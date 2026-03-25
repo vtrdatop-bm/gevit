@@ -81,21 +81,12 @@ export default function UsersTab() {
     setSaving(true);
     setError("");
 
-    if (isDev) {
-      toast.success("Usuário criado com sucesso (Modo Dev)");
-      setForm({ login: "", senha: "", nome: "", patente: "", role: "vistoriador" });
-      setShowForm(false);
-      setSaving(false);
-      fetchUsers();
-      return;
-    }
-
     const loginLower = form.login.toLowerCase();
     const email = loginLower.includes("@") ? loginLower : `${loginLower}@gevit.local`;
     const { error: signupErr } = await supabase.auth.signUp({
       email,
       password: form.senha,
-      options: { data: { nome_completo: form.nome, patente: form.patente, role: form.role } },
+      options: { data: { nome_completo: form.nome_guerra, patente: form.patente, role: form.role } },
     });
 
     if (signupErr) {
@@ -104,7 +95,7 @@ export default function UsersTab() {
       return;
     }
 
-    setForm({ login: "", senha: "", nome: "", patente: "", role: "vistoriador" });
+    setForm({ login: "", senha: "", nome_guerra: "", patente: "vistoriador", role: "vistoriador" });
     setShowForm(false);
     setSaving(false);
     setTimeout(fetchUsers, 1000);
@@ -126,13 +117,6 @@ export default function UsersTab() {
 
   const saveEdit = async (p: Profile) => {
     setSaving(true);
-
-    if (isDev) {
-      toast.success("Usuário atualizado com sucesso (Modo Dev)");
-      setEditingId(null);
-      setSaving(false);
-      return;
-    }
 
     const { error: profileErr } = await supabase
       .from("profiles")
@@ -169,12 +153,6 @@ export default function UsersTab() {
     }
 
     setDeletingId(p.id);
-
-    if (isDev) {
-      toast.success("Usuário excluído com sucesso (Modo Dev)");
-      setDeletingId(null);
-      return;
-    }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();

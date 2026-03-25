@@ -92,18 +92,6 @@ export default function SignupPage() {
             <UserPlus className="w-4 h-4" />
             {loading ? "Cadastrando..." : "Cadastrar"}
           </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              localStorage.setItem("gevit_admin_bypass", "true");
-              window.location.href = "/";
-            }}
-            className="w-full h-10 rounded-md border border-primary/20 bg-primary/5 text-primary font-medium text-sm hover:bg-primary/10 transition-colors flex items-center justify-center gap-2"
-          >
-            <Flame className="w-4 h-4" />
-            Acesso Rápido (Administrador)
-          </button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">

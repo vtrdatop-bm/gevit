@@ -215,7 +215,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </Link>
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
               <span className="text-xs font-semibold text-primary-foreground">
-                {user?.user_metadata?.nome_guerra?.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "U"}
+                {(() => {
+                  const name = user?.user_metadata?.nome_guerra || user?.email?.split('@')[0] || "U";
+                  const parts = name.trim().split(/[.\s]/);
+                  if (parts.length >= 2) {
+                    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                  }
+                  return name.slice(0, 2).toUpperCase();
+                })()}
               </span>
             </div>
           </div>

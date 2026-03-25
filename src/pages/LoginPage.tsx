@@ -102,14 +102,6 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-3">
-          <button
-            onClick={handleDevBypass}
-            className="w-full h-10 rounded-md border border-input bg-background hover:bg-accent text-foreground font-medium text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            <ShieldCheck className="w-4 h-4 text-primary" />
-            Acesso Rápido (Dev)
-          </button>
-
           <Link
             to="/signup"
             className="w-full h-10 rounded-md border border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 font-medium text-sm transition-colors flex items-center justify-center gap-2"

@@ -35,7 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!isMounted) return;
-      if (bypass) return; // Prevent real session from overriding dev bypass
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setLoading(false);
@@ -43,31 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const initializeSession = async () => {
-      if (bypass) {
-        const mockUser = {
-          id: "00000000-0000-0000-0000-000000000000",
-          email: "dev@gevit.local",
-          app_metadata: {},
-          user_metadata: { nome_guerra: "ADMIN" },
-          aud: "authenticated",
-          created_at: new Date().toISOString(),
-        } as User;
-        const mockSession = {
-          access_token: "mock-token",
-          refresh_token: "mock-refresh",
-          expires_in: 3600,
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
-          token_type: "bearer",
-          user: mockUser,
-        } as Session;
-        if (isMounted) {
-          setUser(mockUser);
-          setSession(mockSession);
-          setLoading(false);
-          window.clearTimeout(loadingTimeout);
-        }
-        return;
-      }
 
       try {
         const {
@@ -99,11 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    localStorage.removeItem("gevit_admin_bypass");
     await supabase.auth.signOut();
   };
 
-  const isDev = localStorage.getItem("gevit_admin_bypass") === "true";
+  const isDev = false;
 
   return (
     <AuthContext.Provider value={{ user, session, loading, isDev, signOut }}>
