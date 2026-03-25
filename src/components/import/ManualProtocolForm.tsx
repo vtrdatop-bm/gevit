@@ -46,6 +46,7 @@ function formatCpfCnpj(value: string): string {
     .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
 }
 
+
 function formatCep(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 8);
   if (digits.length <= 2) return digits;
@@ -196,6 +197,7 @@ export default function ManualProtocolForm() {
 
   const geocodeAddress = async () => {
     setGeocoding(true);
+    let viaCepData: any = null;
     try {
       const cepClean = (form.cep || "").replace(/\D/g, "");
       const endereco = form.endereco || "";
@@ -205,7 +207,8 @@ export default function ManualProtocolForm() {
       if (cepClean.length === 8) {
         try {
           const viaCepRes = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
-          const viaCep = await viaCepRes.json();
+          viaCepData = await viaCepRes.json();
+          const viaCep = viaCepData;
           if (viaCep && !viaCep.erro && viaCep.logradouro) {
             const q = `${viaCep.logradouro}${numero ? " " + numero : ""}, ${viaCep.bairro || form.bairro}, ${form.municipio}, Acre, Brasil`;
             const res = await fetch(
@@ -218,6 +221,8 @@ export default function ManualProtocolForm() {
                 ...prev,
                 latitude: parseFloat(data[0].lat).toFixed(6),
                 longitude: parseFloat(data[0].lon).toFixed(6),
+                bairro: prev.bairro || (viaCepData?.bairro?.toUpperCase() || ""),
+                municipio: prev.municipio || (viaCepData?.localidade?.toUpperCase() || ""),
               }));
               toast.success("Coordenadas encontradas!");
               setGeocoding(false);

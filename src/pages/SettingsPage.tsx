@@ -11,10 +11,10 @@ import MinhaContaTab from "@/components/settings/MinhaContaTab";
 
 const allTabs = [
   { key: "minha-conta", label: "Minha Conta", icon: UserCog, roles: ["admin", "distribuidor", "vistoriador"] },
-  { key: "usuarios", label: "Usuários", icon: Users, roles: ["admin"] },
-  { key: "municipios", label: "Municípios", icon: Map, roles: ["admin"] },
-  { key: "regionais", label: "Regionais", icon: MapPin, roles: ["admin"] },
-  { key: "bairros", label: "Bairros", icon: Building2, roles: ["admin"] },
+  { key: "usuarios", label: "Usuários", icon: Users, roles: ["admin", "distribuidor"] },
+  { key: "municipios", label: "Municípios", icon: Map, roles: ["admin", "distribuidor"] },
+  { key: "regionais", label: "Regionais", icon: MapPin, roles: ["admin", "distribuidor"] },
+  { key: "bairros", label: "Bairros", icon: Building2, roles: ["admin", "distribuidor"] },
 ] as const;
 
 type TabKey = (typeof allTabs)[number]["key"];

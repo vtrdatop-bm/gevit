@@ -23,6 +23,7 @@ export default function UsersTab() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canManageUsers, setCanManageUsers] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ login: "", senha: "", nome_guerra: "", patente: "SD BM", role: "vistoriador" });
   const [saving, setSaving] = useState(false);
@@ -68,10 +69,15 @@ export default function UsersTab() {
     if (user) {
       if (isDev) {
         setIsAdmin(true);
+        setCanManageUsers(true);
         return;
       }
       supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
         setIsAdmin(!!data);
+      });
+      supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
+        const roles = (data || []).map(r => r.role);
+        setCanManageUsers(roles.includes("admin") || roles.includes("distribuidor"));
       });
     }
   }, [user, isDev]);
@@ -241,7 +247,7 @@ export default function UsersTab() {
                 <th className="text-left py-2 px-3 text-muted-foreground font-medium text-xs">Login</th>
                 <th className="text-left py-2 px-3 text-muted-foreground font-medium text-xs">Perfil</th>
                 <th className="text-left py-2 px-3 text-muted-foreground font-medium text-xs">Status</th>
-                {isAdmin && <th className="text-right py-2 px-3 text-muted-foreground font-medium text-xs">Ações</th>}
+                {canManageUsers && <th className="text-right py-2 px-3 text-muted-foreground font-medium text-xs">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -307,17 +313,19 @@ export default function UsersTab() {
                           {p.ativo ? "Ativo" : "Inativo"}
                         </span>
                       </td>
-                      {isAdmin && (
+                      {canManageUsers && (
                         <td className="py-2 px-3 text-right">
                           <div className="flex gap-1 justify-end">
                             <button onClick={() => startEdit(p)}
                               className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar">
                               <Pencil className="w-4 h-4" />
                             </button>
-                            <button onClick={() => handleDelete(p)} disabled={deletingId === p.id}
-                              className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-50" title="Excluir">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {isAdmin && (
+                              <button onClick={() => handleDelete(p)} disabled={deletingId === p.id}
+                                className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-50" title="Excluir">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}

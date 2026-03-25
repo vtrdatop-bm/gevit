@@ -132,7 +132,7 @@ export default function ProtocoloDetailPage() {
     if (!id) return;
     setLoading(true);
 
-    const [{ data: prot }, { data: procs }, { data: vists }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
+    const [{ data: prot }, { data: procs }, { vists, data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
       supabase.from("protocolos").select("*").eq("id", id).single(),
       supabase.from("processos").select("*").eq("protocolo_id", id),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
@@ -301,6 +301,7 @@ export default function ProtocoloDetailPage() {
     setSavingBairro(false);
   };
 
+
   const formatCep = (value: string): string => {
     const digits = value.replace(/\D/g, "").slice(0, 8);
     if (digits.length <= 2) return digits;
@@ -310,6 +311,7 @@ export default function ProtocoloDetailPage() {
 
   const geocodeAddress = async () => {
     setGeocoding(true);
+    let viaCepData: any = null;
     try {
       const cepClean = (editForm.cep || "").replace(/\D/g, "");
       const endereco = editForm.endereco || "";
@@ -322,7 +324,8 @@ export default function ProtocoloDetailPage() {
       if (cepClean.length === 8) {
         try {
           const viaCepRes = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
-          const viaCep = await viaCepRes.json();
+          viaCepData = await viaCepRes.json();
+          const viaCep = viaCepData;
 
           if (viaCep && !viaCep.erro && viaCep.logradouro) {
             const parts = [
@@ -361,14 +364,36 @@ export default function ProtocoloDetailPage() {
       }
 
       if (lat && lon) {
-        setEditForm((prev) => ({ ...prev, latitude: lat!, longitude: lon! }));
+        setEditForm((prev) => ({
+          ...prev,
+          latitude: lat!,
+          longitude: lon!,
+          // Also update address if it was empty
+          bairro: prev.bairro || (viaCepData?.bairro?.toUpperCase() || ""),
+          municipio: prev.municipio || (viaCepData?.localidade?.toUpperCase() || ""),
+        }));
 
         // Save coordinates immediately to DB
         if (protocolo) {
-          await supabase.from("protocolos").update({
-            latitude: parseFloat(lat),
-            longitude: parseFloat(lon),
-          }).eq("id", protocolo.id);
+      const cepClean = (editForm.cep || "").replace(/\D/g, "");
+      const { error: protError } = await supabase
+        .from("protocolos")
+        .update({
+          razao_social: editForm.razao_social,
+          nome_fantasia: editForm.nome_fantasia || null,
+          endereco: editForm.endereco,
+          numero: editForm.numero,
+          bairro: editForm.bairro,
+          municipio: editForm.municipio,
+          cep: cepClean || null,
+          area: parseAreaToNumber(editForm.area),
+          latitude: editForm.latitude ? parseFloat(editForm.latitude) : null,
+          longitude: editForm.longitude ? parseFloat(editForm.longitude) : null,
+          solicitante: editForm.solicitante || null,
+          tipo_empresa: editForm.tipo_empresa || null,
+          tipo_servico: editForm.tipo_servico || null,
+        })
+        .eq("id", id);
         }
 
         toast.success("Coordenadas encontradas e salvas!");
