@@ -86,7 +86,7 @@ export default function UsersTab() {
     const { error: signupErr } = await supabase.auth.signUp({
       email,
       password: form.senha,
-      options: { data: { nome_completo: form.nome_guerra, patente: form.patente, role: form.role } },
+      options: { data: { nome_guerra: form.nome_guerra, patente: form.patente, role: form.role } },
     });
 
     if (signupErr) {
