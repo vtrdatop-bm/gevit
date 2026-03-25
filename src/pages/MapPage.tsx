@@ -53,7 +53,13 @@ const getVistoriaResult = (v: any): string | null => {
 };
 
 export default function MapPage() {
-  const { isDev } = useAuth();
+  const { user, isDev } = useAuth();
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<any>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [processos, setProcessos] = useState<MapProcess[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<DisplayStatus | "all" | "minhas">("all");
 
   const fetchData = useCallback(async () => {
     if (isDev) {

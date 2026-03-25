@@ -109,7 +109,7 @@ export default function KanbanPage() {
             regional_nome: "Regional Centro",
             vistoriador_nome: "Administrador (Dev)",
             dias_restantes: 10,
-            deadline: { active: true, remaining: 10, type: "inspection" }
+            deadline: { active: true, remaining: 10, type: "expiration", stage: 1 }
           },
           {
             id: "proc2",
@@ -135,7 +135,7 @@ export default function KanbanPage() {
             regional_nome: "Regional Centro",
             vistoriador_nome: "Administrador (Dev)",
             dias_restantes: 0,
-            deadline: { active: false, remaining: 0, type: "inspection" }
+            deadline: { active: false, remaining: 0, type: "expiration", stage: 0 }
           }
         ];
         setProcessos(mockProcs);
