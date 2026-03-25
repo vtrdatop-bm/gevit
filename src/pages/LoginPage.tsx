@@ -70,7 +70,7 @@ export default function LoginPage() {
             <input
               type="text"
               value={email}
-              onChange={(e) => setEmail(e.target.value.toLowerCase())}
+              onChange={(e) => setEmail(e.target.value)}
               required
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="primeiro.sobrenome"
@@ -118,7 +118,7 @@ export default function LoginPage() {
             <input
               type="text"
               value={registerEmail}
-              onChange={(e) => setRegisterEmail(e.target.value.toLowerCase())}
+              onChange={(e) => setRegisterEmail(e.target.value)}
               required
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="primeiro.sobrenome"

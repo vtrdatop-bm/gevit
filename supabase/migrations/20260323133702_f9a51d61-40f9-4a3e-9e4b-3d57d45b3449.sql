@@ -1,3 +1,11 @@
+-- USUÁRIOS SIMPLES (LOGIN/SENHA)
+CREATE TABLE public.users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  login TEXT UNIQUE NOT NULL,
+  senha TEXT NOT NULL, -- Armazene o hash da senha!
+  ativo BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- Enum for process status
 CREATE TYPE public.process_status AS ENUM ('regional', 'pendencias', 'certificado_termo', 'certificado', 'expirado');
