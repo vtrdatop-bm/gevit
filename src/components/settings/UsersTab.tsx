@@ -55,7 +55,8 @@ export default function UsersTab() {
     setSaving(true);
     setError("");
 
-    const email = form.login.includes("@") ? form.login : `${form.login}@gevit.local`;
+    const loginLower = form.login.toLowerCase();
+    const email = loginLower.includes("@") ? loginLower : `${loginLower}@gevit.local`;
     const { error: signupErr } = await supabase.auth.signUp({
       email,
       password: form.senha,
