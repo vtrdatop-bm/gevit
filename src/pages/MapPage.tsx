@@ -57,7 +57,47 @@ export default function MapPage() {
 
   const fetchData = useCallback(async () => {
     if (isDev) {
-      setProcessos([]);
+      const mockMapped: MapProcess[] = [
+        {
+          id: "proc1",
+          vistoriador_id: "dev-id",
+          status: "regional" as any,
+          displayStatus: "regional",
+          data_prevista: "2024-04-05",
+          vistoriador_nome: "Administrador (Dev)",
+          vistoria: { data_1_atribuicao: "2024-03-22" },
+          protocolo: {
+            numero: "VT2024.0001.0001-01",
+            nome_fantasia: "Mercado Silva",
+            razao_social: "Comércio de Alimentos Silva Ltda",
+            endereco: "Rua das Flores, 123",
+            bairro: "Centro",
+            municipio: "Rio Branco",
+            latitude: -9.975403,
+            longitude: -67.812870,
+          },
+        },
+        {
+          id: "proc2",
+          vistoriador_id: "dev-id",
+          status: "certificado" as any,
+          displayStatus: "certificado",
+          data_prevista: "2024-03-25",
+          vistoriador_nome: "Administrador (Dev)",
+          vistoria: { data_1_atribuicao: "2024-03-22", status_1_vistoria: "aprovado" },
+          protocolo: {
+            numero: "VT2024.0001.0002-02",
+            nome_fantasia: null,
+            razao_social: "Posto de Combustíveis Acreano",
+            endereco: "Av. Brasil, s/n",
+            bairro: "Distrito Industrial",
+            municipio: "Senador Guiomard",
+            latitude: -9.915,
+            longitude: -67.68,
+          },
+        }
+      ];
+      setProcessos(mockMapped);
       setLoading(false);
       return;
     }

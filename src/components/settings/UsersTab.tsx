@@ -77,6 +77,15 @@ export default function UsersTab() {
     setSaving(true);
     setError("");
 
+    if (isDev) {
+      toast.success("Usuário criado com sucesso (Modo Dev)");
+      setForm({ login: "", senha: "", nome: "", patente: "", role: "vistoriador" });
+      setShowForm(false);
+      setSaving(false);
+      fetchUsers();
+      return;
+    }
+
     const loginLower = form.login.toLowerCase();
     const email = loginLower.includes("@") ? loginLower : `${loginLower}@gevit.local`;
     const { error: signupErr } = await supabase.auth.signUp({
@@ -114,6 +123,13 @@ export default function UsersTab() {
   const saveEdit = async (p: Profile) => {
     setSaving(true);
 
+    if (isDev) {
+      toast.success("Usuário atualizado com sucesso (Modo Dev)");
+      setEditingId(null);
+      setSaving(false);
+      return;
+    }
+
     const { error: profileErr } = await supabase
       .from("profiles")
       .update({
@@ -149,6 +165,13 @@ export default function UsersTab() {
     }
 
     setDeletingId(p.id);
+
+    if (isDev) {
+      toast.success("Usuário excluído com sucesso (Modo Dev)");
+      setDeletingId(null);
+      return;
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("delete-user", {

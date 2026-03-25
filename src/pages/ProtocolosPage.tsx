@@ -57,12 +57,45 @@ export default function ProtocolosPage() {
 
   useEffect(() => {
     if (isDev) {
-      setProtocolos([]);
-      setProcessos([]);
-      setVistoriaMap({});
-      setProfileMap({});
-      setPausasByProcesso({});
-      setTermosMap({});
+      const mockProt: Protocolo[] = [
+        {
+          id: "p1",
+          numero: "VT2024.0001.0001-01",
+          data_solicitacao: "2024-03-20",
+          cnpj: "12345678000190",
+          razao_social: "Comércio de Alimentos Silva Ltda",
+          nome_fantasia: "Mercado Silva",
+          endereco: "Rua das Flores, 123",
+          bairro: "Centro",
+          municipio: "Rio Branco",
+          area: 150,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: "p2",
+          numero: "VT2024.0001.0002-02",
+          data_solicitacao: "2024-03-21",
+          cnpj: "98765432000110",
+          razao_social: "Posto de Combustíveis Acreano",
+          nome_fantasia: null,
+          endereco: "Av. Brasil, s/n",
+          bairro: "Distrito Industrial",
+          municipio: "Senador Guiomard",
+          area: 1200,
+          created_at: new Date().toISOString(),
+        }
+      ];
+      const mockProc: Processo[] = [
+        { id: "proc1", protocolo_id: "p1", status: "regional", regional_id: "r1", data_prevista: "2024-04-05", vistoriador_id: "v1" },
+        { id: "proc2", protocolo_id: "p2", status: "certificado", regional_id: "r2", data_prevista: "2024-03-25", vistoriador_id: "v1" }
+      ];
+      setProtocolos(mockProt);
+      setProcessos(mockProc);
+      setVistoriaMap({
+        "proc1": { processo_id: "proc1", data_1_atribuicao: "2024-03-22" } as any,
+        "proc2": { processo_id: "proc2", data_1_atribuicao: "2024-03-22", data_1_vistoria: "2024-03-24", status_1_vistoria: "aprovado" } as any
+      });
+      setProfileMap({ "v1": "Administrador (Dev)" });
       setLoading(false);
       return;
     }
@@ -169,7 +202,7 @@ export default function ProtocolosPage() {
 
   const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
     <th
-      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors select-none"
+      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider cursor-pointer hover:text-foreground transition-colors select-none"
       onClick={() => handleSort(field)}
     >
       <span className="inline-flex items-center gap-1">
@@ -253,12 +286,12 @@ export default function ProtocolosPage() {
                   <SortHeader label="Nº Protocolo" field="numero" />
                   <SortHeader label="Data Solicit." field="data_solicitacao" />
                   <SortHeader label="Razão Social" field="razao_social" />
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">CPF/CNPJ</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">CPF/CNPJ</th>
                   <SortHeader label="Município" field="municipio" />
                   <SortHeader label="Bairro" field="bairro" />
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vistoriador</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Vistoriador</th>
                   <SortHeader label="Status" field="status" />
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prazo</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Prazo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

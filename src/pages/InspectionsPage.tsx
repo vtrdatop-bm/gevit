@@ -46,8 +46,29 @@ export default function InspectionsPage() {
     if (!user) return;
 
     if (user.id === "00000000-0000-0000-0000-000000000000") {
-      setProcessos([]);
-      setVistoriaMap({});
+      const mockProcs: ProcessoComProtocolo[] = [
+        {
+          id: "proc1",
+          protocolo_id: "p1",
+          status: "regional",
+          data_prevista: "2024-04-05",
+          vistoriador_id: "00000000-0000-0000-0000-000000000000",
+          protocolos: {
+            id: "p1",
+            numero: "VT2024.0001.0001-01",
+            razao_social: "Comércio de Alimentos Silva Ltda",
+            nome_fantasia: "Mercado Silva",
+            bairro: "Centro",
+            municipio: "Rio Branco",
+            area: 150,
+            data_solicitacao: "2024-03-20",
+          }
+        }
+      ];
+      setProcessos(mockProcs);
+      setVistoriaMap({
+        "proc1": { processo_id: "proc1", data_1_atribuicao: "2024-03-22" } as any
+      });
       setLoading(false);
       return;
     }

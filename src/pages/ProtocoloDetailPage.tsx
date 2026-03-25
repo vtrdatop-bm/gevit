@@ -258,7 +258,7 @@ export default function ProtocoloDetailPage() {
 
   const textFields = ["numero", "razao_social", "nome_fantasia", "solicitante", "endereco", "bairro", "municipio", "tipo_servico", "tipo_empresa"];
   const handleEditChange = (key: string, value: string) => {
-    const upperValue = textFields.includes(key) ? value.toUpperCase() : value;
+    const upperValue = value; // Stop forcing uppercase
     setEditForm((prev) => {
       const next = { ...prev, [key]: upperValue };
       if (key === "municipio") next.bairro = "";

@@ -84,8 +84,62 @@ export default function KanbanPage() {
   useEffect(() => {
     const fetchData = async () => {
       if (isDev) {
-        setProcessos([]);
-        setRegionaisMap({});
+        const mockProcs: ProcessoWithProtocolo[] = [
+          {
+            id: "proc1",
+            protocolo_id: "p1",
+            dbStatus: "regional",
+            displayStatus: "regional",
+            stage: 1,
+            data_prevista: "2024-04-05",
+            data_solicitacao: "2024-03-20",
+            vistoriador_id: "v1",
+            regional_id: "r1",
+            protocolos: {
+              numero: "VT2024.0001.0001-01",
+              nome_fantasia: "Mercado Silva",
+              razao_social: "Comércio de Alimentos Silva Ltda",
+              cnpj: "12345678000190",
+              endereco: "Rua das Flores, 123",
+              bairro: "Centro",
+              municipio: "Rio Branco",
+              area: 150,
+              data_solicitacao: "2024-03-20",
+            },
+            regional_nome: "Regional Centro",
+            vistoriador_nome: "Administrador (Dev)",
+            dias_restantes: 10,
+            deadline: { active: true, remaining: 10, type: "inspection" }
+          },
+          {
+            id: "proc2",
+            protocolo_id: "p2",
+            dbStatus: "certificado",
+            displayStatus: "certificado",
+            stage: 1,
+            data_prevista: "2024-03-25",
+            data_solicitacao: "2024-03-21",
+            vistoriador_id: "v1",
+            regional_id: "r1",
+            protocolos: {
+              numero: "VT2024.0001.0002-02",
+              nome_fantasia: null,
+              razao_social: "Posto de Combustíveis Acreano",
+              cnpj: "98765432000110",
+              endereco: "Av. Brasil, s/n",
+              bairro: "Distrito Industrial",
+              municipio: "Senador Guiomard",
+              area: 1200,
+              data_solicitacao: "2024-03-21",
+            },
+            regional_nome: "Regional Centro",
+            vistoriador_nome: "Administrador (Dev)",
+            dias_restantes: 0,
+            deadline: { active: false, remaining: 0, type: "inspection" }
+          }
+        ];
+        setProcessos(mockProcs);
+        setRegionaisMap({ "r1": "Regional Centro" });
         setLoading(false);
         return;
       }

@@ -77,7 +77,6 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
-    text-transform: uppercase;
   }
 }
 
@@ -166,19 +165,3 @@
   @apply bg-muted-foreground/30;
 }
 
-/* Force uppercase on all text inputs, textareas, and selects */
-input[type="text"],
-input[type="email"],
-input[type="search"],
-input:not([type]),
-textarea,
-select {
-  text-transform: uppercase;
-}
-input[type="text"]::placeholder,
-input[type="email"]::placeholder,
-input[type="search"]::placeholder,
-input:not([type])::placeholder,
-textarea::placeholder {
-  text-transform: none;
-}

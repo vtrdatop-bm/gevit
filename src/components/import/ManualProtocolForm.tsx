@@ -138,7 +138,7 @@ export default function ManualProtocolForm() {
   }, [form.municipio, municipios, regionaisMunicipios, regionais]);
 
   const handleChange = (key: string, value: string) => {
-    const upperValue = ["numero", "razao_social", "nome_fantasia", "solicitante", "endereco", "bairro", "municipio", "tipo_servico", "tipo_empresa"].includes(key) ? value.toUpperCase() : value;
+    const upperValue = value; // Stop forcing uppercase
     setForm((prev) => {
       const next = { ...prev, [key]: upperValue };
       if (key === "municipio") {
