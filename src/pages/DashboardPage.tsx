@@ -55,7 +55,7 @@ export default function DashboardPage() {
           { processo_id: "1", status_1_vistoria: "pendencia" }
         ]);
         setProfiles([
-          { user_id: "dev-id", nome_completo: "Administrador (Dev)", ativo: true }
+          { user_id: "dev-id", nome_guerra: "ADMIN", ativo: true }
         ]);
         setLoading(false);
         return;
@@ -64,7 +64,7 @@ export default function DashboardPage() {
       const [{ data: procs }, { data: vists }, { data: profs }] = await Promise.all([
         supabase.from("processos").select("id, status, data_prevista, vistoriador_id, created_at"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
-        supabase.from("profiles").select("user_id, nome_completo, ativo"),
+        supabase.from("profiles").select("user_id, nome_guerra, ativo"),
       ]);
       setProcessos(procs || []);
       setVistorias(vists || []);

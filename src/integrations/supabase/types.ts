@@ -200,7 +200,7 @@ export type Database = {
           created_at: string
           id: string
           login: string | null
-          nome_completo: string
+          nome_guerra: string
           patente: string | null
           regional_id: string | null
           updated_at: string
@@ -211,7 +211,7 @@ export type Database = {
           created_at?: string
           id?: string
           login?: string | null
-          nome_completo: string
+          nome_guerra: string
           patente?: string | null
           regional_id?: string | null
           updated_at?: string
@@ -222,7 +222,7 @@ export type Database = {
           created_at?: string
           id?: string
           login?: string | null
-          nome_completo?: string
+          nome_guerra?: string
           patente?: string | null
           regional_id?: string | null
           updated_at?: string

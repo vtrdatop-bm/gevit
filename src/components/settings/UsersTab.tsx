@@ -14,17 +14,21 @@ const ROLE_LABELS: Record<string, string> = {
   vistoriador: "Vistoriador",
 };
 
+const POSTOS_GRADUACOES = [
+  "CEL BM", "TC BM", "MAJ BM", "CAP BM", "1º TEN BM", "2º TEN BM", "CAD BM", "ASP BM", "AL OF BM", "ST BM", "1º SGT BM", "2º SGT BM", "3º SGT BM", "AL SGT BM", "CB BM", "AL CB BM", "SD BM"
+];
+
 export default function UsersTab() {
   const { user, isDev } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ login: "", senha: "", nome: "", patente: "", role: "vistoriador" });
+  const [form, setForm] = useState({ login: "", senha: "", nome_guerra: "", patente: "SD BM", role: "vistoriador" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ nome_completo: "", patente: "", role: "", ativo: true });
+  const [editForm, setEditForm] = useState({ nome_guerra: "", patente: "", role: "", ativo: true });
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
@@ -33,7 +37,7 @@ export default function UsersTab() {
         { 
           id: "dev-id", 
           user_id: "00000000-0000-0000-0000-000000000000", 
-          nome_completo: "Administrador (Dev)", 
+          nome_guerra: "ADMIN", 
           ativo: true, 
           roles: ["admin"],
           created_at: new Date().toISOString(),
@@ -109,8 +113,8 @@ export default function UsersTab() {
   const startEdit = (p: Profile) => {
     setEditingId(p.id);
     setEditForm({
-      nome_completo: p.nome_completo,
-      patente: p.patente || "",
+      nome_guerra: p.nome_guerra,
+      patente: p.patente || "SD BM",
       role: p.roles[0] || "vistoriador",
       ativo: p.ativo,
     });
@@ -133,7 +137,7 @@ export default function UsersTab() {
     const { error: profileErr } = await supabase
       .from("profiles")
       .update({
-        nome_completo: editForm.nome_completo,
+        nome_guerra: editForm.nome_guerra,
         patente: editForm.patente || null,
         ativo: editForm.ativo,
       })
@@ -160,7 +164,7 @@ export default function UsersTab() {
   };
 
   const handleDelete = async (p: Profile) => {
-    if (!confirm(`Tem certeza que deseja excluir o usuário "${[p.patente, p.nome_completo].filter(Boolean).join(" ")}"? Esta ação não pode ser desfeita.`)) {
+    if (!confirm(`Tem certeza que deseja excluir o usuário "${[p.patente, p.nome_guerra].filter(Boolean).join(" ")}"? Esta ação não pode ser desfeita.`)) {
       return;
     }
 
@@ -211,12 +215,14 @@ export default function UsersTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-medium text-foreground">Posto/Graduação</label>
-              <input value={form.patente} onChange={(e) => setForm({ ...form, patente: e.target.value })}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" placeholder="Ex: SD BM" />
+              <select value={form.patente} onChange={(e) => setForm({ ...form, patente: e.target.value })}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                {POSTOS_GRADUACOES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-foreground">Nome de Guerra</label>
-              <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} required
+              <input value={form.nome_guerra} onChange={(e) => setForm({ ...form, nome_guerra: e.target.value })} required
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" placeholder="Nome de guerra" />
             </div>
             <div className="space-y-1">
@@ -266,7 +272,11 @@ export default function UsersTab() {
                   {editingId === p.id ? (
                     <>
                       <td className="py-2 px-3">
-                        <input value={editForm.nome_completo} onChange={(e) => setEditForm({ ...editForm, nome_completo: e.target.value })}
+                        <select value={editForm.patente} onChange={(e) => setEditForm({ ...editForm, patente: e.target.value })}
+                          className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm mb-1">
+                          {POSTOS_GRADUACOES.map(pg => <option key={pg} value={pg}>{pg}</option>)}
+                        </select>
+                        <input value={editForm.nome_guerra} onChange={(e) => setEditForm({ ...editForm, nome_guerra: e.target.value })}
                           className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm" />
                       </td>
                       <td className="py-2 px-3 text-muted-foreground">{(p as any).login || "—"}</td>
@@ -300,7 +310,7 @@ export default function UsersTab() {
                     </>
                   ) : (
                     <>
-                      <td className="py-2 px-3 font-medium">{[p.patente, p.nome_completo].filter(Boolean).join(" ")}</td>
+                       <td className="py-2 px-3 font-medium">{[p.patente, p.nome_guerra].filter(Boolean).join(" ")}</td>
                       <td className="py-2 px-3 text-muted-foreground">{(p as any).login || "—"}</td>
                       <td className="py-2 px-3">
                         <div className="flex gap-1">
