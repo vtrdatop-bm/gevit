@@ -1,0 +1,452 @@
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigation, ExternalLink, Copy } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import RouteMap from "@/components/routes/RouteMap";
+
+interface VistoriaRow {
+  processo_id: string;
+  data_1_atribuicao: string | null;
+  data_2_atribuicao: string | null;
+  data_3_atribuicao: string | null;
+  status_1_vistoria: string | null;
+  status_2_vistoria: string | null;
+  status_3_vistoria: string | null;
+}
+
+interface ProcessoComProtocolo {
+  id: string;
+  protocolo_id: string;
+  vistoriador_id: string | null;
+  status: string;
+  protocolo: {
+    nome_fantasia: string | null;
+    razao_social: string;
+    endereco: string;
+    bairro: string;
+    municipio: string;
+    latitude: number | null;
+    longitude: number | null;
+  };
+  datasAtribuicao: string[];
+}
+
+interface Vistoriador {
+  user_id: string;
+  nome_completo: string;
+}
+
+const PONTO_PARTIDA = "-9.966142405683366,-67.80275437311697";
+const START_COORDS: [number, number] = [-9.966142405683366, -67.80275437311697];
+
+export default function RoutesPage() {
+  const { user } = useAuth();
+  const [dataLimite, setDataLimite] = useState("");
+  const [selectedVistoriador, setSelectedVistoriador] = useState("");
+  const [routeGenerated, setRouteGenerated] = useState(false);
+  const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
+  const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);
+  const [vistorias, setVistorias] = useState<VistoriaRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [canChangeVistoriador, setCanChangeVistoriador] = useState(false);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      const [{ data: roles }, { data: procsData }, { data: vistoriasData }] = await Promise.all([
+        supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
+        supabase
+          .from("processos")
+          .select("id, protocolo_id, vistoriador_id, status, protocolos(nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
+          .neq("status", "certificado"),
+        supabase
+          .from("vistorias")
+          .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria"),
+      ]);
+
+      // Check if current user is admin or distribuidor
+      if (user) {
+        const { data: userRoles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        const isAdminOrDist = userRoles?.some(
+          (r) => r.role === "admin" || r.role === "distribuidor"
+        );
+        setCanChangeVistoriador(!!isAdminOrDist);
+
+        // Default to current user if they are a vistoriador
+        const isVistoriador = roles?.some((r) => r.user_id === user.id);
+        if (isVistoriador) {
+          setSelectedVistoriador(user.id);
+        }
+      }
+
+      if (roles?.length) {
+        const ids = roles.map((r) => r.user_id);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, nome_completo")
+          .in("user_id", ids);
+        if (profiles) setVistoriadores(profiles);
+      }
+
+      if (procsData) {
+        const mapped = procsData
+          .filter((p: any) => p.protocolos)
+          .map((p: any) => ({
+            id: p.id,
+            protocolo_id: p.protocolo_id,
+            vistoriador_id: p.vistoriador_id,
+            status: p.status,
+            protocolo: p.protocolos,
+            datasAtribuicao: [] as string[],
+          }));
+        setProcessos(mapped);
+      }
+
+      if (vistoriasData) setVistorias(vistoriasData);
+      setLoading(false);
+    }
+    fetchData();
+  }, []);
+
+  // For each processo, find attribution dates that are pending (no result yet)
+  const pendingAttrMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    vistorias.forEach((v) => {
+      const dates: string[] = [];
+      if (v.data_1_atribuicao && !v.status_1_vistoria) dates.push(v.data_1_atribuicao);
+      if (v.data_2_atribuicao && !v.status_2_vistoria) dates.push(v.data_2_atribuicao);
+      if (v.data_3_atribuicao && !v.status_3_vistoria) dates.push(v.data_3_atribuicao);
+      if (dates.length) map[v.processo_id] = dates;
+    });
+    return map;
+  }, [vistorias]);
+
+  const filteredProcesses = useMemo(() => {
+    if (!dataLimite) return [];
+
+    return processos
+      .filter((p) => {
+        if (selectedVistoriador && p.vistoriador_id !== selectedVistoriador) return false;
+
+        const dates = pendingAttrMap[p.id];
+        if (!dates?.length) return false;
+
+        // At least one pending date must be <= dataLimite
+        return dates.some((d) => d <= dataLimite);
+      })
+      .map((p) => ({
+        ...p,
+        datasAtribuicao: (pendingAttrMap[p.id] || []).filter((d) => d <= dataLimite),
+      }));
+  }, [processos, selectedVistoriador, pendingAttrMap, dataLimite]);
+
+  const selectedProcesses = filteredProcesses.filter((p) => selectedIds.has(p.id));
+
+  // Optimized order after route generation (nearest-neighbor)
+  const [optimizedOrder, setOptimizedOrder] = useState<string[]>([]);
+
+  const orderedProcesses = useMemo(() => {
+    if (!routeGenerated || optimizedOrder.length === 0) return selectedProcesses;
+    const map = new Map(selectedProcesses.map((p) => [p.id, p]));
+    return optimizedOrder.map((id) => map.get(id)!).filter(Boolean);
+  }, [routeGenerated, optimizedOrder, selectedProcesses]);
+
+  const selectedRoutePoints = useMemo(
+    () =>
+      orderedProcesses
+        .filter((p) => p.protocolo.latitude != null && p.protocolo.longitude != null)
+        .map((p) => ({
+          id: p.id,
+          latitude: p.protocolo.latitude as number,
+          longitude: p.protocolo.longitude as number,
+          name: p.protocolo.nome_fantasia || p.protocolo.razao_social,
+          address: p.protocolo.endereco,
+          bairro: p.protocolo.bairro,
+        })),
+    [orderedProcesses]
+  );
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === filteredProcesses.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredProcesses.map((p) => p.id)));
+    }
+  };
+
+  // Nearest-neighbor algorithm to optimize route
+  const handleGenerateRoute = () => {
+    const withCoords = selectedProcesses.filter(
+      (p) => p.protocolo.latitude != null && p.protocolo.longitude != null
+    );
+
+    if (withCoords.length === 0) {
+      setOptimizedOrder(selectedProcesses.map((p) => p.id));
+      setRouteGenerated(true);
+      return;
+    }
+
+    const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const toRad = (v: number) => (v * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+      return 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    const remaining = [...withCoords];
+    const ordered: ProcessoComProtocolo[] = [];
+    let currentLat = START_COORDS[0];
+    let currentLng = START_COORDS[1];
+
+    while (remaining.length > 0) {
+      let nearestIdx = 0;
+      let nearestDist = Infinity;
+      for (let i = 0; i < remaining.length; i++) {
+        const d = haversine(
+          currentLat, currentLng,
+          remaining[i].protocolo.latitude!, remaining[i].protocolo.longitude!
+        );
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearestIdx = i;
+        }
+      }
+      const nearest = remaining.splice(nearestIdx, 1)[0];
+      ordered.push(nearest);
+      currentLat = nearest.protocolo.latitude!;
+      currentLng = nearest.protocolo.longitude!;
+    }
+
+    // Add any without coords at the end
+    const withoutCoords = selectedProcesses.filter(
+      (p) => p.protocolo.latitude == null || p.protocolo.longitude == null
+    );
+
+    setOptimizedOrder([...ordered, ...withoutCoords].map((p) => p.id));
+    setRouteGenerated(true);
+  };
+
+  const buildGoogleMapsUrl = () => {
+    const waypoints = orderedProcesses
+      .filter((p) => p.protocolo.latitude && p.protocolo.longitude)
+      .map((p) => `${p.protocolo.latitude},${p.protocolo.longitude}`);
+    const all = [PONTO_PARTIDA, ...waypoints, PONTO_PARTIDA];
+    return `https://www.google.com/maps/dir/${all.join("/")}`;
+  };
+
+  const copyRouteLink = () => {
+    const url = buildGoogleMapsUrl();
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success("Link da rota copiado!");
+    });
+  };
+
+  const openGoogleMaps = () => {
+    window.open(buildGoogleMapsUrl(), "_blank");
+  };
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setRouteGenerated(false);
+    setOptimizedOrder([]);
+  }, [dataLimite, selectedVistoriador]);
+
+  return (
+    <div className="p-4 md:p-6 space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Roteirização Inteligente</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Filtre por data limite e vistoriador para traçar rotas de vistorias pendentes
+        </p>
+      </div>
+
+      {/* Filters */}
+      <div className="kpi-card">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+              Atribuídas até <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="date"
+              value={dataLimite}
+              onChange={(e) => setDataLimite(e.target.value)}
+              className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Vistoriador</label>
+            <select
+              value={selectedVistoriador}
+              onChange={(e) => setSelectedVistoriador(e.target.value)}
+              disabled={!canChangeVistoriador}
+              className={cn(
+                "w-full text-sm rounded-lg border border-input bg-background px-3 py-2",
+                !canChangeVistoriador && "opacity-60 cursor-not-allowed"
+              )}
+            >
+              {canChangeVistoriador && <option value="">Todos</option>}
+              {vistoriadores.map((v) => (
+                <option key={v.user_id} value={v.user_id}>{v.nome_completo}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={handleGenerateRoute}
+            disabled={selectedProcesses.length < 1}
+            className={cn(
+              "px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 justify-center transition-colors",
+              selectedProcesses.length < 1
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                : "bg-primary text-primary-foreground hover:bg-primary/90"
+            )}
+          >
+            <Navigation className="w-4 h-4" />
+            Gerar Rota ({selectedIds.size})
+          </button>
+        </div>
+      </div>
+
+      {/* Route list */}
+      <div className="kpi-card">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            {!routeGenerated && filteredProcesses.length > 0 && (
+              <input
+                type="checkbox"
+                checked={selectedIds.size === filteredProcesses.length && filteredProcesses.length > 0}
+                onChange={toggleAll}
+                className="w-4 h-4 rounded border-input accent-primary"
+              />
+            )}
+            <h3 className="text-sm font-semibold text-foreground">
+              {routeGenerated ? "Rota Otimizada" : "Vistorias Pendentes"} ({filteredProcesses.length})
+            </h3>
+          </div>
+          {routeGenerated && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setRouteGenerated(false)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-accent transition-colors"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={copyRouteLink}
+                className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 transition-colors"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                Copiar Link da Rota
+              </button>
+              <button
+                onClick={openGoogleMaps}
+                className="text-xs px-3 py-1.5 rounded-lg bg-accent text-foreground hover:bg-accent/80 flex items-center gap-1.5 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Abrir no Google Maps
+              </button>
+            </div>
+          )}
+        </div>
+
+        {!dataLimite ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Informe a <strong>data limite</strong> para visualizar as vistorias pendentes.
+          </p>
+        ) : loading ? (
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        ) : filteredProcesses.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Nenhuma vistoria pendente neste período.
+          </p>
+        ) : routeGenerated ? (
+          <div className="space-y-3">
+            {orderedProcesses.map((process, index) => (
+              <div
+                key={process.id}
+                className="flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-accent/30 transition-colors animate-fade-in"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-primary-foreground">{index + 1}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {process.protocolo.nome_fantasia || process.protocolo.razao_social}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {process.protocolo.endereco}, {process.protocolo.bairro}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredProcesses.map((process) => (
+              <label
+                key={process.id}
+                className={cn(
+                  "flex items-center gap-4 p-3 rounded-lg border transition-colors cursor-pointer",
+                  selectedIds.has(process.id)
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-accent/30"
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(process.id)}
+                  onChange={() => toggleSelect(process.id)}
+                  className="w-4 h-4 rounded border-input accent-primary flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {process.protocolo.nome_fantasia || process.protocolo.razao_social}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {process.protocolo.endereco}, {process.protocolo.bairro}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
+                  <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                    {process.datasAtribuicao.join(", ")}
+                  </p>
+                </div>
+              </label>
+            ))}
+          </div>
+        )}
+
+        {routeGenerated && orderedProcesses.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <h4 className="text-sm font-semibold text-foreground mb-3">Mapa da Rota</h4>
+            <div className="rounded-xl overflow-hidden border border-border" style={{ height: 400 }}>
+              <RouteMap start={START_COORDS} points={selectedRoutePoints} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
