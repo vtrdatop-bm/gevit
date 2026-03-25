@@ -133,7 +133,7 @@ export default function ProtocoloDetailPage() {
     if (!id) return;
     setLoading(true);
 
-    const [{ data: prot }, { data: procs }, { vists, data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
+    const [{ data: prot }, { data: procs }, { data: vists }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
       supabase.from("protocolos").select("*").eq("id", id).single(),
       supabase.from("processos").select("*").eq("protocolo_id", id),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
@@ -151,7 +151,7 @@ export default function ProtocoloDetailPage() {
 
     // Load vistoriadores profiles
     if (vists && vists.length > 0) {
-      const userIds = vists.map((v) => v.user_id);
+      const userIds = vists.map((v: any) => v.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, nome_guerra")
