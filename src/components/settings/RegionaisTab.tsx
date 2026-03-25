@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Pencil, X, Check, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 
 interface Regional {
   id: string;
@@ -51,12 +52,18 @@ export default function RegionaisTab() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data } = await supabase.from("regionais").insert({ nome: newForm.nome }).select("id").single();
+    const { data, error } = await supabase.from("regionais").insert({ nome: newForm.nome }).select("id").single();
+    if (error) {
+      toast.error("Erro ao criar regional: " + error.message);
+      return;
+    }
     if (data && newForm.municipios.length > 0) {
-      await supabase.from("regionais_municipios").insert(
+      const { error: relError } = await supabase.from("regionais_municipios").insert(
         newForm.municipios.map((mid) => ({ regional_id: data.id, municipio_id: mid }))
       );
+      if (relError) toast.error("Erro ao vincular municípios: " + relError.message);
     }
+    toast.success("Regional criada com sucesso!");
     setNewForm({ nome: "", municipios: [] });
     setShowNew(false);
     fetchData();
@@ -69,13 +76,19 @@ export default function RegionaisTab() {
 
   const saveEdit = async () => {
     if (!editing) return;
-    await supabase.from("regionais").update({ nome: form.nome }).eq("id", editing);
+    const { error } = await supabase.from("regionais").update({ nome: form.nome }).eq("id", editing);
+    if (error) {
+      toast.error("Erro ao atualizar regional: " + error.message);
+      return;
+    }
     await supabase.from("regionais_municipios").delete().eq("regional_id", editing);
     if (form.municipios.length > 0) {
-      await supabase.from("regionais_municipios").insert(
+      const { error: relError } = await supabase.from("regionais_municipios").insert(
         form.municipios.map((mid) => ({ regional_id: editing, municipio_id: mid }))
       );
+      if (relError) toast.error("Erro ao atualizar vínculos: " + relError.message);
     }
+    toast.success("Regional atualizada!");
     setEditing(null);
     fetchData();
   };

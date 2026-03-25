@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Pencil, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Bairro {
   id: string;
@@ -65,14 +66,19 @@ export default function BairrosTab() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await supabase.from("bairros").insert({
+    const { error } = await supabase.from("bairros").insert({
       nome: newForm.nome,
       municipio: newForm.municipio,
       regional_id: newForm.regional_id || null,
     });
-    setNewForm({ nome: "", municipio: "", regional_id: "" });
-    setShowNew(false);
-    fetchData();
+    if (error) {
+      toast.error("Erro ao salvar bairro: " + error.message);
+    } else {
+      toast.success("Bairro salvo com sucesso!");
+      setNewForm({ nome: "", municipio: "", regional_id: "" });
+      setShowNew(false);
+      fetchData();
+    }
   };
 
   const startEdit = (b: Bairro) => {
@@ -82,13 +88,18 @@ export default function BairrosTab() {
 
   const saveEdit = async () => {
     if (!editing) return;
-    await supabase.from("bairros").update({
+    const { error } = await supabase.from("bairros").update({
       nome: form.nome,
       municipio: form.municipio,
       regional_id: form.regional_id || null,
     }).eq("id", editing);
-    setEditing(null);
-    fetchData();
+    if (error) {
+      toast.error("Erro ao atualizar bairro: " + error.message);
+    } else {
+      toast.success("Bairro atualizado!");
+      setEditing(null);
+      fetchData();
+    }
   };
 
   const regionalName = (id: string | null) => regionais.find((r) => r.id === id)?.nome || "—";

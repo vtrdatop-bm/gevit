@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Pencil, X, Check } from "lucide-react";
+import { toast } from "sonner";
 
 interface Municipio {
   id: string;
@@ -26,19 +27,29 @@ export default function MunicipiosTab() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    await supabase.from("municipios").insert({ nome: newName });
-    setNewName("");
-    setShowNew(false);
-    fetchData();
+    const { error } = await supabase.from("municipios").insert({ nome: newName });
+    if (error) {
+      toast.error("Erro ao salvar município: " + error.message);
+    } else {
+      toast.success("Município salvo com sucesso!");
+      setNewName("");
+      setShowNew(false);
+      fetchData();
+    }
   };
 
   const startEdit = (m: Municipio) => { setEditing(m.id); setEditName(m.nome); };
 
   const saveEdit = async () => {
     if (!editing) return;
-    await supabase.from("municipios").update({ nome: editName }).eq("id", editing);
-    setEditing(null);
-    fetchData();
+    const { error } = await supabase.from("municipios").update({ nome: editName }).eq("id", editing);
+    if (error) {
+      toast.error("Erro ao atualizar município: " + error.message);
+    } else {
+      toast.success("Município atualizado!");
+      setEditing(null);
+      fetchData();
+    }
   };
 
   return (
