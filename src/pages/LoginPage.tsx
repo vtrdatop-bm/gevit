@@ -92,24 +92,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-background px-2 text-muted-foreground">Ou</span>
-          </div>
-        </div>
 
-        <div className="space-y-3">
-          <Link
-            to="/signup"
-            className="w-full h-10 rounded-md border border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 font-medium text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            <UserPlus className="w-4 h-4" />
-            Criar Nova Conta
-          </Link>
-        </div>
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const POSTOS_GRADUACOES = [
-  "CEL BM", "TC BM", "MAJ BM", "CAP BM", "1º TEN BM", "2º TEN BM", "CAD BM", "ASP BM", "AL OF BM", "ST BM", "1º SGT BM", "2º SGT BM", "3º SGT BM", "AL SGT BM", "CB BM", "AL CB BM", "SD BM"
+  "CEL BM", "TC BM", "MAJ BM", "CAP BM", "1º TEN BM", "2º TEN BM", "CAD BM", "ASP BM", "AL OF BM", "ST BM", "1º SGT BM", "2º SGT BM", "3º SGT BM", "AL SGT BM", "CB BM", "AL CB BM", "SD BM", "FC"
 ];
 
 export default function UsersTab() {
