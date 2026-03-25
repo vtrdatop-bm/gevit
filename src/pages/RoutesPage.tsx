@@ -148,7 +148,8 @@ export default function RoutesPage() {
 
   const selectedProcesses = filteredProcesses.filter((p) => selectedIds.has(p.id));
 
-  // Optimized order after route generation (nearest-neighbor)
+  // Optimized order after route generation (nearest-neighbor) grouped by date
+  // the array holds process IDs in exact route order across all dates
   const [optimizedOrder, setOptimizedOrder] = useState<string[]>([]);
 
   const orderedProcesses = useMemo(() => {
@@ -189,17 +190,27 @@ export default function RoutesPage() {
     }
   };
 
-  // Nearest-neighbor algorithm to optimize route
+  // Nearest-neighbor algorithm grouped by date, then optimizing route per date
   const handleGenerateRoute = () => {
-    const withCoords = selectedProcesses.filter(
-      (p) => p.protocolo.latitude != null && p.protocolo.longitude != null
-    );
+    // 1. Group selected processes by their earliest pending assignment date
+    const groupedByDate: Record<string, ProcessoComProtocolo[]> = {};
+    const noCoords: ProcessoComProtocolo[] = [];
 
-    if (withCoords.length === 0) {
-      setOptimizedOrder(selectedProcesses.map((p) => p.id));
-      setRouteGenerated(true);
-      return;
-    }
+    selectedProcesses.forEach((p) => {
+      const earliestDate = p.datasAtribuicao.length > 0 ? [...p.datasAtribuicao].sort()[0] : "Sem Data";
+      if (!groupedByDate[earliestDate]) {
+        groupedByDate[earliestDate] = [];
+      }
+      
+      if (p.protocolo.latitude != null && p.protocolo.longitude != null) {
+        groupedByDate[earliestDate].push(p);
+      } else {
+        noCoords.push(p);
+      }
+    });
+
+    // 2. Sort dates in ascending order
+    const sortedDates = Object.keys(groupedByDate).sort();
 
     const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
       const toRad = (v: number) => (v * Math.PI) / 180;
@@ -211,36 +222,36 @@ export default function RoutesPage() {
       return 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     };
 
-    const remaining = [...withCoords];
     const ordered: ProcessoComProtocolo[] = [];
     let currentLat = START_COORDS[0];
     let currentLng = START_COORDS[1];
 
-    while (remaining.length > 0) {
-      let nearestIdx = 0;
-      let nearestDist = Infinity;
-      for (let i = 0; i < remaining.length; i++) {
-        const d = haversine(
-          currentLat, currentLng,
-          remaining[i].protocolo.latitude!, remaining[i].protocolo.longitude!
-        );
-        if (d < nearestDist) {
-          nearestDist = d;
-          nearestIdx = i;
+    // 3. For each date group, find optimal route
+    for (const date of sortedDates) {
+      const remaining = [...groupedByDate[date]];
+      
+      while (remaining.length > 0) {
+        let nearestIdx = 0;
+        let nearestDist = Infinity;
+        for (let i = 0; i < remaining.length; i++) {
+          const d = haversine(
+            currentLat, currentLng,
+            remaining[i].protocolo.latitude!, remaining[i].protocolo.longitude!
+          );
+          if (d < nearestDist) {
+            nearestDist = d;
+            nearestIdx = i;
+          }
         }
+        const nearest = remaining.splice(nearestIdx, 1)[0];
+        ordered.push(nearest);
+        currentLat = nearest.protocolo.latitude!;
+        currentLng = nearest.protocolo.longitude!;
       }
-      const nearest = remaining.splice(nearestIdx, 1)[0];
-      ordered.push(nearest);
-      currentLat = nearest.protocolo.latitude!;
-      currentLng = nearest.protocolo.longitude!;
     }
 
     // Add any without coords at the end
-    const withoutCoords = selectedProcesses.filter(
-      (p) => p.protocolo.latitude == null || p.protocolo.longitude == null
-    );
-
-    setOptimizedOrder([...ordered, ...withoutCoords].map((p) => p.id));
+    setOptimizedOrder([...ordered, ...noCoords].map((p) => p.id));
     setRouteGenerated(true);
   };
 
@@ -378,28 +389,62 @@ export default function RoutesPage() {
             Nenhuma vistoria pendente neste período.
           </p>
         ) : routeGenerated ? (
-          <div className="space-y-3">
-            {orderedProcesses.map((process, index) => (
-              <div
-                key={process.id}
-                className="flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-accent/30 transition-colors animate-fade-in"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-primary-foreground">{index + 1}</span>
+          <div className="space-y-6">
+            {Object.entries(
+              orderedProcesses.reduce((acc, process) => {
+                const date = process.datasAtribuicao.length > 0 ? [...process.datasAtribuicao].sort()[0] : "Sem Data";
+                if (!acc[date]) acc[date] = [];
+                acc[date].push(process);
+                return acc;
+              }, {} as Record<string, ProcessoComProtocolo[]>)
+            ).sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+             .map(([date, processesInDate]) => {
+              // Get the starting index for mapping across all dates relative to orderedProcesses
+              const startIndex = orderedProcesses.indexOf(processesInDate[0]);
+              
+              const formatBRDate = (d: string) => {
+                if (d === "Sem Data") return "Vistorias Sem Data";
+                const [year, month, day] = d.split("-");
+                return `Vistorias do dia ${day}/${month}/${year}`;
+              };
+
+              return (
+                <div key={date} className="space-y-3">
+                  <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-1">
+                    <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">
+                      {formatBRDate(date)}
+                    </span>
+                    <span className="text-muted-foreground text-xs font-normal">
+                      ({processesInDate.length} vistorias)
+                    </span>
+                  </h4>
+                  {processesInDate.map((process, localIndex) => {
+                    const globalIndex = startIndex + localIndex;
+                    return (
+                      <div
+                        key={process.id}
+                        className="flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-accent/30 transition-colors animate-fade-in"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-primary-foreground">{globalIndex + 1}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {process.protocolo.nome_fantasia || process.protocolo.razao_social}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {process.protocolo.endereco}, {process.protocolo.bairro}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {process.protocolo.nome_fantasia || process.protocolo.razao_social}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {process.protocolo.endereco}, {process.protocolo.bairro}
-                  </p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="space-y-3">
@@ -441,7 +486,7 @@ export default function RoutesPage() {
         {routeGenerated && orderedProcesses.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
             <h4 className="text-sm font-semibold text-foreground mb-3">Mapa da Rota</h4>
-            <div className="rounded-xl overflow-hidden border border-border" style={{ height: 400 }}>
+            <div className="rounded-xl overflow-hidden border border-border h-[400px]">
               <RouteMap start={START_COORDS} points={selectedRoutePoints} />
             </div>
           </div>
