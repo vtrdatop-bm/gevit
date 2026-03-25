@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: "00000000-0000-0000-0000-000000000000",
           email: "dev@gevit.local",
           app_metadata: {},
-          user_metadata: { nome_completo: "Administrador (Dev)" },
+          user_metadata: { nome_guerra: "ADMIN" },
           aud: "authenticated",
           created_at: new Date().toISOString(),
         } as User;

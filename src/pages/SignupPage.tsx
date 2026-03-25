@@ -21,7 +21,7 @@ export default function SignupPage() {
     const { data, error } = await supabase.auth.signUp({
       email: signupEmail,
       password: password.trim(),
-      options: { data: { nome_completo: nome.trim() } },
+      options: { data: { nome_guerra: nome.trim() } },
     });
 
     if (error) {
@@ -41,7 +41,7 @@ export default function SignupPage() {
           <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center">
             <Flame className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Criar Conta</h1>
+          <p className="text-sm text-muted-foreground">Crie sua conta para acessar o sistema</p>
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
@@ -51,7 +51,7 @@ export default function SignupPage() {
             </div>
           )}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Nome completo</label>
+            <label className="text-sm font-medium text-foreground">Nome de Guerra</label>
             <input
               type="text"
               value={nome}
