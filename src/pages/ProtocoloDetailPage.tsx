@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Building2, MapPin, FileText, Pencil, X, Save, LocateFixed, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, FileText, Pencil, X, Save, LocateFixed, Loader2, Plus, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import VistoriaTab from "@/components/protocolo/VistoriaTab";
@@ -83,6 +83,7 @@ export default function ProtocoloDetailPage() {
   const [editForm, setEditForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
   const [municipios, setMunicipios] = useState<{ id: string; nome: string }[]>([]);
   const [bairros, setBairros] = useState<{ id: string; nome: string; municipio: string }[]>([]);
   const [regionais, setRegionais] = useState<{ id: string; nome: string }[]>([]);
@@ -270,6 +271,40 @@ export default function ProtocoloDetailPage() {
       }
       return next;
     });
+  };
+
+  const lookupCnpj = async (cnpjDigits: string) => {
+    if (cnpjDigits.length !== 14) return;
+    setCnpjLoading(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjDigits}`);
+      if (!res.ok) {
+        toast.error("CNPJ não encontrado na Receita Federal");
+        setCnpjLoading(false);
+        return;
+      }
+      const data = await res.json();
+      const numero = data.numero || "";
+      const complemento = data.complemento || "";
+      const logradouro = data.descricao_tipo_de_logradouro
+        ? `${data.descricao_tipo_de_logradouro} ${data.logradouro}`
+        : data.logradouro || "";
+      const enderecoCompleto = [logradouro, numero ? `nº ${numero}` : "", complemento].filter(Boolean).join(", ");
+
+      setEditForm((prev) => ({
+        ...prev,
+        razao_social: data.razao_social || prev.razao_social || "",
+        nome_fantasia: data.nome_fantasia || prev.nome_fantasia || "",
+        endereco: enderecoCompleto || prev.endereco || "",
+        bairro: (data.bairro || prev.bairro || "").toUpperCase(),
+        municipio: (data.municipio || prev.municipio || "").toUpperCase(),
+        cep: data.cep ? formatCep(data.cep.toString().replace(/\D/g, "")) : prev.cep || "",
+      }));
+      toast.success("Dados do CNPJ preenchidos!");
+    } catch {
+      toast.error("Erro ao consultar CNPJ");
+    }
+    setCnpjLoading(false);
   };
 
   const openNovoBairroDialog = (nome: string) => {
@@ -526,7 +561,27 @@ export default function ProtocoloDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">CPF/CNPJ</label>
-                <input value={editForm.cnpj || ""} onChange={(e) => handleEditChange("cnpj", formatCpfCnpjInput(e.target.value))} className={inputClass} />
+                <div className="flex gap-2">
+                  <input
+                    value={editForm.cnpj || ""}
+                    onChange={(e) => {
+                      const formatted = formatCpfCnpjInput(e.target.value);
+                      handleEditChange("cnpj", formatted);
+                      const digits = formatted.replace(/\D/g, "");
+                      if (digits.length === 14) lookupCnpj(digits);
+                    }}
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => lookupCnpj((editForm.cnpj || "").replace(/\D/g, ""))}
+                    disabled={cnpjLoading || (editForm.cnpj || "").replace(/\D/g, "").length !== 14}
+                    title="Buscar dados do CNPJ"
+                    className="flex items-center justify-center px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 shrink-0"
+                  >
+                    {cnpjLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
           ) : (

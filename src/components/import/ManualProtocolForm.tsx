@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2, Search } from "lucide-react";
 import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -88,6 +88,43 @@ export default function ManualProtocolForm() {
 
   // Geocoding
   const [geocoding, setGeocoding] = useState(false);
+
+  // CNPJ lookup
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+
+  const lookupCnpj = async (cnpjDigits: string) => {
+    if (cnpjDigits.length !== 14) return;
+    setCnpjLoading(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjDigits}`);
+      if (!res.ok) {
+        toast.error("CNPJ não encontrado na Receita Federal");
+        setCnpjLoading(false);
+        return;
+      }
+      const data = await res.json();
+      const numero = data.numero || "";
+      const complemento = data.complemento || "";
+      const logradouro = data.descricao_tipo_de_logradouro
+        ? `${data.descricao_tipo_de_logradouro} ${data.logradouro}`
+        : data.logradouro || "";
+      const enderecoCompleto = [logradouro, numero ? `nº ${numero}` : "", complemento].filter(Boolean).join(", ");
+
+      setForm((prev) => ({
+        ...prev,
+        razao_social: data.razao_social || prev.razao_social || "",
+        nome_fantasia: data.nome_fantasia || prev.nome_fantasia || "",
+        endereco: enderecoCompleto || prev.endereco || "",
+        bairro: (data.bairro || prev.bairro || "").toUpperCase(),
+        municipio: (data.municipio || prev.municipio || "").toUpperCase(),
+        cep: data.cep ? formatCep(data.cep.toString().replace(/\D/g, "")) : prev.cep || "",
+      }));
+      toast.success("Dados do CNPJ preenchidos!");
+    } catch {
+      toast.error("Erro ao consultar CNPJ");
+    }
+    setCnpjLoading(false);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -302,7 +339,29 @@ export default function ManualProtocolForm() {
             <input type="date" value={form.data_solicitacao || ""} onChange={(e) => handleChange("data_solicitacao", e.target.value)} required className={inputClass} />
           </Field>
           <Field label="CPF/CNPJ" required>
-            <input value={form.cnpj || ""} onChange={(e) => handleChange("cnpj", formatCpfCnpj(e.target.value))} required placeholder="000.000.000-00 ou 00.000.000/0000-00" className={inputClass} />
+            <div className="flex gap-2">
+              <input
+                value={form.cnpj || ""}
+                onChange={(e) => {
+                  const formatted = formatCpfCnpj(e.target.value);
+                  handleChange("cnpj", formatted);
+                  const digits = formatted.replace(/\D/g, "");
+                  if (digits.length === 14) lookupCnpj(digits);
+                }}
+                required
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                className={inputClass}
+              />
+              <button
+                type="button"
+                onClick={() => lookupCnpj((form.cnpj || "").replace(/\D/g, ""))}
+                disabled={cnpjLoading || (form.cnpj || "").replace(/\D/g, "").length !== 14}
+                title="Buscar dados do CNPJ"
+                className="flex items-center justify-center px-3 h-10 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 shrink-0"
+              >
+                {cnpjLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </button>
+            </div>
           </Field>
           <Field label="Razão Social" required>
             <input value={form.razao_social || ""} onChange={(e) => handleChange("razao_social", e.target.value)} required placeholder="Razão social da empresa" className={inputClass} />
