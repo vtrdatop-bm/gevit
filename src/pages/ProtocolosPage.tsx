@@ -318,10 +318,10 @@ export default function ProtocolosPage() {
                         {formatCpfCnpj(p.cnpj)}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                        {p.municipio}
+                        {(p.municipio || "").toUpperCase()}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                        {p.bairro}
+                        {(p.bairro || "").toUpperCase()}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                         {(() => {

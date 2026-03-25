@@ -22,3 +22,47 @@ export function formatProtocoloNumero(value: string): string {
   }
   return result;
 }
+
+/**
+ * Formats a number for display with dot as thousands separator and comma as decimal.
+ * Example: 1234.56 -> 1.234,56
+ */
+export function formatArea(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return typeof value === "string" ? value : "";
+  
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
+/**
+ * Formats an input string with thousands separator and comma.
+ * To be used in onChange events.
+ */
+export function applyAreaMask(value: string): string {
+  // Remove anything that is not a digit
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  
+  // Convert to number (last 2 digits are decimals)
+  const num = (parseInt(digits, 10) / 100).toFixed(2);
+  const [int, dec] = num.split(".");
+  
+  // Add thousands separator (dot)
+  const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  
+  return `${formattedInt},${dec}`;
+}
+
+/**
+ * Returns a number from a masked string.
+ * Example: "1.234,56" -> 1234.56
+ */
+export function parseAreaToNumber(value: string): number {
+  if (!value) return 0;
+  const clean = value.replace(/\./g, "").replace(",", ".");
+  return parseFloat(clean) || 0;
+}

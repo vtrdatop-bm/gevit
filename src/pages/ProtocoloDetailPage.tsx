@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import VistoriaTab from "@/components/protocolo/VistoriaTab";
 import ExpirationWarning from "@/components/protocolo/ExpirationWarning";
-import { cn, formatProtocoloNumero } from "@/lib/utils";
+import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber } from "@/lib/utils";
 import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { computeDisplayStatus, computeStage } from "@/lib/vistoriaStatus";
@@ -205,9 +205,9 @@ export default function ProtocoloDetailPage() {
       razao_social: protocolo.razao_social,
       nome_fantasia: protocolo.nome_fantasia || "",
       endereco: protocolo.endereco,
-      bairro: protocolo.bairro,
-      municipio: protocolo.municipio,
-      area: protocolo.area?.toString() || "",
+      bairro: (protocolo.bairro || "").toUpperCase(),
+      municipio: (protocolo.municipio || "").toUpperCase(),
+      area: protocolo.area ? formatArea(protocolo.area) : "",
       cep: protocolo.cep || "",
       latitude: protocolo.latitude?.toString() || "",
       longitude: protocolo.longitude?.toString() || "",
@@ -236,9 +236,9 @@ export default function ProtocoloDetailPage() {
       razao_social: editForm.razao_social,
       nome_fantasia: editForm.nome_fantasia || null,
       endereco: editForm.endereco,
-      bairro: editForm.bairro,
-      municipio: editForm.municipio,
-      area: editForm.area ? parseFloat(editForm.area) : null,
+      bairro: (editForm.bairro || "").toUpperCase(),
+      municipio: (editForm.municipio || "").toUpperCase(),
+      area: editForm.area ? parseAreaToNumber(editForm.area) : null,
       cep: editForm.cep ? editForm.cep.replace(/\D/g, "") : null,
       latitude: editForm.latitude ? parseFloat(String(editForm.latitude).replace(",", ".")) : null,
       longitude: editForm.longitude ? parseFloat(String(editForm.longitude).replace(",", ".")) : null,
@@ -258,10 +258,16 @@ export default function ProtocoloDetailPage() {
 
   const textFields = ["numero", "razao_social", "nome_fantasia", "solicitante", "endereco", "bairro", "municipio", "tipo_servico", "tipo_empresa"];
   const handleEditChange = (key: string, value: string) => {
-    const upperValue = value; // Stop forcing uppercase
+    let finalValue = value;
+    if (key === "municipio" || key === "bairro") finalValue = value.toUpperCase();
+    if (key === "area") finalValue = applyAreaMask(value);
+
     setEditForm((prev) => {
-      const next = { ...prev, [key]: upperValue };
-      if (key === "municipio") next.bairro = "";
+      const next = { ...prev, [key]: finalValue };
+      if (key === "municipio") {
+        next.bairro = "";
+        setBairroSearch("");
+      }
       return next;
     });
   };
@@ -274,11 +280,12 @@ export default function ProtocoloDetailPage() {
   };
 
   const saveNovoBairro = async () => {
-    if (!editForm.municipio || !novoBairroNome.trim()) return;
+    const nome = novoBairroNome.trim().toUpperCase();
+    if (!editForm.municipio || !nome) return;
     setSavingBairro(true);
     const { error } = await supabase.from("bairros").insert({
-      nome: novoBairroNome.trim(),
-      municipio: editForm.municipio,
+      nome,
+      municipio: (editForm.municipio || "").toUpperCase(),
       regional_id: novoBairroRegional || null,
     });
     if (error) {
@@ -286,10 +293,10 @@ export default function ProtocoloDetailPage() {
     } else {
       const { data: newBairros } = await supabase.from("bairros").select("id, nome, municipio").order("nome");
       setBairros(newBairros || []);
-      handleEditChange("bairro", novoBairroNome.trim());
+      handleEditChange("bairro", nome);
       setBairroSearch("");
       setNovoBairroDialog(false);
-      toast.success(`Bairro "${novoBairroNome.trim()}" cadastrado!`);
+      toast.success(`Bairro "${nome}" cadastrado!`);
     }
     setSavingBairro(false);
   };
@@ -580,7 +587,7 @@ export default function ProtocoloDetailPage() {
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Área (m²)</label>
-                <input type="number" step="0.01" value={editForm.area || ""} onChange={(e) => handleEditChange("area", e.target.value)} className={inputClass} />
+                <input type="text" value={editForm.area || ""} onChange={(e) => handleEditChange("area", e.target.value)} className={inputClass} placeholder="Ex: 1.234,56" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">

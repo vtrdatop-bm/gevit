@@ -52,7 +52,8 @@ export default function RegionaisTab() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data, error } = await supabase.from("regionais").insert({ nome: newForm.nome }).select("id").single();
+    const upperNome = newForm.nome.trim().toUpperCase();
+    const { data, error } = await supabase.from("regionais").insert({ nome: upperNome }).select("id").single();
     if (error) {
       toast.error("Erro ao criar regional: " + error.message);
       return;
@@ -76,7 +77,8 @@ export default function RegionaisTab() {
 
   const saveEdit = async () => {
     if (!editing) return;
-    const { error } = await supabase.from("regionais").update({ nome: form.nome }).eq("id", editing);
+    const upperNome = form.nome.trim().toUpperCase();
+    const { error } = await supabase.from("regionais").update({ nome: upperNome }).eq("id", editing);
     if (error) {
       toast.error("Erro ao atualizar regional: " + error.message);
       return;

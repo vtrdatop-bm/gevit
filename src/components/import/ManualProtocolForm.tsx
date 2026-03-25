@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2 } from "lucide-react";
-import { cn, formatProtocoloNumero } from "@/lib/utils";
+import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -138,9 +138,15 @@ export default function ManualProtocolForm() {
   }, [form.municipio, municipios, regionaisMunicipios, regionais]);
 
   const handleChange = (key: string, value: string) => {
-    const upperValue = value; // Stop forcing uppercase
+    let finalValue = value;
+    if (key === "municipio" || key === "bairro") {
+      finalValue = value.toUpperCase();
+    }
+    if (key === "area") {
+      finalValue = applyAreaMask(value);
+    }
     setForm((prev) => {
-      const next = { ...prev, [key]: upperValue };
+      const next = { ...prev, [key]: finalValue };
       if (key === "municipio") {
         next.bairro = "";
         setBairroSearch("");
@@ -159,7 +165,7 @@ export default function ManualProtocolForm() {
   };
 
   const handleSaveNovoBairro = async () => {
-    const nome = novoBairroNome.trim();
+    const nome = novoBairroNome.trim().toUpperCase();
     if (!nome) {
       setBairroError("Informe o nome do bairro");
       return;
@@ -262,9 +268,9 @@ export default function ManualProtocolForm() {
       razao_social: form.razao_social,
       nome_fantasia: form.nome_fantasia || null,
       endereco: form.endereco,
-      bairro: form.bairro,
-      municipio: form.municipio,
-      area: form.area ? parseFloat(form.area) : null,
+      bairro: (form.bairro || "").toUpperCase(),
+      municipio: (form.municipio || "").toUpperCase(),
+      area: form.area ? parseAreaToNumber(form.area) : null,
       cep: form.cep?.replace(/\D/g, "") || null,
       latitude: form.latitude ? parseFloat(form.latitude) : null,
       longitude: form.longitude ? parseFloat(form.longitude) : null,
@@ -365,7 +371,7 @@ export default function ManualProtocolForm() {
           </Field>
 
           <Field label="Área (m²)">
-            <input type="number" step="0.01" value={form.area || ""} onChange={(e) => handleChange("area", e.target.value)} placeholder="Ex: 150" className={inputClass} />
+            <input type="text" value={form.area || ""} onChange={(e) => handleChange("area", e.target.value)} placeholder="Ex: 1.234,56" className={inputClass} />
           </Field>
 
           <Field label="Coordenadas Geográficas">

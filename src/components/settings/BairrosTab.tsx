@@ -66,9 +66,11 @@ export default function BairrosTab() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const upperNome = newForm.nome.trim().toUpperCase();
+    const upperMunicipio = newForm.municipio.trim().toUpperCase();
     const { error } = await supabase.from("bairros").insert({
-      nome: newForm.nome,
-      municipio: newForm.municipio,
+      nome: upperNome,
+      municipio: upperMunicipio,
       regional_id: newForm.regional_id || null,
     });
     if (error) {
@@ -88,9 +90,11 @@ export default function BairrosTab() {
 
   const saveEdit = async () => {
     if (!editing) return;
+    const upperNome = form.nome.trim().toUpperCase();
+    const upperMunicipio = form.municipio.trim().toUpperCase();
     const { error } = await supabase.from("bairros").update({
-      nome: form.nome,
-      municipio: form.municipio,
+      nome: upperNome,
+      municipio: upperMunicipio,
       regional_id: form.regional_id || null,
     }).eq("id", editing);
     if (error) {

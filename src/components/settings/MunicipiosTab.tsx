@@ -27,7 +27,8 @@ export default function MunicipiosTab() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from("municipios").insert({ nome: newName });
+    const upperName = newName.trim().toUpperCase();
+    const { error } = await supabase.from("municipios").insert({ nome: upperName });
     if (error) {
       toast.error("Erro ao salvar município: " + error.message);
     } else {
@@ -42,7 +43,8 @@ export default function MunicipiosTab() {
 
   const saveEdit = async () => {
     if (!editing) return;
-    const { error } = await supabase.from("municipios").update({ nome: editName }).eq("id", editing);
+    const upperName = editName.trim().toUpperCase();
+    const { error } = await supabase.from("municipios").update({ nome: upperName }).eq("id", editing);
     if (error) {
       toast.error("Erro ao atualizar município: " + error.message);
     } else {
