@@ -113,12 +113,12 @@ export default function MapPage() {
         .from("processos")
         .select("id, status, data_prevista, vistoriador_id, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
         .neq("status", "expirado"),
-      supabase.from("profiles").select("user_id, nome_completo"),
+      supabase.from("profiles").select("user_id, nome_guerra"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria"),
     ]);
 
     const profMap: Record<string, string> = {};
-    (profiles || []).forEach((p) => { profMap[p.user_id] = p.nome_completo; });
+    (profiles || []).forEach((p) => { profMap[p.user_id] = p.nome_guerra; });
 
     const vistMap: Record<string, any> = {};
     (vistorias || []).forEach((v: any) => { vistMap[v.processo_id] = v; });

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 interface Vistoriador {
   user_id: string;
-  nome_completo: string;
+  nome_guerra: string;
 }
 
 interface TermoData {
@@ -209,7 +209,7 @@ export default function VistoriaTab({
             <option value="">Selecione...</option>
             {vistoriadores.map((v) => (
               <option key={v.user_id} value={v.user_id}>
-                {v.nome_completo}
+                {v.nome_guerra}
               </option>
             ))}
           </select>

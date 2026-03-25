@@ -153,7 +153,7 @@ export default function ProtocoloDetailPage() {
       const userIds = vists.map((v) => v.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, nome_completo")
+        .select("user_id, nome_guerra")
         .in("user_id", userIds);
       setVistoriadores(profiles || []);
     }
