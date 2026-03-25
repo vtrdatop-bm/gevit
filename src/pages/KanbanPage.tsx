@@ -149,7 +149,7 @@ export default function KanbanPage() {
           .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao)")
           .neq("status", "expirado"),
         supabase.from("regionais").select("id, nome").order("nome"),
-        supabase.from("profiles").select("user_id, nome_guerra"),
+        supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("bairros").select("nome, municipio, regional_id"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
         supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
@@ -160,7 +160,7 @@ export default function KanbanPage() {
       (regionais || []).forEach((r) => { regMap[r.id] = r.nome; });
 
       const profMap: Record<string, string> = {};
-      (profiles || []).forEach((p) => { profMap[p.user_id] = p.nome_guerra; });
+      (profiles || []).forEach((p: any) => { profMap[p.user_id] = [p.patente, p.nome_guerra].filter(Boolean).join(" "); });
 
       const bairroRegionalMap: Record<string, string> = {};
       (bairrosData || []).forEach((b) => {

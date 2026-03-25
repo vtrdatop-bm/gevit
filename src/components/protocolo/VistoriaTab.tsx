@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 interface Vistoriador {
   user_id: string;
+  patente?: string;
   nome_guerra: string;
 }
 
@@ -209,7 +210,7 @@ export default function VistoriaTab({
             <option value="">Selecione...</option>
             {vistoriadores.map((v) => (
               <option key={v.user_id} value={v.user_id}>
-                {v.nome_guerra}
+                {[v.patente, v.nome_guerra].filter(Boolean).join(" ")}
               </option>
             ))}
           </select>

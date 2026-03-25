@@ -113,12 +113,12 @@ export default function MapPage() {
         .from("processos")
         .select("id, status, data_prevista, vistoriador_id, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
         .neq("status", "expirado"),
-      supabase.from("profiles").select("user_id, nome_guerra"),
+      supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria"),
     ]);
 
     const profMap: Record<string, string> = {};
-    (profiles || []).forEach((p) => { profMap[p.user_id] = p.nome_guerra; });
+    (profiles || []).forEach((p: any) => { profMap[p.user_id] = [p.patente, p.nome_guerra].filter(Boolean).join(" "); });
 
     const vistMap: Record<string, any> = {};
     (vistorias || []).forEach((v: any) => { vistMap[v.processo_id] = v; });
@@ -126,7 +126,6 @@ export default function MapPage() {
     const mapped: MapProcess[] = (procs || []).map((p: any) => {
       const vistoria = vistMap[p.id] || null;
       return {
-        id: p.id,
         vistoriador_id: p.vistoriador_id || null,
         status: p.status as ProcessStatus,
         displayStatus: computeDisplayStatus(p.status, vistoria),

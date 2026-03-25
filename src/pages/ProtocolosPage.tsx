@@ -105,7 +105,7 @@ export default function ProtocolosPage() {
       supabase.from("protocolos").select("*").order("created_at", { ascending: false }),
       supabase.from("processos").select("id, protocolo_id, status, regional_id, data_prevista, vistoriador_id"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
-      supabase.from("profiles").select("user_id, nome_guerra"),
+      supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
       supabase.from("termos_compromisso").select("processo_id, data_validade"),
     ]).then(([{ data: p }, { data: proc }, { data: vist }, { data: profiles }, { data: pausas }, { data: termos }]) => {
@@ -115,7 +115,7 @@ export default function ProtocolosPage() {
       (vist || []).forEach((v: any) => { vm[v.processo_id] = v; });
       setVistoriaMap(vm);
       const pm: Record<string, string> = {};
-      (profiles || []).forEach((pr: any) => { pm[pr.user_id] = pr.nome_guerra; });
+      (profiles || []).forEach((pr: any) => { pm[pr.user_id] = [pr.patente, pr.nome_guerra].filter(Boolean).join(" "); });
       setProfileMap(pm);
       const pMap: Record<string, DeadlinePausaData[]> = {};
       (pausas || []).forEach((pa: any) => {
