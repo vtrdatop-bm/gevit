@@ -38,6 +38,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const initializeSession = async () => {
+      // Dev bypass check
+      const bypass = localStorage.getItem("gevit_admin_bypass");
+      if (bypass) {
+        const mockUser = {
+          id: "00000000-0000-0000-0000-000000000000",
+          email: "dev@gevit.local",
+          app_metadata: {},
+          user_metadata: { nome_completo: "Administrador (Dev)" },
+          aud: "authenticated",
+          created_at: new Date().toISOString(),
+        } as User;
+        const mockSession = {
+          access_token: "mock-token",
+          refresh_token: "mock-refresh",
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          token_type: "bearer",
+          user: mockUser,
+        } as Session;
+        if (isMounted) {
+          setUser(mockUser);
+          setSession(mockSession);
+          setLoading(false);
+          window.clearTimeout(loadingTimeout);
+        }
+        return;
+      }
+
       try {
         const {
           data: { session: initialSession },
@@ -68,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    localStorage.removeItem("gevit_admin_bypass");
     await supabase.auth.signOut();
   };
 

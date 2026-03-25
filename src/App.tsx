@@ -19,6 +19,7 @@ import CadastroProtocoloPage from "@/pages/CadastroProtocoloPage";
 import ProtocolosPage from "@/pages/ProtocolosPage";
 import ProtocoloDetailPage from "@/pages/ProtocoloDetailPage";
 import LoginPage from "@/pages/LoginPage";
+import SignupPage from "@/pages/SignupPage";
 
 import NotFound from "@/pages/NotFound";
 
@@ -31,6 +32,14 @@ function ProtectedRoutes() {
 
   useEffect(() => {
     if (!user) { setRoleLoading(false); return; }
+    
+    // Dev bypass role
+    if (user.id === "00000000-0000-0000-0000-000000000000") {
+      setRole("admin");
+      setRoleLoading(false);
+      return;
+    }
+
     supabase
       .from("user_roles")
       .select("role")
@@ -87,6 +96,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
             
             <Route path="/*" element={<ProtectedRoutes />} />
           </Routes>

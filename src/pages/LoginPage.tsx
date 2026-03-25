@@ -1,22 +1,44 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Flame, LogIn } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Flame, LogIn, ShieldCheck, UserPlus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function LoginPage() {
   const [login, setLogin] = useState("");
   const [senha, setSenha] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+
     if (!login || !senha) {
       setError("Preencha login e senha.");
+      setLoading(false);
       return;
     }
-    localStorage.setItem("login", login);
-    localStorage.setItem("senha", senha);
+
+    const email = login.includes("@") ? login : `${login}@gevit.local`;
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password: senha,
+    });
+
+    if (authError) {
+      setError("Login ou senha inválidos.");
+      setLoading(false);
+      return;
+    }
+
     navigate("/");
+  };
+
+  const handleDevBypass = () => {
+    localStorage.setItem("gevit_admin_bypass", "true");
+    window.location.href = "/"; // Force reload to trigger useAuth bypass
   };
 
   return (
@@ -46,7 +68,6 @@ export default function LoginPage() {
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="primeironome.sobrenome"
               autoFocus
-              style={{ textTransform: "none" }}
             />
           </div>
           <div className="space-y-2">
@@ -62,12 +83,40 @@ export default function LoginPage() {
           </div>
           <button
             type="submit"
-            className="w-full h-10 rounded-md bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+            disabled={loading}
+            className="w-full h-10 rounded-md bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <LogIn className="w-4 h-4" />
-            Entrar
+            {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Ou</span>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <button
+            onClick={handleDevBypass}
+            className="w-full h-10 rounded-md border border-input bg-background hover:bg-accent text-foreground font-medium text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            Acesso Rápido (Dev)
+          </button>
+
+          <Link
+            to="/signup"
+            className="w-full h-10 rounded-md border border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 font-medium text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            Criar Nova Conta
+          </Link>
+        </div>
       </div>
     </div>
   );
