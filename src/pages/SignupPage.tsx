@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Flame, UserPlus } from "lucide-react";
@@ -16,7 +16,7 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
 
-    const signupEmail = email.includes("@") ? email : `${email}@gevit.local`;
+    const signupEmail = email.includes("@") ? email : `${email}@gevit.com.br`;
     const { data, error } = await supabase.auth.signUp({
       email: signupEmail,
       password,

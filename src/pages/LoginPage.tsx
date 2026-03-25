@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Flame, LogIn, ShieldCheck, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,7 @@ export default function LoginPage() {
       return;
     }
 
-    const email = login.includes("@") ? login : `${login}@gevit.local`;
+    const email = login.includes("@") ? login : `${login}@gevit.com.br`;
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
       password: senha,
