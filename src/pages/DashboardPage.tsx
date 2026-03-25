@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { computeDisplayStatus, DisplayStatus, displayStatusLabels, VistoriaData } from "@/lib/vistoriaStatus";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
   ClipboardCheck,
@@ -35,8 +36,8 @@ const STATUS_COLORS: Record<string, string> = {
   certificado: "hsl(142, 71%, 45%)",
   expirado: "hsl(0, 0%, 45%)",
 };
-
 export default function DashboardPage() {
+  const { isDev } = useAuth();
   const [processos, setProcessos] = useState<any[]>([]);
   const [vistorias, setVistorias] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -45,6 +46,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function fetch() {
+      if (isDev) {
+        setProcessos([
+          { id: "1", status: "regional", created_at: new Date().toISOString() },
+          { id: "2", status: "certificado", created_at: new Date().toISOString() },
+        ]);
+        setVistorias([
+          { processo_id: "1", status_1_vistoria: "pendencia" }
+        ]);
+        setProfiles([
+          { user_id: "dev-id", nome_completo: "Administrador (Dev)", ativo: true }
+        ]);
+        setLoading(false);
+        return;
+      }
+
       const [{ data: procs }, { data: vists }, { data: profs }] = await Promise.all([
         supabase.from("processos").select("id, status, data_prevista, vistoriador_id, created_at"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
@@ -56,7 +72,7 @@ export default function DashboardPage() {
       setLoading(false);
     }
     fetch();
-  }, []);
+  }, [isDev]);
 
   const filteredProcessos = useMemo(() => {
     if (!dateRange.from && !dateRange.to) return processos;

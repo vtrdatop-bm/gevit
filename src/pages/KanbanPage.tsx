@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { Calendar, User, MapPin, Clock, Building2, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,7 @@ interface ProcessoWithProtocolo {
 }
 
 export default function KanbanPage() {
+  const { isDev } = useAuth();
   const navigate = useNavigate();
   const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
   const [collapsedRegionais, setCollapsedRegionais] = useState<Set<string>>(new Set());
@@ -81,6 +83,12 @@ export default function KanbanPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (isDev) {
+        setProcessos([]);
+        setRegionaisMap({});
+        setLoading(false);
+        return;
+      }
       const [{ data: procs }, { data: regionais }, { data: profiles }, { data: bairrosData }, { data: vistoriasData }, { data: pausasData }, { data: termosData }] = await Promise.all([
         supabase
           .from("processos")

@@ -15,7 +15,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function UsersTab() {
-  const { user } = useAuth();
+  const { user, isDev } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -28,6 +28,24 @@ export default function UsersTab() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
+    if (isDev) {
+      setProfiles([
+        { 
+          id: "dev-id", 
+          user_id: "00000000-0000-0000-0000-000000000000", 
+          nome_completo: "Administrador (Dev)", 
+          ativo: true, 
+          roles: ["admin"],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          login: "admin.dev",
+          patente: "ADM",
+          regional_id: null
+        } as any
+      ]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data: profs } = await supabase.from("profiles").select("*");
     const { data: roles } = await supabase.from("user_roles").select("*");
@@ -40,15 +58,19 @@ export default function UsersTab() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { fetchUsers(); }, [isDev]);
 
   useEffect(() => {
     if (user) {
+      if (isDev) {
+        setIsAdmin(true);
+        return;
+      }
       supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
         setIsAdmin(!!data);
       });
     }
-  }, [user]);
+  }, [user, isDev]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

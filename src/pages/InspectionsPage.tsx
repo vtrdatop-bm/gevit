@@ -45,6 +45,13 @@ export default function InspectionsPage() {
   useEffect(() => {
     if (!user) return;
 
+    if (user.id === "00000000-0000-0000-0000-000000000000") {
+      setProcessos([]);
+      setVistoriaMap({});
+      setLoading(false);
+      return;
+    }
+
     Promise.all([
       supabase
         .from("processos")

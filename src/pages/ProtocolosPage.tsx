@@ -53,7 +53,20 @@ export default function ProtocolosPage() {
   const [sortAsc, setSortAsc] = useState(true);
   const navigate = useNavigate();
 
+  const { isDev } = useAuth();
+
   useEffect(() => {
+    if (isDev) {
+      setProtocolos([]);
+      setProcessos([]);
+      setVistoriaMap({});
+      setProfileMap({});
+      setPausasByProcesso({});
+      setTermosMap({});
+      setLoading(false);
+      return;
+    }
+
     Promise.all([
       supabase.from("protocolos").select("*").order("created_at", { ascending: false }),
       supabase.from("processos").select("id, protocolo_id, status, regional_id, data_prevista, vistoriador_id"),

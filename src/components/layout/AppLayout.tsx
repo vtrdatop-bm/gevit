@@ -48,6 +48,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   useEffect(() => {
     if (!user) return;
+    
+    // Dev bypass
+    if (user.id === "00000000-0000-0000-0000-000000000000") {
+      setUserRole("admin");
+      return;
+    }
+
     supabase
       .from("user_roles")
       .select("role")
@@ -61,7 +68,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
   );
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || user.id === "00000000-0000-0000-0000-000000000000") {
+      setUnreadCount(0);
+      return;
+    }
+
     const fetchUnread = async () => {
       const { count } = await supabase
         .from("notificacoes")

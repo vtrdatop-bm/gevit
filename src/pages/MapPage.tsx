@@ -53,15 +53,15 @@ const getVistoriaResult = (v: any): string | null => {
 };
 
 export default function MapPage() {
-  const { user } = useAuth();
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
-  const [filterStatus, setFilterStatus] = useState<DisplayStatus | "all" | "minhas">("all");
-  const [processos, setProcessos] = useState<MapProcess[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [mapReady, setMapReady] = useState(false);
+  const { isDev } = useAuth();
 
   const fetchData = useCallback(async () => {
+    if (isDev) {
+      setProcessos([]);
+      setLoading(false);
+      return;
+    }
+
     const [{ data: procs }, { data: profiles }, { data: vistorias }] = await Promise.all([
       supabase
         .from("processos")
