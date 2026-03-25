@@ -303,7 +303,7 @@ export default function ManualProtocolForm() {
       return;
     }
 
-    const { error } = await supabase.from("protocolos").insert({
+    const { data: inserted, error } = await supabase.from("protocolos").insert({
       numero: form.numero,
       data_solicitacao: form.data_solicitacao,
       cnpj: cnpjClean,
@@ -316,11 +316,23 @@ export default function ManualProtocolForm() {
       cep: form.cep?.replace(/\D/g, "") || null,
       latitude: form.latitude ? parseFloat(form.latitude) : null,
       longitude: form.longitude ? parseFloat(form.longitude) : null,
-    });
+    }).select().single();
 
     if (error) {
       setResult({ type: "error", message: error.message });
-    } else {
+    } else if (inserted) {
+      // Auto-create processo (status 'regional' = Aguardando Vistoria)
+      const { data: proc, error: procError } = await supabase
+        .from("processos")
+        .insert({ protocolo_id: inserted.id, status: "regional" })
+        .select()
+        .single();
+
+      if (proc && !procError) {
+        // Auto-create vistoria linked to the processo
+        await supabase.from("vistorias").insert({ processo_id: proc.id });
+      }
+
       setResult({ type: "success", message: "Protocolo cadastrado com sucesso!" });
       setForm({});
       setBairroSearch("");
