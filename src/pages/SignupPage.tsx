@@ -16,11 +16,12 @@ export default function SignupPage() {
     setLoading(true);
     setError("");
 
-    const signupEmail = email.includes("@") ? email : `${email}@gevit.com.br`;
+    const emailTrimmed = email.trim().toLowerCase();
+    const signupEmail = emailTrimmed.includes("@") ? emailTrimmed : `${emailTrimmed}@gevit.com.br`;
     const { data, error } = await supabase.auth.signUp({
       email: signupEmail,
-      password,
-      options: { data: { nome_completo: nome } },
+      password: password.trim(),
+      options: { data: { nome_completo: nome.trim() } },
     });
 
     if (error) {

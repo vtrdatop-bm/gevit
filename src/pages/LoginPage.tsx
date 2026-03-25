@@ -21,10 +21,11 @@ export default function LoginPage() {
       return;
     }
 
-    const email = login.includes("@") ? login : `${login}@gevit.com.br`;
+    const loginTrimmed = login.trim().toLowerCase();
+    const email = loginTrimmed.includes("@") ? loginTrimmed : `${loginTrimmed}@gevit.com.br`;
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
-      password: senha,
+      password: senha.trim(),
     });
 
     if (authError) {
