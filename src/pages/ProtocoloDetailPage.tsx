@@ -138,7 +138,7 @@ export default function ProtocoloDetailPage() {
     if (!id) return;
     setLoading(true);
 
-    const [{ data: prot }, { data: procs }, { data: vists }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
+    const [{ data: prot }, { data: procs }, { data: vistoriasRoles }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
       supabase.from("protocolos").select("*").eq("id", id).single(),
       supabase.from("processos").select("*").eq("protocolo_id", id),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
@@ -155,8 +155,8 @@ export default function ProtocoloDetailPage() {
     setRegionaisMunicipios(regMuns || []);
 
     // Load vistoriadores profiles
-    if (vists && vists.length > 0) {
-      const userIds = vists.map((v: any) => v.user_id);
+    if (vistoriasRoles && vistoriasRoles.length > 0) {
+      const userIds = vistoriasRoles.map((v: any) => v.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, patente, nome_guerra")
@@ -168,14 +168,24 @@ export default function ProtocoloDetailPage() {
       const proc = procs[0];
       setProcesso(proc);
 
-      const [{ data: vistData }, { data: termoData }, { data: pausasData }] = await Promise.all([
+      const [vistRes, termoRes, pausasRes] = await Promise.all([
         supabase.from("vistorias").select("*").eq("processo_id", proc.id).maybeSingle(),
         supabase.from("termos_compromisso").select("*").eq("processo_id", proc.id).maybeSingle(),
         supabase.from("pausas").select("*").eq("processo_id", proc.id).order("data_inicio"),
       ]);
-      setVistoria(vistData);
-      setTermo(termoData);
-      setPausas(pausasData || []);
+
+      let finalVistData = vistRes.data;
+      if (!finalVistData) {
+        const { data: createdVist } = await supabase
+          .from("vistorias")
+          .insert({ processo_id: proc.id })
+          .select()
+          .single();
+        finalVistData = createdVist;
+      }
+      setVistoria(finalVistData as any);
+      setTermo(termoRes.data);
+      setPausas(pausasRes.data || []);
     } else {
       // Create processo automatically
       const { data: newProc } = await supabase
@@ -820,14 +830,14 @@ export default function ProtocoloDetailPage() {
               <VistoriaTab
                 numero={1}
                 dataSolicitacao={protocolo.data_solicitacao}
-                dataVistoria={vistoria.data_1_vistoria}
-                statusVistoria={vistoria.status_1_vistoria}
-                dataRetorno={vistoria.data_1_retorno}
-                vistoriadorId={vistoria.vistoriador_1_id}
+                dataVistoria={vistoria?.data_1_vistoria}
+                statusVistoria={vistoria?.status_1_vistoria}
+                dataRetorno={vistoria?.data_1_retorno}
+                vistoriadorId={vistoria?.vistoriador_1_id}
                 vistoriadores={vistoriadores}
                 processoId={processo.id}
-                vistoriaId={vistoria.id}
-                dataAtribuicao={(vistoria as any).data_1_atribuicao}
+                vistoriaId={vistoria?.id}
+                dataAtribuicao={(vistoria as any)?.data_1_atribuicao}
                 termo={termo}
                 onUpdate={fetchData}
               />
@@ -836,14 +846,14 @@ export default function ProtocoloDetailPage() {
               <VistoriaTab
                 numero={2}
                 dataSolicitacao={protocolo.data_solicitacao}
-                dataVistoria={vistoria.data_2_vistoria}
-                statusVistoria={vistoria.status_2_vistoria}
-                dataRetorno={vistoria.data_1_retorno}
-                vistoriadorId={vistoria.vistoriador_2_id}
+                dataVistoria={vistoria?.data_2_vistoria}
+                statusVistoria={vistoria?.status_2_vistoria}
+                dataRetorno={vistoria?.data_1_retorno}
+                vistoriadorId={vistoria?.vistoriador_2_id}
                 vistoriadores={vistoriadores}
                 processoId={processo.id}
-                vistoriaId={vistoria.id}
-                dataAtribuicao={(vistoria as any).data_2_atribuicao}
+                vistoriaId={vistoria?.id}
+                dataAtribuicao={(vistoria as any)?.data_2_atribuicao}
                 termo={termo}
                 onUpdate={fetchData}
               />
@@ -852,14 +862,14 @@ export default function ProtocoloDetailPage() {
               <VistoriaTab
                 numero={3}
                 dataSolicitacao={protocolo.data_solicitacao}
-                dataVistoria={vistoria.data_3_vistoria}
-                statusVistoria={vistoria.status_3_vistoria}
-                dataRetorno={vistoria.data_2_retorno}
-                vistoriadorId={vistoria.vistoriador_3_id}
+                dataVistoria={vistoria?.data_3_vistoria}
+                statusVistoria={vistoria?.status_3_vistoria}
+                dataRetorno={vistoria?.data_2_retorno}
+                vistoriadorId={vistoria?.vistoriador_3_id}
                 vistoriadores={vistoriadores}
                 processoId={processo.id}
-                vistoriaId={vistoria.id}
-                dataAtribuicao={(vistoria as any).data_3_atribuicao}
+                vistoriaId={vistoria?.id}
+                dataAtribuicao={(vistoria as any)?.data_3_atribuicao}
                 termo={termo}
                 onUpdate={fetchData}
               />

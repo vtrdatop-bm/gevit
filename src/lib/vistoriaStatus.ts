@@ -154,3 +154,17 @@ export const displayStatusDotColor: Record<DisplayStatus, string> = {
   certificado: "bg-[hsl(var(--status-certified))]",
   expirado: "bg-[hsl(var(--status-expired))]",
 };
+
+/**
+ * Computes the overall process_status enum for the database based on the latest result.
+ */
+export function computeProcessStatus(vistoria: VistoriaData): string | null {
+  // Check from stage 3 down to 1
+  for (let i = 3; i >= 1; i--) {
+    const s = (vistoria as any)[`status_${i}_vistoria`];
+    if (s === "pendencia") return "pendencias";
+    if (s === "aprovado") return "certificado_termo";
+    if (s === "reprovado") return "certificado";
+  }
+  return null;
+}

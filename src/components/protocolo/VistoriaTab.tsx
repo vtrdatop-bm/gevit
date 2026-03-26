@@ -1,5 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Vistoriador } from "@/types/user";
+import {
+  VistoriaStage,
+  VistoriaData,
+  computeDisplayStatus,
+  computeProcessStatus,
+} from "@/lib/vistoriaStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -62,6 +68,19 @@ export default function VistoriaTab({
   const [numeroTermo, setNumeroTermo] = useState(termo?.numero_termo || "");
   const [validadeTermo, setValidadeTermo] = useState(termo?.data_validade || "");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setData(dataVistoria || "");
+    setStatus(statusVistoria || "");
+    setRetorno(dataRetorno || "");
+    setVistoriador(vistoriadorId || "");
+    setAtribuicao(dataAtribuicao || "");
+  }, [dataVistoria, statusVistoria, dataRetorno, vistoriadorId, dataAtribuicao]);
+
+  useEffect(() => {
+    setNumeroTermo(termo?.numero_termo || "");
+    setValidadeTermo(termo?.data_validade || "");
+  }, [termo]);
 
   const handleSave = async () => {
     setSaving(true);
