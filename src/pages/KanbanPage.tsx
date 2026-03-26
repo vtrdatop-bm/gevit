@@ -25,9 +25,7 @@ const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] =
   { key: "pendencias", label: "Vistoria com Pendência", dotColor: displayStatusDotColor.pendencias },
   { key: "certificado_termo", label: "Certificado Provisório", dotColor: displayStatusDotColor.certificado_termo },
   { key: "certificado", label: "Certificado", dotColor: displayStatusDotColor.certificado },
-  { key: "expirado_3_vist", label: "Expirado Vist.", dotColor: displayStatusDotColor.expirado_3_vist },
-  { key: "expirado", label: "Expirado 120", dotColor: displayStatusDotColor.expirado },
-  { key: "expirado_1_ano", label: "Expirado 1 ano", dotColor: displayStatusDotColor.expirado_1_ano },
+  { key: "expirado", label: "Expirados", dotColor: displayStatusDotColor.expirado },
 ];
 
 // Predefined colors for regional sections

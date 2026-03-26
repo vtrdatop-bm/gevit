@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import KpiCard from "@/components/dashboard/KpiCard";
 import DateRangeFilter, { DateRange } from "@/components/dashboard/DateRangeFilter";
+import DashboardEstatisticas from "@/components/dashboard/DashboardEstatisticas";
 
 
 const STATUS_COLORS: Record<string, string> = {
@@ -252,6 +253,10 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Estatísticas */}
+      <hr className="border-border" />
+      <DashboardEstatisticas />
     </div>
   );
 }

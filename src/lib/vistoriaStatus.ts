@@ -10,9 +10,8 @@ export type DisplayStatus =
   | "pendencias"
   | "certificado_termo"
   | "certificado"
-  | "expirado"
-  | "expirado_3_vist"
-  | "expirado_1_ano";
+  | "certificado"
+  | "expirado";
 
 export type VistoriaStage = 1 | 2 | 3 | null;
 
@@ -45,7 +44,7 @@ export function computeDisplayStatus(
   if (vistoria) {
     // --- STAGE 3 ---
     if (vistoria.status_3_vistoria) {
-      if (vistoria.status_3_vistoria === "pendencia") status = "expirado_3_vist";
+      if (vistoria.status_3_vistoria === "pendencia") status = "expirado";
       else if (vistoria.status_3_vistoria === "aprovado") status = "certificado_termo";
       else if (vistoria.status_3_vistoria === "reprovado") status = "certificado";
     } else if (vistoria.data_3_atribuicao) {
@@ -79,7 +78,7 @@ export function computeDisplayStatus(
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     if (solDate < oneYearAgo) {
-      return "expirado_1_ano";
+      return "expirado";
     }
   }
 
@@ -142,9 +141,7 @@ export const displayStatusLabels: Record<DisplayStatus, string> = {
   pendencias: "Vistoria com Pendência",
   certificado_termo: "Certificado Provisório",
   certificado: "Certificado",
-  expirado: "Expirado 120",
-  expirado_3_vist: "Expirado Vist.",
-  expirado_1_ano: "Expirado 1 ano",
+  expirado: "Expirados",
 };
 
 export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
@@ -154,8 +151,6 @@ export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
   certificado_termo: "status-badge-term",
   certificado: "status-badge-certified",
   expirado: "status-badge-expired",
-  expirado_3_vist: "status-badge-expired",
-  expirado_1_ano: "status-badge-expired",
 };
 
 export const displayStatusDotColor: Record<DisplayStatus, string> = {
@@ -165,8 +160,6 @@ export const displayStatusDotColor: Record<DisplayStatus, string> = {
   certificado_termo: "bg-[hsl(var(--status-certified-term))]",
   certificado: "bg-[hsl(var(--status-certified))]",
   expirado: "bg-[hsl(var(--status-expired))]",
-  expirado_3_vist: "bg-[hsl(var(--status-expired))]",
-  expirado_1_ano: "bg-[hsl(var(--status-expired))]",
 };
 
 /**
