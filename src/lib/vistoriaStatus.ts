@@ -88,18 +88,28 @@ export function getDisplayStatusLabel(
 }
 
 export function computeStage(vistoria?: VistoriaData | null): VistoriaStage {
-  if (!vistoria) return null;
+  if (!vistoria) return 1;
 
-  // The stage reflects the latest inspection that has a result or is in progress
-  if (vistoria.status_3_vistoria || vistoria.data_3_vistoria) return 3;
-  if (vistoria.status_2_vistoria || vistoria.data_2_vistoria) return 2;
-  if (vistoria.status_1_vistoria || vistoria.data_1_vistoria) return 1;
+  // The stage reflects the latest inspection that has ANY activity.
+  // We check from the most advanced stage downwards.
+  
+  // STAGE 3: Result, Visit Date, Attribution, or coming from 2nd Return
+  if (
+    vistoria.status_3_vistoria || 
+    vistoria.data_3_vistoria || 
+    vistoria.data_3_atribuicao || 
+    vistoria.data_2_retorno
+  ) return 3;
 
-  // If no result yet, stage is based on attribution/return dates
-  // If stage 3 had any activity
-  if (vistoria.data_2_retorno || vistoria.data_3_atribuicao) return 3;
-  // If stage 2 had any activity
-  if (vistoria.data_1_retorno || vistoria.data_2_atribuicao) return 2;
+  // STAGE 2: Result, Visit Date, Attribution, or coming from 1st Return
+  if (
+    vistoria.status_2_vistoria || 
+    vistoria.data_2_vistoria || 
+    vistoria.data_2_atribuicao || 
+    vistoria.data_1_retorno
+  ) return 2;
+
+  // Default to stage 1
   return 1;
 }
 
