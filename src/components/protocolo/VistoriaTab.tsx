@@ -126,7 +126,7 @@ export default function VistoriaTab({
         if (newGlobalStatus) {
           await supabase
             .from("processos")
-            .update({ status: newGlobalStatus })
+            .update({ status: newGlobalStatus as any })
             .eq("id", processoId);
         }
       }
@@ -146,6 +146,7 @@ export default function VistoriaTab({
             processo_id: processoId,
             numero_termo: numeroTermo,
             data_validade: validadeTermo || null,
+            data_assinatura: new Date().toISOString().split("T")[0],
           });
         }
       }
