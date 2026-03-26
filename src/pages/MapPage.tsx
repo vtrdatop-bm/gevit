@@ -13,6 +13,7 @@ const statusMarkerColors: Record<DisplayStatus, string> = {
   certificado_termo: "#3b82f6",
   certificado: "#22c55e",
   expirado: "#737373",
+  expirado_3_vist: "#444444",
 };
 
 interface Vistoriador {
@@ -298,7 +299,7 @@ export default function MapPage() {
         {/* Status Pills */}
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <Filter className="w-4 h-4 text-muted-foreground mr-1" />
-          {(["all", "minhas", "regional", "atribuido", "pendencias", "certificado_termo", "certificado"] as const).map(
+          {(["all", "minhas", "regional", "atribuido", "pendencias", "expirado_3_vist", "certificado_termo", "certificado"] as const).map(
             (status) => (
               <button
                 key={status}

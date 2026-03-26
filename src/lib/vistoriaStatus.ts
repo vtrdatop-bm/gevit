@@ -10,7 +10,8 @@ export type DisplayStatus =
   | "pendencias"
   | "certificado_termo"
   | "certificado"
-  | "expirado";
+  | "expirado"
+  | "expirado_3_vist";
 
 export type VistoriaStage = 1 | 2 | 3 | null;
 
@@ -45,7 +46,7 @@ export function computeDisplayStatus(
   // --- STAGE 3 ---
   // If 3ª vistoria has a result, that's the final word
   if (vistoria.status_3_vistoria) {
-    if (vistoria.status_3_vistoria === "pendencia") return "pendencias";
+    if (vistoria.status_3_vistoria === "pendencia") return "expirado_3_vist";
     if (vistoria.status_3_vistoria === "aprovado") return "certificado_termo";
     if (vistoria.status_3_vistoria === "reprovado") return "certificado";
   }
@@ -137,6 +138,7 @@ export const displayStatusLabels: Record<DisplayStatus, string> = {
   certificado_termo: "Certificado Provisório",
   certificado: "Certificado",
   expirado: "Expirado",
+  expirado_3_vist: "Expirado - 3 Vist.",
 };
 
 export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
@@ -146,6 +148,7 @@ export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
   certificado_termo: "status-badge-term",
   certificado: "status-badge-certified",
   expirado: "status-badge-expired",
+  expirado_3_vist: "status-badge-expired",
 };
 
 export const displayStatusDotColor: Record<DisplayStatus, string> = {
@@ -155,6 +158,7 @@ export const displayStatusDotColor: Record<DisplayStatus, string> = {
   certificado_termo: "bg-[hsl(var(--status-certified-term))]",
   certificado: "bg-[hsl(var(--status-certified))]",
   expirado: "bg-[hsl(var(--status-expired))]",
+  expirado_3_vist: "bg-[hsl(var(--status-expired))]",
 };
 
 /**
