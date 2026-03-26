@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -86,6 +86,7 @@ export default function KanbanPage() {
   const [processos, setProcessos] = useState<ProcessoWithProtocolo[]>([]);
   const [regionaisMap, setRegionaisMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -243,13 +244,26 @@ export default function KanbanPage() {
     };
   }, [isDev]);
 
+  const filteredProcessos = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return processos;
+    return processos.filter((p) => 
+      p.protocolos?.numero.toLowerCase().includes(q) ||
+      p.protocolos?.razao_social.toLowerCase().includes(q) ||
+      (p.protocolos?.nome_fantasia || "").toLowerCase().includes(q) ||
+      p.protocolos?.cnpj.includes(q) ||
+      p.protocolos?.municipio.toLowerCase().includes(q) ||
+      p.protocolos?.bairro.toLowerCase().includes(q)
+    );
+  }, [processos, search]);
+
   const groupedByRegional = (() => {
     const groups: Record<string, { nome: string; processos: ProcessoWithProtocolo[] }> = {};
     Object.entries(regionaisMap).forEach(([id, nome]) => {
       groups[id] = { nome, processos: [] };
     });
     groups["__sem_regional__"] = { nome: "Sem Regional", processos: [] };
-    processos.forEach((p) => {
+    filteredProcessos.forEach((p) => {
       const key = p.regional_id || "__sem_regional__";
       if (!groups[key]) {
         groups[key] = { nome: regionaisMap[key] || "Desconhecida", processos: [] };
@@ -313,9 +327,20 @@ export default function KanbanPage() {
             Fluxo automático de processos — agrupados por regional
           </p>
         </div>
-        <span className="text-xs text-muted-foreground bg-accent px-3 py-1.5 rounded-full">
-          {totalProcessos} processos
-        </span>
+        <div className="flex items-center gap-3">
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nº, razão social, CNPJ, município..."
+              className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <span className="text-xs text-muted-foreground bg-accent px-3 py-1.5 rounded-full whitespace-nowrap">
+            {filteredProcessos.length} {filteredProcessos.length === 1 ? "processo" : "processos"}
+          </span>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-4 pb-4">
