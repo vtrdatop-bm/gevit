@@ -31,6 +31,7 @@ interface MapProcess {
   vistoriador_nome: string | null;
   vistoria: any | null;
   protocolo: {
+    id: string;
     numero: string;
     nome_fantasia: string | null;
     razao_social: string;
@@ -87,6 +88,7 @@ export default function MapPage() {
           vistoriador_nome: "Administrador (Dev)",
           vistoria: { data_1_atribuicao: "2024-03-22" },
           protocolo: {
+            id: "p1",
             numero: "VT2024.0001.0001-01",
             nome_fantasia: "Mercado Silva",
             razao_social: "Comércio de Alimentos Silva Ltda",
@@ -106,6 +108,7 @@ export default function MapPage() {
           vistoriador_nome: "Administrador (Dev)",
           vistoria: { data_1_atribuicao: "2024-03-22", status_1_vistoria: "aprovado" },
           protocolo: {
+            id: "p2",
             numero: "VT2024.0001.0002-02",
             nome_fantasia: null,
             razao_social: "Posto de Combustíveis Acreano",
@@ -125,7 +128,7 @@ export default function MapPage() {
     const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }] = await Promise.all([
       supabase
         .from("processos")
-        .select("id, status, data_prevista, vistoriador_id, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)")
+        .select("id, status, data_prevista, vistoriador_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)")
         .neq("status", "expirado"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
@@ -267,16 +270,43 @@ export default function MapPage() {
         const result = getVistoriaResult(process.vistoria);
 
         marker.bindPopup(`
-          <div style="font-family: system-ui, sans-serif; min-width: 200px;">
-            <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">${process.protocolo.nome_fantasia || process.protocolo.razao_social}</div>
-            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">${process.protocolo.razao_social}</div>
-            <div style="font-size: 11px; color: #888; margin-bottom: 2px;">📍 ${process.protocolo.endereco}, ${process.protocolo.bairro}</div>
-            <div style="font-size: 11px; color: #888; margin-bottom: 2px;">📋 ${getDisplayStatusLabel(process.displayStatus, process.vistoria)}</div>
-            ${stage ? `<div style="font-size: 11px; color: #888; margin-bottom: 2px;">🔍 ${stage}${result ? ` — ${result}` : ""}</div>` : ""}
-            ${process.data_prevista ? `<div style="font-size: 11px; color: #888; margin-bottom: 2px;">📅 Previsto: ${process.data_prevista}</div>` : ""}
-            ${process.vistoriador_nome ? `<div style="font-size: 11px; color: #888;">👤 ${process.vistoriador_nome}</div>` : ""}
+          <div style="font-family: system-ui, sans-serif; min-width: 220px; padding: 4px;">
+            <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px; color: #1a1a1a;">
+              ${process.protocolo.nome_fantasia || process.protocolo.razao_social}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-bottom: 10px; line-height: 1.4;">
+              ${process.protocolo.razao_social}
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
+              <div style="font-size: 11px; color: #444; display: flex; align-items: start; gap: 4px;">
+                <span>📍</span> <span>${process.protocolo.endereco}, ${process.protocolo.bairro}</span>
+              </div>
+              <div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
+                <span>📋</span> <span>${getDisplayStatusLabel(process.displayStatus, process.vistoria)}</span>
+              </div>
+              ${stage ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
+                <span>🔍</span> <span>${stage}${result ? ` — ${result}` : ""}</span>
+              </div>` : ""}
+              ${process.data_prevista ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
+                <span>📅</span> <span>Previsto: ${process.data_prevista}</span>
+              </div>` : ""}
+              ${process.vistoriador_nome ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
+                <span>👤</span> <span>${process.vistoriador_nome}</span>
+              </div>` : ""}
+            </div>
+            <button 
+              onclick="window.dispatchEvent(new CustomEvent('open-protocolo', { detail: '${process.protocolo.id}' }))"
+              style="width: 100%; background: hsl(var(--primary)); color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;"
+              onmouseover="this.style.opacity='0.9'"
+              onmouseout="this.style.opacity='1'"
+            >
+              Ver Detalhes do Protocolo
+            </button>
           </div>
-        `);
+        `, {
+          className: 'protocolo-popup',
+          maxWidth: 300
+        });
 
         if (focusProcessoId && process.id === focusProcessoId) {
           focusMarker = marker;
@@ -292,6 +322,18 @@ export default function MapPage() {
       }
     });
   }, [filteredProcesses, mapReady, focusProcessoId]);
+
+  useEffect(() => {
+    const handleOpenProtocolo = (e: any) => {
+      const id = e.detail;
+      if (id) {
+        navigate(`/protocolo/${id}`);
+      }
+    };
+
+    window.addEventListener('open-protocolo', handleOpenProtocolo);
+    return () => window.removeEventListener('open-protocolo', handleOpenProtocolo);
+  }, [navigate]);
 
   const processesWithCoords = processos.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
 

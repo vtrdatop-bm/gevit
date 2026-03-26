@@ -12,6 +12,7 @@ import StatusBadge from "@/components/shared/StatusBadge";
 import { computeDisplayStatus, computeStage } from "@/lib/vistoriaStatus";
 import { Vistoriador } from "@/types/user";
 import { useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ProtocoloData {
   id: string;
@@ -77,6 +78,7 @@ const formatCpfCnpj = (val: string) => {
 export default function ProtocoloDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isDev } = useAuth();
   const [protocolo, setProtocolo] = useState<ProtocoloData | null>(null);
   const [processo, setProcesso] = useState<ProcessoData | null>(null);
   const [vistoria, setVistoria] = useState<VistoriaData | null>(null);
@@ -144,10 +146,67 @@ export default function ProtocoloDetailPage() {
       initialLoadRef.current = false;
     }
 
-    const [{ data: prot }, { data: procs }, { data: vistoriasRoles }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
+    if (isDev) {
+      // Mock data for dev mode
+      setProtocolo({
+        id: "p1",
+        numero: "VT2024.0001.0001-01",
+        data_solicitacao: "2024-03-20",
+        cnpj: "12345678000190",
+        razao_social: "Comércio de Alimentos Silva Ltda",
+        nome_fantasia: "Mercado Silva",
+        endereco: "Rua das Flores, 123",
+        bairro: "CENTRO",
+        municipio: "RIO BRANCO",
+        area: 150,
+        latitude: -9.974,
+        longitude: -67.807,
+        cep: "69900-000",
+        solicitante: "João Silva",
+        tipo_empresa: "Comércio",
+        tipo_servico: "Vistoria",
+      });
+      setMunicipios([{ id: "m1", nome: "RIO BRANCO" }]);
+      setBairros([{ id: "b1", nome: "CENTRO", municipio: "RIO BRANCO" }]);
+      setRegionais([{ id: "r1", nome: "Regional Centro" }]);
+      setVistoriadores([
+        { user_id: "v1", patente: "Capitão", nome_guerra: "Gabriel" },
+        { user_id: "v2", patente: "Sargento", nome_guerra: "Silva" },
+        { user_id: "v3", patente: "Tenente", nome_guerra: "Souza" },
+      ]);
+      setProcesso({
+        id: "proc1",
+        protocolo_id: "p1",
+        status: "regional",
+        regional_id: "r1",
+        vistoriador_id: "v1",
+        data_prevista: "2024-04-05",
+      });
+      setVistoria({
+        id: "v1",
+        processo_id: "proc1",
+        data_1_vistoria: null,
+        status_1_vistoria: null,
+        data_1_retorno: null,
+        data_2_vistoria: null,
+        status_2_vistoria: null,
+        data_2_retorno: null,
+        data_3_vistoria: null,
+        status_3_vistoria: null,
+        vistoriador_1_id: "v1",
+        vistoriador_2_id: null,
+        vistoriador_3_id: null,
+        observacoes: null,
+        data_1_atribuicao: "2024-03-22",
+      } as any);
+      setLoading(false);
+      return;
+    }
+
+    const [{ data: prot }, { data: procs }, { data: allRoles }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
       supabase.from("protocolos").select("*").eq("id", id).single(),
       supabase.from("processos").select("*").eq("protocolo_id", id),
-      supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
+      supabase.from("user_roles").select("user_id, role"),
       supabase.from("municipios").select("id, nome").order("nome"),
       supabase.from("bairros").select("id, nome, municipio").order("nome"),
       supabase.from("regionais").select("id, nome").order("nome"),
@@ -160,14 +219,19 @@ export default function ProtocoloDetailPage() {
     setRegionais(regs || []);
     setRegionaisMunicipios(regMuns || []);
 
-    // Load vistoriadores profiles
-    if (vistoriasRoles && vistoriasRoles.length > 0) {
-      const userIds = vistoriasRoles.map((v: any) => v.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, patente, nome_guerra")
-        .in("user_id", userIds);
-      setVistoriadores(profiles || []);
+    // Load vistoriadores profiles (users who have the 'vistoriador' role)
+    if (allRoles && allRoles.length > 0) {
+      const vistoriadorUserIds = allRoles
+        .filter((r: any) => r.role === "vistoriador")
+        .map((r: any) => r.user_id);
+        
+      if (vistoriadorUserIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, patente, nome_guerra")
+          .in("user_id", vistoriadorUserIds);
+        setVistoriadores(profiles || []);
+      }
     }
 
     if (procs && procs.length > 0) {
@@ -212,7 +276,7 @@ export default function ProtocoloDetailPage() {
     }
 
     setLoading(false);
-  }, [id]);
+  }, [id, isDev]);
 
   const dStatus = useMemo(() => {
     return computeDisplayStatus(processo?.status || "regional", vistoria, protocolo?.data_solicitacao);
@@ -235,7 +299,7 @@ export default function ProtocoloDetailPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id, fetchData]);
+  }, [id, fetchData, isDev]);
 
   useEffect(() => {
     if (protocolo) {

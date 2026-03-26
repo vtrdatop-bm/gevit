@@ -427,62 +427,65 @@ export default function KanbanPage() {
                                 <h4 className="text-sm font-semibold text-foreground mb-1">
                                   {process.protocolos.nome_fantasia || process.protocolos.razao_social}
                                 </h4>
-                                <p className="text-xs text-muted-foreground mb-3">
-                                  {process.protocolos.razao_social}
-                                </p>
-
-                                <div className="space-y-1.5">
-                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                    <MapPin className="w-3.5 h-3.5 shrink-0" />
-                                    <span className="truncate">
-                                      {process.protocolos.bairro}, {process.protocolos.municipio}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                      <Calendar className="w-3.5 h-3.5 shrink-0" />
-                                      <span>Solicitação: {new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}</span>
-                                    </div>
-                                  {process.data_prevista && (
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                      <Clock className="w-3.5 h-3.5 shrink-0" />
-                                      <span>Previsto: {process.data_prevista}</span>
-                                    </div>
-                                  )}
-                                  {process.vistoriador_nome && (
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                      <User className="w-3.5 h-3.5 shrink-0" />
-                                      <span>{process.vistoriador_nome}</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {process.deadline.active && (
-                                  <div className={cn("mt-3 flex items-center gap-1.5", deadlineColorClass(process.deadline.remaining))}>
-                                    {process.deadline.remaining <= 15 ? (
-                                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                                    ) : (
-                                      <Clock className="w-3.5 h-3.5 shrink-0" />
-                                    )}
-                                    <span className="text-xs font-medium">
-                                      {process.deadline.remaining <= 0
-                                        ? (process.deadline.type === "validity" ? "Certificado vencido!" : "Prazo expirado!")
-                                        : `${process.deadline.remaining} dias ${process.deadline.type === "validity" ? "p/ vencer" : "p/ expirar"}`}
-                                    </span>
-                                  </div>
-                                )}
 
                                 {selectedProcess === process.id && (
-                                  <div className="mt-3 pt-3 border-t border-border space-y-2 animate-fade-in">
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                      <Building2 className="w-3.5 h-3.5" />
-                                      <span>CNPJ: {process.protocolos.cnpj}</span>
+                                  <div className="mt-3 pt-3 border-t border-border space-y-3 animate-fade-in">
+                                    <p className="text-xs text-muted-foreground font-medium">
+                                      {process.protocolos.razao_social}
+                                    </p>
+
+                                    <div className="space-y-1.5">
+                                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="truncate">
+                                          {process.protocolos.endereco}, {process.protocolos.bairro}, {process.protocolos.municipio}
+                                        </span>
+                                      </div>
+                                      
+                                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                        <span>Solicitação: {new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}</span>
+                                      </div>
+
+                                      {process.data_prevista && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                                          <span>Previsto: {process.data_prevista}</span>
+                                        </div>
+                                      )}
+
+                                      {process.vistoriador_id && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                          <User className="w-3.5 h-3.5 shrink-0" />
+                                          <span>{process.vistoriador_nome || "Carregando..."}</span>
+                                        </div>
+                                      )}
+
+                                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
+                                        <Building2 className="w-3.5 h-3.5 shrink-0" />
+                                        <span>CNPJ: {process.protocolos.cnpj}</span>
+                                      </div>
+                                      
+                                      {process.protocolos.area && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                          <Maximize2 className="w-3.5 h-3.5 shrink-0" />
+                                          <span>Área: {process.protocolos.area}m²</span>
+                                        </div>
+                                      )}
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      Endereço: {process.protocolos.endereco}
-                                    </div>
-                                    {process.protocolos.area && (
-                                      <div className="text-xs text-muted-foreground">
-                                        Área: {process.protocolos.area}m²
+
+                                    {process.deadline.active && (
+                                      <div className={cn("mt-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-background/50", deadlineColorClass(process.deadline.remaining))}>
+                                        {process.deadline.remaining <= 15 ? (
+                                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                        ) : (
+                                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                                        )}
+                                        <span className="text-xs font-semibold">
+                                          {process.deadline.remaining <= 0
+                                            ? (process.deadline.type === "validity" ? "Certificado vencido!" : "Prazo expirado!")
+                                            : `${process.deadline.remaining} dias ${process.deadline.type === "validity" ? "p/ vencer" : "p/ expirar"}`}
+                                        </span>
                                       </div>
                                     )}
                                   </div>
