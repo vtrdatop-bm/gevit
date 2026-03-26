@@ -148,12 +148,19 @@ export default function ProtocolosPage() {
     return map;
   }, [processos]);
 
+  const protocoloById = useMemo(() => {
+    const map: Record<string, Protocolo> = {};
+    protocolos.forEach((p) => { map[p.id] = p; });
+    return map;
+  }, [protocolos]);
+
   const getDisplayInfo = (protocoloId: string): { status: DisplayStatus; stage: VistoriaStage } | null => {
     const proc = processoByProtocolo[protocoloId];
     if (!proc) return null;
     const vistoria = vistoriaMap[proc.id] || null;
+    const proto = protocoloById[protocoloId];
     return {
-      status: computeDisplayStatus(proc.status, vistoria),
+      status: computeDisplayStatus(proc.status, vistoria, proto?.data_solicitacao),
       stage: computeStage(vistoria),
     };
   };

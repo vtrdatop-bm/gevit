@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Building2, MapPin, FileText, Pencil, X, Save, LocateFixed, Loader2, Plus, Search } from "lucide-react";
+import { ArrowLeft, Building2, MapPin, FileText, Pencil, X, Save, LocateFixed, Loader2, Plus, Search, Trash2, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import VistoriaTab from "@/components/protocolo/VistoriaTab";
@@ -99,6 +99,8 @@ export default function ProtocoloDetailPage() {
   const [novoBairroDialog, setNovoBairroDialog] = useState(false);
   const [novoBairroNome, setNovoBairroNome] = useState("");
   const [novoBairroRegional, setNovoBairroRegional] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const bairroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -212,6 +214,13 @@ export default function ProtocoloDetailPage() {
     setLoading(false);
   }, [id]);
 
+  const dStatus = useMemo(() => {
+    return computeDisplayStatus(processo?.status || "regional", vistoria, protocolo?.data_solicitacao);
+  }, [processo?.status, vistoria, protocolo?.data_solicitacao]);
+
+  const stage = useMemo(() => {
+    return computeStage(vistoria);
+  }, [vistoria]);
   useEffect(() => {
     fetchData();
 
@@ -481,6 +490,37 @@ export default function ProtocoloDetailPage() {
     setGeocoding(false);
   };
 
+  const handleDeleteProtocolo = async () => {
+    if (!protocolo) return;
+    setIsDeleting(true);
+    try {
+      // If there's a process, we might need to delete it first if not cascading
+      // But usually protocols have on delete cascade processes.
+      // Let's delete explicit to be safe.
+      if (processo) {
+        await supabase.from("vistorias").delete().eq("processo_id", processo.id);
+        await supabase.from("pausas").delete().eq("processo_id", processo.id);
+        await supabase.from("termos_compromisso").delete().eq("processo_id", processo.id);
+        await supabase.from("processos").delete().eq("id", processo.id);
+      }
+      
+      const { error } = await supabase
+        .from("protocolos")
+        .delete()
+        .eq("id", protocolo.id);
+
+      if (error) throw error;
+
+      toast.success("Protocolo excluído com sucesso");
+      navigate("/protocolos");
+    } catch (error: any) {
+      toast.error("Erro ao excluir protocolo: " + error.message);
+      setDeleteDialogOpen(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const formatCpfCnpjInput = (value: string): string => {
     const digits = value.replace(/\D/g, "").slice(0, 14);
     if (digits.length <= 11) {
@@ -523,35 +563,10 @@ export default function ProtocoloDetailPage() {
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-2xl font-bold text-foreground">{protocolo.numero}</h2>
-            {processo && (
-              <StatusBadge
-                status={computeDisplayStatus(processo.status, vistoria ? {
-                  data_1_atribuicao: (vistoria as any).data_1_atribuicao,
-                  data_2_atribuicao: (vistoria as any).data_2_atribuicao,
-                  data_3_atribuicao: (vistoria as any).data_3_atribuicao,
-                  data_1_vistoria: vistoria.data_1_vistoria,
-                  data_2_vistoria: vistoria.data_2_vistoria,
-                  data_3_vistoria: vistoria.data_3_vistoria,
-                  status_1_vistoria: vistoria.status_1_vistoria,
-                  status_2_vistoria: vistoria.status_2_vistoria,
-                  status_3_vistoria: vistoria.status_3_vistoria,
-                  data_1_retorno: vistoria.data_1_retorno,
-                  data_2_retorno: vistoria.data_2_retorno,
-                } : null)}
-                stage={computeStage(vistoria ? {
-                  data_1_atribuicao: (vistoria as any).data_1_atribuicao,
-                  data_2_atribuicao: (vistoria as any).data_2_atribuicao,
-                  data_3_atribuicao: (vistoria as any).data_3_atribuicao,
-                  data_1_vistoria: vistoria.data_1_vistoria,
-                  data_2_vistoria: vistoria.data_2_vistoria,
-                  data_3_vistoria: vistoria.data_3_vistoria,
-                  status_1_vistoria: vistoria.status_1_vistoria,
-                  status_2_vistoria: vistoria.status_2_vistoria,
-                  status_3_vistoria: vistoria.status_3_vistoria,
-                  data_1_retorno: vistoria.data_1_retorno,
-                  data_2_retorno: vistoria.data_2_retorno,
-                } : null)}
-              />
+            {protocolo && (
+              <div className="flex items-center gap-2">
+                <StatusBadge status={dStatus} />
+              </div>
             )}
           </div>
           <p className="text-sm text-muted-foreground">
@@ -559,9 +574,17 @@ export default function ProtocoloDetailPage() {
           </p>
         </div>
         {!editing ? (
-          <button onClick={startEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">
-            <Pencil className="w-3.5 h-3.5" /> Editar
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setDeleteDialogOpen(true)} 
+              className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Excluir
+            </button>
+            <button onClick={startEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">
+              <Pencil className="w-3.5 h-3.5" /> Editar
+            </button>
+          </div>
         ) : (
           <div className="flex gap-2">
             <button onClick={cancelEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">
@@ -791,19 +814,7 @@ export default function ProtocoloDetailPage() {
           vistoria={vistoria}
           pausas={pausas}
           processoId={processo.id}
-          displayStatus={computeDisplayStatus(processo.status, {
-            data_1_atribuicao: (vistoria as any).data_1_atribuicao,
-            data_2_atribuicao: (vistoria as any).data_2_atribuicao,
-            data_3_atribuicao: (vistoria as any).data_3_atribuicao,
-            data_1_vistoria: vistoria.data_1_vistoria,
-            data_2_vistoria: vistoria.data_2_vistoria,
-            data_3_vistoria: vistoria.data_3_vistoria,
-            status_1_vistoria: vistoria.status_1_vistoria,
-            status_2_vistoria: vistoria.status_2_vistoria,
-            status_3_vistoria: vistoria.status_3_vistoria,
-            data_1_retorno: vistoria.data_1_retorno,
-            data_2_retorno: vistoria.data_2_retorno,
-          })}
+          displayStatus={dStatus}
           termoValidade={termo?.data_validade || null}
           onUpdate={fetchData}
         />
@@ -944,6 +955,47 @@ export default function ProtocoloDetailPage() {
                 {savingBairro ? "Salvando..." : "Salvar"}
               </button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="w-5 h-5" />
+              Confirmar Exclusão
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-foreground">
+              Você tem certeza que deseja excluir o protocolo **{protocolo.numero}**?
+            </p>
+            <p className="text-xs text-muted-foreground p-3 bg-destructive/10 rounded-lg border border-destructive/20 text-destructive-foreground">
+              Esta ação é permanente e excluirá também todas as vistorias, documentos e históricos associados a este protocolo.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button 
+              onClick={() => setDeleteDialogOpen(false)} 
+              disabled={isDeleting}
+              className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={handleDeleteProtocolo} 
+              disabled={isDeleting}
+              className="px-4 h-9 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />Excluindo...
+                </>
+              ) : (
+                "Sim, Excluir"
+              )}
+            </button>
           </div>
         </DialogContent>
       </Dialog>

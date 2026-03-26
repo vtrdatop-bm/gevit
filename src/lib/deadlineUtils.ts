@@ -113,7 +113,7 @@ export function deadlineBgClass(remaining: number): string {
 export function deadlineLabel(result: DeadlineResult): string | null {
   if (!result.active) return null;
   if (result.remaining <= 0) {
-    return result.type === "validity" ? "Vencido" : "Expirado";
+    return result.type === "validity" ? "Vencido" : "Expirado 120";
   }
   return `${result.remaining}d`;
 }

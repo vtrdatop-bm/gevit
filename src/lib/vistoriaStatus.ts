@@ -11,7 +11,8 @@ export type DisplayStatus =
   | "certificado_termo"
   | "certificado"
   | "expirado"
-  | "expirado_3_vist";
+  | "expirado_3_vist"
+  | "expirado_1_ano";
 
 export type VistoriaStage = 1 | 2 | 3 | null;
 
@@ -35,50 +36,54 @@ export interface VistoriaData {
 
 export function computeDisplayStatus(
   dbStatus: string,
-  vistoria?: VistoriaData | null
+  vistoria?: VistoriaData | null,
+  dataSolicitacao?: string | null
 ): DisplayStatus {
-  // If no vistoria data, fall back to DB status
-  if (!vistoria) return dbStatus as DisplayStatus;
+  // 1. Calculate the "natural" status first
+  let status: DisplayStatus = dbStatus as DisplayStatus;
 
-  // We determine the status by looking from the latest stage backwards.
-  // The goal is to show the *current* activity.
-
-  // --- STAGE 3 ---
-  // If 3ª vistoria has a result, that's the final word
-  if (vistoria.status_3_vistoria) {
-    if (vistoria.status_3_vistoria === "pendencia") return "expirado_3_vist";
-    if (vistoria.status_3_vistoria === "aprovado") return "certificado_termo";
-    if (vistoria.status_3_vistoria === "reprovado") return "certificado";
+  if (vistoria) {
+    // --- STAGE 3 ---
+    if (vistoria.status_3_vistoria) {
+      if (vistoria.status_3_vistoria === "pendencia") status = "expirado_3_vist";
+      else if (vistoria.status_3_vistoria === "aprovado") status = "certificado_termo";
+      else if (vistoria.status_3_vistoria === "reprovado") status = "certificado";
+    } else if (vistoria.data_3_atribuicao) {
+      status = "atribuido";
+    } else if (vistoria.data_2_retorno) {
+      status = "regional";
+    } 
+    // --- STAGE 2 ---
+    else if (vistoria.status_2_vistoria) {
+      if (vistoria.status_2_vistoria === "pendencia") status = "pendencias";
+      else if (vistoria.status_2_vistoria === "aprovado") status = "certificado_termo";
+      else if (vistoria.status_2_vistoria === "reprovado") status = "certificado";
+    } else if (vistoria.data_2_atribuicao) {
+      status = "atribuido";
+    } else if (vistoria.data_1_retorno) {
+      status = "regional";
+    }
+    // --- STAGE 1 ---
+    else if (vistoria.status_1_vistoria) {
+      if (vistoria.status_1_vistoria === "pendencia") status = "pendencias";
+      else if (vistoria.status_1_vistoria === "aprovado") status = "certificado_termo";
+      else if (vistoria.status_1_vistoria === "reprovado") status = "certificado";
+    } else if (vistoria.data_1_atribuicao) {
+      status = "atribuido";
+    }
   }
-  // If 3ª attribution is set but no result yet -> "atribuido"
-  if (vistoria.data_3_atribuicao) return "atribuido";
-  // If 2º retorno is set -> "regional" (waiting for 3rd visit)
-  if (vistoria.data_2_retorno) return "regional";
 
-  // --- STAGE 2 ---
-  // If 2ª vistoria has a result
-  if (vistoria.status_2_vistoria) {
-    if (vistoria.status_2_vistoria === "pendencia") return "pendencias";
-    if (vistoria.status_2_vistoria === "aprovado") return "certificado_termo";
-    if (vistoria.status_2_vistoria === "reprovado") return "certificado";
+  // 2. Apply 1-year override if NOT certificado
+  if (status !== "certificado" && dataSolicitacao) {
+    const solDate = new Date(dataSolicitacao + "T00:00:00");
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    if (solDate < oneYearAgo) {
+      return "expirado_1_ano";
+    }
   }
-  // If 2ª attribution is set
-  if (vistoria.data_2_atribuicao) return "atribuido";
-  // If 1º retorno is set
-  if (vistoria.data_1_retorno) return "regional";
 
-  // --- STAGE 1 ---
-  // If 1ª vistoria has a result
-  if (vistoria.status_1_vistoria) {
-    if (vistoria.status_1_vistoria === "pendencia") return "pendencias";
-    if (vistoria.status_1_vistoria === "aprovado") return "certificado_termo";
-    if (vistoria.status_1_vistoria === "reprovado") return "certificado";
-  }
-  // If 1ª attribution is set
-  if (vistoria.data_1_atribuicao) return "atribuido";
-
-  // Fallback to base DB status (e.g. regional or expired)
-  return dbStatus as DisplayStatus;
+  return status;
 }
 
 export function getDisplayStatusLabel(
@@ -137,8 +142,9 @@ export const displayStatusLabels: Record<DisplayStatus, string> = {
   pendencias: "Vistoria com Pendência",
   certificado_termo: "Certificado Provisório",
   certificado: "Certificado",
-  expirado: "Expirado",
-  expirado_3_vist: "Expirado - 3 Vist.",
+  expirado: "Expirado 120",
+  expirado_3_vist: "Expirado Vist.",
+  expirado_1_ano: "Expirado 1 ano",
 };
 
 export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
@@ -149,6 +155,7 @@ export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
   certificado: "status-badge-certified",
   expirado: "status-badge-expired",
   expirado_3_vist: "status-badge-expired",
+  expirado_1_ano: "status-badge-expired",
 };
 
 export const displayStatusDotColor: Record<DisplayStatus, string> = {
@@ -159,6 +166,7 @@ export const displayStatusDotColor: Record<DisplayStatus, string> = {
   certificado: "bg-[hsl(var(--status-certified))]",
   expirado: "bg-[hsl(var(--status-expired))]",
   expirado_3_vist: "bg-[hsl(var(--status-expired))]",
+  expirado_1_ano: "bg-[hsl(var(--status-expired))]",
 };
 
 /**

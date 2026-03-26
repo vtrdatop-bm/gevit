@@ -25,6 +25,9 @@ const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] =
   { key: "pendencias", label: "Vistoria com Pendência", dotColor: displayStatusDotColor.pendencias },
   { key: "certificado_termo", label: "Certificado Provisório", dotColor: displayStatusDotColor.certificado_termo },
   { key: "certificado", label: "Certificado", dotColor: displayStatusDotColor.certificado },
+  { key: "expirado_3_vist", label: "Expirado Vist.", dotColor: displayStatusDotColor.expirado_3_vist },
+  { key: "expirado", label: "Expirado 120", dotColor: displayStatusDotColor.expirado },
+  { key: "expirado_1_ano", label: "Expirado 1 ano", dotColor: displayStatusDotColor.expirado_1_ano },
 ];
 
 // Predefined colors for regional sections
@@ -198,7 +201,7 @@ export default function KanbanPage() {
           resolvedRegionalId = bairroRegionalMap[`${p.protocolos.bairro}|${p.protocolos.municipio}`] || null;
         }
         const vistoria = vistoriaMap[p.id] || null;
-        const dStatus = computeDisplayStatus(p.status, vistoria);
+        const dStatus = computeDisplayStatus(p.status, vistoria, p.protocolos?.data_solicitacao);
         const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vistoria);
         const deadlineResult = computeDeadline(vistoria, pausasByProcesso[p.id] || [], dStatus, termosMap[p.id] || null);
         return {

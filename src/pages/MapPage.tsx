@@ -14,6 +14,7 @@ const statusMarkerColors: Record<DisplayStatus, string> = {
   certificado: "#22c55e",
   expirado: "#737373",
   expirado_3_vist: "#444444",
+  expirado_1_ano: "#000000",
 };
 
 interface Vistoriador {
@@ -121,7 +122,7 @@ export default function MapPage() {
     const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }] = await Promise.all([
       supabase
         .from("processos")
-        .select("id, status, data_prevista, vistoriador_id, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
+        .select("id, status, data_prevista, vistoriador_id, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)")
         .neq("status", "expirado"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
@@ -157,7 +158,7 @@ export default function MapPage() {
 
     const mapped: MapProcess[] = (procs || []).map((p: any) => {
       const vist = vistoriaMap[p.id] || null;
-      const dStatus = computeDisplayStatus(p.status, vist);
+      const dStatus = computeDisplayStatus(p.status, vist, p.protocolos?.data_solicitacao);
       const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vist);
 
       return {
@@ -299,7 +300,7 @@ export default function MapPage() {
         {/* Status Pills */}
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <Filter className="w-4 h-4 text-muted-foreground mr-1" />
-          {(["all", "minhas", "regional", "atribuido", "pendencias", "expirado_3_vist", "certificado_termo", "certificado"] as const).map(
+          {(["all", "minhas", "regional", "atribuido", "pendencias", "expirado_1_ano", "expirado_3_vist", "certificado_termo", "certificado"] as const).map(
             (status) => (
               <button
                 key={status}
