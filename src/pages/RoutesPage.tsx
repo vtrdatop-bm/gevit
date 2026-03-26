@@ -249,8 +249,16 @@ export default function RoutesPage() {
     const waypoints = orderedProcesses
       .filter((p) => p.protocolo.latitude && p.protocolo.longitude)
       .map((p) => `${p.protocolo.latitude},${p.protocolo.longitude}`);
-    const all = [PONTO_PARTIDA, ...waypoints, PONTO_PARTIDA];
-    return `https://www.google.com/maps/dir/${all.join("/")}`;
+
+    const origin = PONTO_PARTIDA;
+    const destination = PONTO_PARTIDA;
+    const baseUrl = "https://www.google.com/maps/dir/?api=1";
+    
+    if (waypoints.length === 0) {
+      return `${baseUrl}&origin=${origin}&destination=${destination}&travelmode=driving`;
+    }
+    
+    return `${baseUrl}&origin=${origin}&destination=${destination}&waypoints=${encodeURIComponent(waypoints.join('|'))}&travelmode=driving`;
   };
 
   const copyRouteLink = () => {

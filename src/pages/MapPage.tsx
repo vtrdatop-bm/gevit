@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ProcessStatus } from "@/types/process";
-import { DisplayStatus, displayStatusLabels, computeDisplayStatus } from "@/lib/vistoriaStatus";
+import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel } from "@/lib/vistoriaStatus";
 import { Filter } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
@@ -14,6 +14,12 @@ const statusMarkerColors: Record<DisplayStatus, string> = {
   certificado: "#22c55e",
   expirado: "#737373",
 };
+
+interface Vistoriador {
+  user_id: string;
+  patente: string | null;
+  nome_guerra: string | null;
+}
 
 interface MapProcess {
   id: string;
@@ -60,6 +66,9 @@ export default function MapPage() {
   const [processos, setProcessos] = useState<MapProcess[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<DisplayStatus | "all" | "minhas">("all");
+  const [selectedVistoriador, setSelectedVistoriador] = useState("");
+  const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);
+  const [canChangeVistoriador, setCanChangeVistoriador] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (isDev) {
@@ -108,37 +117,60 @@ export default function MapPage() {
       return;
     }
 
-    const [{ data: procs }, { data: profiles }, { data: vistorias }] = await Promise.all([
+    const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }] = await Promise.all([
       supabase
         .from("processos")
         .select("id, status, data_prevista, vistoriador_id, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
         .neq("status", "expirado"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria"),
+      supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
     ]);
 
+    // Check if current user is admin or distribuidor
+    if (user) {
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const isAdminOrDist = userRoles?.some(
+        (r) => r.role === "admin" || r.role === "distribuidor"
+      );
+      setCanChangeVistoriador(!!isAdminOrDist);
+    }
+
+    if (roles?.length) {
+      const ids = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, patente, nome_guerra")
+        .in("user_id", ids);
+      if (profiles) setVistoriadores(profiles);
+    }
+
     const profMap: Record<string, string> = {};
-    (profiles || []).forEach((p: any) => { profMap[p.user_id] = [p.patente, p.nome_guerra].filter(Boolean).join(" "); });
+    (profilesData || []).forEach((p) => { profMap[p.user_id] = [p.patente, p.nome_guerra].filter(Boolean).join(" "); });
 
     const vistMap: Record<string, any> = {};
-    (vistorias || []).forEach((v: any) => { vistMap[v.processo_id] = v; });
+    (vistorias || []).forEach((v) => { vistMap[v.processo_id] = v; });
 
-    const mapped: MapProcess[] = (procs || []).map((p: any) => {
+    const mapped: MapProcess[] = (procs || []).map((p) => {
       const vistoria = vistMap[p.id] || null;
       return {
+        id: p.id,
         vistoriador_id: p.vistoriador_id || null,
         status: p.status as ProcessStatus,
         displayStatus: computeDisplayStatus(p.status, vistoria),
         data_prevista: p.data_prevista,
         vistoriador_nome: p.vistoriador_id ? profMap[p.vistoriador_id] || null : null,
-        protocolo: p.protocolos,
+        protocolo: p.protocolos as any,
         vistoria,
       };
     });
 
     setProcessos(mapped);
     setLoading(false);
-  }, []);
+  }, [user, isDev]);
 
   useEffect(() => {
     fetchData();
@@ -155,12 +187,13 @@ export default function MapPage() {
     };
   }, [fetchData]);
 
-  const filteredProcesses =
-    filterStatus === "all"
-      ? processos
-      : filterStatus === "minhas"
-        ? processos.filter((p) => p.vistoriador_id === user?.id)
-        : processos.filter((p) => p.displayStatus === filterStatus);
+  const filteredProcesses = processos.filter((p) => {
+    if (selectedVistoriador && p.vistoriador_id !== selectedVistoriador) return false;
+    
+    if (filterStatus === "all") return true;
+    if (filterStatus === "minhas") return p.vistoriador_id === user?.id;
+    return p.displayStatus === filterStatus;
+  });
 
   // Init map centered on Rio Branco, AC
   useEffect(() => {
@@ -228,7 +261,7 @@ export default function MapPage() {
             <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">${process.protocolo.nome_fantasia || process.protocolo.razao_social}</div>
             <div style="font-size: 12px; color: #666; margin-bottom: 8px;">${process.protocolo.razao_social}</div>
             <div style="font-size: 11px; color: #888; margin-bottom: 2px;">📍 ${process.protocolo.endereco}, ${process.protocolo.bairro}</div>
-            <div style="font-size: 11px; color: #888; margin-bottom: 2px;">📋 ${displayStatusLabels[process.displayStatus]}</div>
+            <div style="font-size: 11px; color: #888; margin-bottom: 2px;">📋 ${getDisplayStatusLabel(process.displayStatus, process.vistoria)}</div>
             ${stage ? `<div style="font-size: 11px; color: #888; margin-bottom: 2px;">🔍 ${stage}${result ? ` — ${result}` : ""}</div>` : ""}
             ${process.data_prevista ? `<div style="font-size: 11px; color: #888; margin-bottom: 2px;">📅 Previsto: ${process.data_prevista}</div>` : ""}
             ${process.vistoriador_nome ? `<div style="font-size: 11px; color: #888;">👤 ${process.vistoriador_nome}</div>` : ""}
@@ -257,25 +290,68 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Filter className="w-4 h-4 text-muted-foreground" />
-        {(["all", "minhas", "regional", "atribuido", "pendencias", "certificado_termo", "certificado"] as const).map(
-          (status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                filterStatus === status
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card text-muted-foreground border-border hover:border-primary/30"
-              }`}
+      {/* Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-muted/40 p-3 rounded-xl border border-border">
+        {/* Status Pills */}
+        <div className="flex items-center gap-2 flex-wrap flex-1">
+          <Filter className="w-4 h-4 text-muted-foreground mr-1" />
+          {(["all", "minhas", "regional", "atribuido", "pendencias", "certificado_termo", "certificado"] as const).map(
+            (status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  filterStatus === status
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-background text-muted-foreground border-border hover:border-primary/30"
+                }`}
+              >
+                {status === "all" ? "Todos os Status" : status === "minhas" ? "Minhas Vistorias" : getDisplayStatusLabel(status)}
+              </button>
+            )
+          )}
+        </div>
+
+        {/* Vistoriador Selection */}
+        {canChangeVistoriador && (
+          <div className="flex items-center gap-3 pl-4 border-l border-border sr-only sm:not-sr-only">
+            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Vistoriador:</span>
+            <select
+              title="Filtrar por Vistoriador"
+              value={selectedVistoriador}
+              onChange={(e) => setSelectedVistoriador(e.target.value)}
+              className="text-xs rounded-lg border border-input bg-background px-3 py-1.5 min-w-[180px] focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              {status === "all" ? "Todos" : status === "minhas" ? "Minhas Vistorias" : displayStatusLabels[status]}
-            </button>
-          )
+              <option value="">Todos</option>
+              {vistoriadores.map((v) => (
+                <option key={v.user_id} value={v.user_id}>
+                  {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
+
+      {/* Vistoriador for Mobile (below pills if drawer is narrow) */}
+      {canChangeVistoriador && (
+        <div className="sm:hidden flex flex-col gap-1.5 px-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Filtrar por Vistoriador</label>
+          <select
+            title="Filtrar por Vistoriador (Mobile)"
+            value={selectedVistoriador}
+            onChange={(e) => setSelectedVistoriador(e.target.value)}
+            className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
+          >
+            <option value="">Todos os Vistoriadores</option>
+            {vistoriadores.map((v) => (
+              <option key={v.user_id} value={v.user_id}>
+                {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="flex items-center gap-4 flex-wrap">
@@ -283,7 +359,7 @@ export default function MapPage() {
           <div key={status} className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
             <span className="text-xs text-muted-foreground">
-              {displayStatusLabels[status as DisplayStatus]}
+              {getDisplayStatusLabel(status as DisplayStatus)}
             </span>
           </div>
         ))}

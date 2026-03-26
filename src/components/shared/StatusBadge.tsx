@@ -9,10 +9,11 @@ import {
 interface StatusBadgeProps {
   status: DisplayStatus;
   stage?: VistoriaStage;
+  customLabel?: string;
   className?: string;
 }
 
-export default function StatusBadge({ status, stage, className }: StatusBadgeProps) {
+export default function StatusBadge({ status, stage, customLabel, className }: StatusBadgeProps) {
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
       <span
@@ -22,7 +23,7 @@ export default function StatusBadge({ status, stage, className }: StatusBadgePro
           className
         )}
       >
-        {displayStatusLabels[status] || status}
+        {customLabel || displayStatusLabels[status] || status}
       </span>
       {stage && (
         <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[11px] font-medium stage-badge whitespace-nowrap">

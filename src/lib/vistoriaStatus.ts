@@ -42,21 +42,37 @@ export function computeDisplayStatus(
     return dbStatus as DisplayStatus;
   }
 
-  // For "regional" or "pendencias" status, check vistoria data for virtual statuses
+  // Return date filled but next inspection not done → back to "aguardando vistoria"
+  // Note: We check this before database "atribuido" to give priority to the return flow
   if (vistoria) {
-    // Return date filled but next inspection not done → back to "aguardando vistoria"
     if (vistoria.data_2_retorno && !vistoria.data_3_vistoria && !vistoria.status_3_vistoria) return "regional";
     if (vistoria.data_1_retorno && !vistoria.data_2_vistoria && !vistoria.status_2_vistoria) return "regional";
+  }
 
+  // For "regional" or "pendencias" status, check vistoria data for virtual statuses
+  if (dbStatus === "regional" && vistoria) {
     // Attribution without a result → "atribuído"
-    if (dbStatus === "regional") {
-      if (vistoria.data_3_atribuicao && !vistoria.status_3_vistoria) return "atribuido";
-      if (vistoria.data_2_atribuicao && !vistoria.status_2_vistoria) return "atribuido";
-      if (vistoria.data_1_atribuicao && !vistoria.status_1_vistoria) return "atribuido";
-    }
+    if (vistoria.data_3_atribuicao && !vistoria.status_3_vistoria) return "atribuido";
+    if (vistoria.data_2_atribuicao && !vistoria.status_2_vistoria) return "atribuido";
+    if (vistoria.data_1_atribuicao && !vistoria.status_1_vistoria) return "atribuido";
   }
 
   return dbStatus as DisplayStatus;
+}
+
+export function getDisplayStatusLabel(
+  status: DisplayStatus,
+  vistoria?: VistoriaData | null
+): string {
+  if (status === "regional" && vistoria) {
+    if (vistoria.data_2_retorno && !vistoria.data_3_vistoria && !vistoria.status_3_vistoria) {
+      return "Aguardando Vistoria 3ª vist.";
+    }
+    if (vistoria.data_1_retorno && !vistoria.data_2_vistoria && !vistoria.status_2_vistoria) {
+      return "Aguardando Vistoria 2ª vist.";
+    }
+  }
+  return displayStatusLabels[status] || status;
 }
 
 export function computeStage(vistoria?: VistoriaData | null): VistoriaStage {

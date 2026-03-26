@@ -15,6 +15,7 @@ import {
   computeStage,
   displayStatusLabels,
   displayStatusDotColor,
+  getDisplayStatusLabel,
 } from "@/lib/vistoriaStatus";
 
 const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] = [
@@ -70,6 +71,9 @@ interface ProcessoWithProtocolo {
   vistoriador_nome?: string;
   dias_restantes: number;
   deadline: DeadlineResult;
+  data_1_retorno: string | null;
+  data_2_retorno: string | null;
+  vistoria_completa?: VistoriaData | null;
 }
 
 export default function KanbanPage() {
@@ -109,7 +113,9 @@ export default function KanbanPage() {
             regional_nome: "Regional Centro",
             vistoriador_nome: "Administrador (Dev)",
             dias_restantes: 10,
-            deadline: { active: true, remaining: 10, type: "expiration", stage: 1 }
+            deadline: { active: true, remaining: 10, type: "expiration", stage: 1 },
+            data_1_retorno: null,
+            data_2_retorno: null,
           },
           {
             id: "proc2",
@@ -135,7 +141,9 @@ export default function KanbanPage() {
             regional_nome: "Regional Centro",
             vistoriador_nome: "Administrador (Dev)",
             dias_restantes: 0,
-            deadline: { active: false, remaining: 0, type: "expiration", stage: 0 }
+            deadline: { active: false, remaining: 0, type: "expiration", stage: 0 },
+            data_1_retorno: null,
+            data_2_retorno: null,
           }
         ];
         setProcessos(mockProcs);
@@ -208,6 +216,9 @@ export default function KanbanPage() {
             ? differenceInDays(new Date(p.data_prevista), new Date())
             : 999,
           deadline: deadlineResult,
+          data_1_retorno: vistoria?.data_1_retorno || null,
+          data_2_retorno: vistoria?.data_2_retorno || null,
+          vistoria_completa: vistoria,
         };
       });
 
@@ -250,7 +261,15 @@ export default function KanbanPage() {
   };
 
   const getByStatus = (procs: ProcessoWithProtocolo[], status: DisplayStatus) =>
-    procs.filter((p) => p.displayStatus === status).sort((a, b) => a.data_solicitacao.localeCompare(b.data_solicitacao));
+    procs.filter((p) => p.displayStatus === status).sort((a, b) => {
+      if (status === "regional") {
+        // User wants to prioritize return dates in sorting
+        const dateA = a.data_2_retorno || a.data_1_retorno || a.data_solicitacao;
+        const dateB = b.data_2_retorno || b.data_1_retorno || b.data_solicitacao;
+        return dateA.localeCompare(dateB);
+      }
+      return a.data_solicitacao.localeCompare(b.data_solicitacao);
+    });
 
   const totalProcessos = processos.length;
 
@@ -349,7 +368,11 @@ export default function KanbanPage() {
                                     {process.protocolos.numero}
                                   </span>
                                   <div className="flex flex-wrap items-center justify-end gap-1">
-                                    <StatusBadge status={process.displayStatus} stage={process.stage} />
+                                    <StatusBadge 
+                                      status={process.displayStatus} 
+                                      stage={process.stage} 
+                                      customLabel={getDisplayStatusLabel(process.displayStatus, process.vistoria_completa)}
+                                    />
                                   </div>
                                 </div>
 
