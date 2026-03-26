@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Vistoriador } from "@/types/user";
 import {
   VistoriaStage,
@@ -69,13 +69,42 @@ export default function VistoriaTab({
   const [validadeTermo, setValidadeTermo] = useState(termo?.data_validade || "");
   const [saving, setSaving] = useState(false);
 
+  // We only sync from props IF the prop is NOT what we have OR if we just finished saving
+  // Actually, a simpler way is to handle the update in handleSave and only depend on props for initial value
+  // BUT we need to support Realtime updates from other users too.
+  // The best way is to only sync when the PROP itself changes (not every re-render).
+  const lastPropVistoriador = useRef(vistoriadorId);
   useEffect(() => {
-    setData(dataVistoria || "");
-    setStatus(statusVistoria || "");
-    setRetorno(dataRetorno || "");
-    setVistoriador(vistoriadorId || "");
-    setAtribuicao(dataAtribuicao || "");
-  }, [dataVistoria, statusVistoria, dataRetorno, vistoriadorId, dataAtribuicao]);
+    if (vistoriadorId !== lastPropVistoriador.current) {
+      setVistoriador(vistoriadorId || "");
+      lastPropVistoriador.current = vistoriadorId;
+    }
+  }, [vistoriadorId]);
+
+  // Sync other fields similarly or just remove the global sync if causing issues
+  const lastPropData = useRef(dataVistoria);
+  useEffect(() => {
+    if (dataVistoria !== lastPropData.current) {
+      setData(dataVistoria || "");
+      lastPropData.current = dataVistoria;
+    }
+  }, [dataVistoria]);
+
+  const lastPropStatus = useRef(statusVistoria);
+  useEffect(() => {
+    if (statusVistoria !== lastPropStatus.current) {
+      setStatus(statusVistoria || "");
+      lastPropStatus.current = statusVistoria;
+    }
+  }, [statusVistoria]);
+
+  const lastPropAtribuicao = useRef(dataAtribuicao);
+  useEffect(() => {
+    if (dataAtribuicao !== lastPropAtribuicao.current) {
+      setAtribuicao(dataAtribuicao || "");
+      lastPropAtribuicao.current = dataAtribuicao;
+    }
+  }, [dataAtribuicao]);
 
   useEffect(() => {
     setNumeroTermo(termo?.numero_termo || "");
