@@ -84,14 +84,6 @@ export function getDisplayStatusLabel(
   status: DisplayStatus,
   vistoria?: VistoriaData | null
 ): string {
-  if (status === "regional" && vistoria) {
-    if (vistoria.data_2_retorno && !vistoria.data_3_vistoria && !vistoria.status_3_vistoria) {
-      return "Aguardando Vistoria 3ª vist.";
-    }
-    if (vistoria.data_1_retorno && !vistoria.data_2_vistoria && !vistoria.status_2_vistoria) {
-      return "Aguardando Vistoria 2ª vist.";
-    }
-  }
   return displayStatusLabels[status] || status;
 }
 

@@ -93,18 +93,18 @@ export default function VistoriaTab({
         vistoriaUpdate.vistoriador_1_id = vistoriador || null;
         vistoriaUpdate.data_1_vistoria = data || null;
         vistoriaUpdate.status_1_vistoria = status || null;
-        vistoriaUpdate.data_1_retorno = retorno || null;
       } else if (numero === 2) {
         vistoriaUpdate.data_2_atribuicao = atribuicao || null;
         vistoriaUpdate.vistoriador_2_id = vistoriador || null;
         vistoriaUpdate.data_2_vistoria = data || null;
         vistoriaUpdate.status_2_vistoria = status || null;
-        vistoriaUpdate.data_2_retorno = retorno || null;
+        vistoriaUpdate.data_1_retorno = retorno || null;
       } else {
         vistoriaUpdate.data_3_atribuicao = atribuicao || null;
         vistoriaUpdate.vistoriador_3_id = vistoriador || null;
         vistoriaUpdate.data_3_vistoria = data || null;
         vistoriaUpdate.status_3_vistoria = status || null;
+        vistoriaUpdate.data_2_retorno = retorno || null;
       }
 
       // Update the vistoria record
