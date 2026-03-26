@@ -35,7 +35,8 @@ interface ProcessoComProtocolo {
 
 interface Vistoriador {
   user_id: string;
-  nome_completo: string;
+  patente: string | null;
+  nome_guerra: string | null;
 }
 
 const PONTO_PARTIDA = "-9.966142405683366,-67.80275437311697";
@@ -89,15 +90,15 @@ export default function RoutesPage() {
         const ids = roles.map((r) => r.user_id);
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("user_id, nome_completo")
+          .select("user_id, patente, nome_guerra")
           .in("user_id", ids);
         if (profiles) setVistoriadores(profiles);
       }
 
       if (procsData) {
         const mapped = procsData
-          .filter((p: any) => p.protocolos)
-          .map((p: any) => ({
+          .filter((p) => p.protocolos)
+          .map((p) => ({
             id: p.id,
             protocolo_id: p.protocolo_id,
             vistoriador_id: p.vistoriador_id,
@@ -190,27 +191,19 @@ export default function RoutesPage() {
     }
   };
 
-  // Nearest-neighbor algorithm grouped by date, then optimizing route per date
+  // Nearest-neighbor algorithm optimized globally ignoring assign date
   const handleGenerateRoute = () => {
-    // 1. Group selected processes by their earliest pending assignment date
-    const groupedByDate: Record<string, ProcessoComProtocolo[]> = {};
+    // 1. Separate processes with and without coordinates
+    const withCoords: ProcessoComProtocolo[] = [];
     const noCoords: ProcessoComProtocolo[] = [];
 
     selectedProcesses.forEach((p) => {
-      const earliestDate = p.datasAtribuicao.length > 0 ? [...p.datasAtribuicao].sort()[0] : "Sem Data";
-      if (!groupedByDate[earliestDate]) {
-        groupedByDate[earliestDate] = [];
-      }
-      
       if (p.protocolo.latitude != null && p.protocolo.longitude != null) {
-        groupedByDate[earliestDate].push(p);
+        withCoords.push(p);
       } else {
         noCoords.push(p);
       }
     });
-
-    // 2. Sort dates in ascending order
-    const sortedDates = Object.keys(groupedByDate).sort();
 
     const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
       const toRad = (v: number) => (v * Math.PI) / 180;
@@ -226,28 +219,25 @@ export default function RoutesPage() {
     let currentLat = START_COORDS[0];
     let currentLng = START_COORDS[1];
 
-    // 3. For each date group, find optimal route
-    for (const date of sortedDates) {
-      const remaining = [...groupedByDate[date]];
-      
-      while (remaining.length > 0) {
-        let nearestIdx = 0;
-        let nearestDist = Infinity;
-        for (let i = 0; i < remaining.length; i++) {
-          const d = haversine(
-            currentLat, currentLng,
-            remaining[i].protocolo.latitude!, remaining[i].protocolo.longitude!
-          );
-          if (d < nearestDist) {
-            nearestDist = d;
-            nearestIdx = i;
-          }
+    // 2. For each date group, find optimal route
+    const remaining = [...withCoords];
+    while (remaining.length > 0) {
+      let nearestIdx = 0;
+      let nearestDist = Infinity;
+      for (let i = 0; i < remaining.length; i++) {
+        const d = haversine(
+          currentLat, currentLng,
+          remaining[i].protocolo.latitude!, remaining[i].protocolo.longitude!
+        );
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearestIdx = i;
         }
-        const nearest = remaining.splice(nearestIdx, 1)[0];
-        ordered.push(nearest);
-        currentLat = nearest.protocolo.latitude!;
-        currentLng = nearest.protocolo.longitude!;
       }
+      const nearest = remaining.splice(nearestIdx, 1)[0];
+      ordered.push(nearest);
+      currentLat = nearest.protocolo.latitude!;
+      currentLng = nearest.protocolo.longitude!;
     }
 
     // Add any without coords at the end
@@ -316,7 +306,9 @@ export default function RoutesPage() {
             >
               {canChangeVistoriador && <option value="">Todos</option>}
               {vistoriadores.map((v) => (
-                <option key={v.user_id} value={v.user_id}>{v.nome_completo}</option>
+                <option key={v.user_id} value={v.user_id}>
+                  {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
+                </option>
               ))}
             </select>
           </div>
@@ -389,9 +381,36 @@ export default function RoutesPage() {
             Nenhuma vistoria pendente neste período.
           </p>
         ) : routeGenerated ? (
+          <div className="space-y-3">
+            {orderedProcesses.map((process, index) => (
+              <div
+                key={process.id}
+                className="flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-accent/30 transition-colors animate-fade-in"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-primary-foreground">{index + 1}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {process.protocolo.nome_fantasia || process.protocolo.razao_social}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {process.protocolo.endereco}, {process.protocolo.bairro}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
+                  <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                    {process.datasAtribuicao.join(", ")}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
           <div className="space-y-6">
             {Object.entries(
-              orderedProcesses.reduce((acc, process) => {
+              filteredProcesses.reduce((acc, process) => {
                 const date = process.datasAtribuicao.length > 0 ? [...process.datasAtribuicao].sort()[0] : "Sem Data";
                 if (!acc[date]) acc[date] = [];
                 acc[date].push(process);
@@ -399,9 +418,6 @@ export default function RoutesPage() {
               }, {} as Record<string, ProcessoComProtocolo[]>)
             ).sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
              .map(([date, processesInDate]) => {
-              // Get the starting index for mapping across all dates relative to orderedProcesses
-              const startIndex = orderedProcesses.indexOf(processesInDate[0]);
-              
               const formatBRDate = (d: string) => {
                 if (d === "Sem Data") return "Vistorias Sem Data";
                 const [year, month, day] = d.split("-");
@@ -418,68 +434,38 @@ export default function RoutesPage() {
                       ({processesInDate.length} vistorias)
                     </span>
                   </h4>
-                  {processesInDate.map((process, localIndex) => {
-                    const globalIndex = startIndex + localIndex;
-                    return (
-                      <div
-                        key={process.id}
-                        className="flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-accent/30 transition-colors animate-fade-in"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-bold text-primary-foreground">{globalIndex + 1}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">
-                            {process.protocolo.nome_fantasia || process.protocolo.razao_social}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {process.protocolo.endereco}, {process.protocolo.bairro}
-                          </p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
-                        </div>
+                  {processesInDate.map((process) => (
+                    <label
+                      key={process.id}
+                      className={cn(
+                        "flex items-center gap-4 p-3 rounded-lg border transition-colors cursor-pointer",
+                        selectedIds.has(process.id)
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:bg-accent/30"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(process.id)}
+                        onChange={() => toggleSelect(process.id)}
+                        className="w-4 h-4 rounded border-input accent-primary flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {process.protocolo.nome_fantasia || process.protocolo.razao_social}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {process.protocolo.endereco}, {process.protocolo.bairro}
+                        </p>
                       </div>
-                    );
-                  })}
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
+                      </div>
+                    </label>
+                  ))}
                 </div>
               );
             })}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredProcesses.map((process) => (
-              <label
-                key={process.id}
-                className={cn(
-                  "flex items-center gap-4 p-3 rounded-lg border transition-colors cursor-pointer",
-                  selectedIds.has(process.id)
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-accent/30"
-                )}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(process.id)}
-                  onChange={() => toggleSelect(process.id)}
-                  className="w-4 h-4 rounded border-input accent-primary flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {process.protocolo.nome_fantasia || process.protocolo.razao_social}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {process.protocolo.endereco}, {process.protocolo.bairro}
-                  </p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
-                  <p className="text-xs font-mono text-muted-foreground mt-0.5">
-                    {process.datasAtribuicao.join(", ")}
-                  </p>
-                </div>
-              </label>
-            ))}
           </div>
         )}
 
