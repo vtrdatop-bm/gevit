@@ -399,7 +399,7 @@ export default function ProtocoloDetailPage() {
     try {
       const cepClean = (editForm.cep || "").replace(/\D/g, "");
       const endereco = editForm.endereco || "";
-      const numMatch = endereco.match(/(\d+)\s*$/);
+      const numMatch = endereco.match(/(?:,|nº|num|número)\s*(\d+)/i) || endereco.match(/\b(\d+)\b/);
       const numero = numMatch ? numMatch[1] : "";
 
       let lat: string | null = null;
@@ -414,8 +414,8 @@ export default function ProtocoloDetailPage() {
           if (viaCep && !viaCep.erro && viaCep.logradouro) {
             const parts = [
               numero ? `${viaCep.logradouro}, ${numero}` : viaCep.logradouro,
-              viaCep.bairro,
-              viaCep.localidade,
+              viaCep.bairro || editForm.bairro,
+              viaCep.localidade || editForm.municipio,
               viaCep.uf,
               "Brasil",
             ].filter(Boolean);
@@ -438,13 +438,17 @@ export default function ProtocoloDetailPage() {
       const searchStrategies = [];
       const municipioStr = editForm.municipio || "";
       const bairroStr = editForm.bairro || "";
-      const baseEndereco = endereco.split(",")[0].trim(); // Pega só o logradouro base
+      const addressClean = endereco.split('-')[0].trim(); // Rua + Número sem complemento
+      const baseEndereco = endereco.split(",")[0].trim(); // Só a rua
       
-      if (baseEndereco && bairroStr && municipioStr) {
+      if (addressClean && bairroStr && municipioStr) {
+        searchStrategies.push(`${addressClean}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
+      }
+      if (baseEndereco && baseEndereco !== addressClean && bairroStr && municipioStr) {
         searchStrategies.push(`${baseEndereco}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
       }
-      if (baseEndereco && municipioStr) {
-        searchStrategies.push(`${baseEndereco}, ${municipioStr}, Acre, Brasil`);
+      if (addressClean && municipioStr) {
+        searchStrategies.push(`${addressClean}, ${municipioStr}, Acre, Brasil`);
       }
       if (bairroStr && municipioStr) {
         searchStrategies.push(`${bairroStr}, ${municipioStr}, Acre, Brasil`);

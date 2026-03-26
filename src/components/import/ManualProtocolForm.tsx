@@ -238,7 +238,7 @@ export default function ManualProtocolForm() {
     try {
       const cepClean = (form.cep || "").replace(/\D/g, "");
       const endereco = form.endereco || "";
-      const numMatch = endereco.match(/(\d+)\s*$/);
+      const numMatch = endereco.match(/(?:,|nº|num|número)\s*(\d+)/i) || endereco.match(/\b(\d+)\b/);
       const numero = numMatch ? numMatch[1] : "";
 
       let lat: string | null = null;
@@ -250,7 +250,14 @@ export default function ManualProtocolForm() {
           viaCepData = await viaCepRes.json();
           const viaCep = viaCepData;
           if (viaCep && !viaCep.erro && viaCep.logradouro) {
-            const q = `${viaCep.logradouro}${numero ? " " + numero : ""}, ${viaCep.bairro || form.bairro}, ${form.municipio}, Acre, Brasil`;
+            const parts = [
+              numero ? `${viaCep.logradouro}, ${numero}` : viaCep.logradouro,
+              viaCep.bairro || form.bairro,
+              viaCep.localidade || form.municipio,
+              viaCep.uf || "Acre",
+              "Brasil",
+            ].filter(Boolean);
+            const q = parts.join(", ");
             const res = await fetch(
               `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,
               { headers: { "User-Agent": "GEVIT-App/1.0" } }
@@ -276,13 +283,17 @@ export default function ManualProtocolForm() {
       const searchStrategies = [];
       const municipioStr = form.municipio || "";
       const bairroStr = form.bairro || "";
-      const baseEndereco = endereco.split(",")[0].trim(); // Pega só o logradouro base
+      const addressClean = endereco.split('-')[0].trim(); // Rua + Número sem complemento
+      const baseEndereco = endereco.split(",")[0].trim(); // Só a rua
       
-      if (baseEndereco && bairroStr && municipioStr) {
+      if (addressClean && bairroStr && municipioStr) {
+        searchStrategies.push(`${addressClean}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
+      }
+      if (baseEndereco && baseEndereco !== addressClean && bairroStr && municipioStr) {
         searchStrategies.push(`${baseEndereco}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
       }
-      if (baseEndereco && municipioStr) {
-        searchStrategies.push(`${baseEndereco}, ${municipioStr}, Acre, Brasil`);
+      if (addressClean && municipioStr) {
+        searchStrategies.push(`${addressClean}, ${municipioStr}, Acre, Brasil`);
       }
       if (bairroStr && municipioStr) {
         searchStrategies.push(`${bairroStr}, ${municipioStr}, Acre, Brasil`);
