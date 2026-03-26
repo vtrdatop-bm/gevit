@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { Calendar, User, MapPin, Clock, Building2, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
+import { Calendar, User, MapPin, Clock, Building2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 import { computeDeadline, deadlineColorClass, deadlineLabel, DeadlineResult, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
@@ -79,8 +79,8 @@ interface ProcessoWithProtocolo {
 }
 
 export default function KanbanPage() {
-  const { isDev } = useAuth();
   const navigate = useNavigate();
+  const { isDev, user } = useAuth();
   const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
   const [collapsedRegionais, setCollapsedRegionais] = useState<Set<string>>(new Set());
   const [processos, setProcessos] = useState<ProcessoWithProtocolo[]>([]);
@@ -299,7 +299,16 @@ export default function KanbanPage() {
     <div className="p-4 md:p-6 space-y-4 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Gerenciamento</h2>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Voltar"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-foreground">Gerenciamento</h2>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             Fluxo automático de processos — agrupados por regional
           </p>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigation, ExternalLink, Copy } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Navigation, ExternalLink, Copy, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import RouteMap from "@/components/routes/RouteMap";
@@ -43,6 +44,7 @@ const PONTO_PARTIDA = "-9.966142405683366,-67.80275437311697";
 const START_COORDS: [number, number] = [-9.966142405683366, -67.80275437311697];
 
 export default function RoutesPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [dataLimite, setDataLimite] = useState("");
   const [selectedVistoriador, setSelectedVistoriador] = useState("");
@@ -281,7 +283,16 @@ export default function RoutesPage() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Roteirização Inteligente</h2>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Voltar"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-2xl font-bold text-foreground">Roteirização Inteligente</h2>
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           Filtre por data limite e vistoriador para traçar rotas de vistorias pendentes
         </p>

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface ImportRow {
@@ -22,6 +23,7 @@ function validateCNPJ(cnpj: string): boolean {
 }
 
 export default function ImportPage() {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -68,7 +70,16 @@ export default function ImportPage() {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Importar Protocolos</h2>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Voltar"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-2xl font-bold text-foreground">Importar Protocolos</h2>
+        </div>
         <p className="text-sm text-muted-foreground mt-1">Faça upload de arquivo CSV ou Excel com os dados dos protocolos</p>
       </div>
 

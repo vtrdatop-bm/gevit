@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { Search, Calendar, MapPin, Building2, CheckCircle2 } from "lucide-react";
+import { Search, Calendar, MapPin, Building2, CheckCircle2, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DisplayStatus,
@@ -129,7 +129,16 @@ export default function InspectionsPage() {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Minhas Vistorias</h2>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Voltar"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-2xl font-bold text-foreground">Minhas Vistorias</h2>
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           {filtered.length} processo{filtered.length !== 1 ? "s" : ""} atribuído{filtered.length !== 1 ? "s" : ""} a você
         </p>

@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ProcessStatus } from "@/types/process";
 import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
-import { Filter } from "lucide-react";
+import { Filter, Layers, Navigation, MousePointerClick, MapPin, Search, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 
 const statusMarkerColors: Record<DisplayStatus, string> = {
@@ -59,7 +60,8 @@ const getVistoriaResult = (v: any): string | null => {
 };
 
 export default function MapPage() {
-  const { user, isDev } = useAuth();
+  const navigate = useNavigate();
+  const { isDev, user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -284,7 +286,16 @@ export default function MapPage() {
     <div className="p-4 md:p-6 space-y-4 h-full flex flex-col">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Mapa Interativo</h2>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Voltar"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-foreground">Mapa Interativo</h2>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             {processesWithCoords > 0
               ? `${processesWithCoords} vistorias geolocalizadas`

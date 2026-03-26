@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Users, MapPin, Building2, Map, UserCog } from "lucide-react";
+import { Users, MapPin, Building2, Map, UserCog, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import UsersTab from "@/components/settings/UsersTab";
@@ -20,6 +21,7 @@ const allTabs = [
 type TabKey = (typeof allTabs)[number]["key"];
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [tab, setTab] = useState<TabKey>("minha-conta");
   const [role, setRole] = useState<string | null>(null);
@@ -39,7 +41,16 @@ export default function SettingsPage() {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Configurações</h2>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Voltar"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className="text-2xl font-bold text-foreground">Configurações</h2>
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           Gerencie usuários, municípios, regionais, bairros e parâmetros do sistema
         </p>

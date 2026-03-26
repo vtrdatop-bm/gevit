@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, FileText, ChevronDown, ChevronUp, Plus, AlertTriangle, Clock } from "lucide-react";
+import { Search, FileText, ChevronDown, ChevronUp, Plus, AlertTriangle, Clock, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import {
@@ -242,7 +242,16 @@ export default function ProtocolosPage() {
     <div className="p-4 md:p-6 space-y-4 max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Protocolos</h2>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Voltar"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-foreground">Protocolos</h2>
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             {protocolos.length} protocolo{protocolos.length !== 1 ? "s" : ""} cadastrado{protocolos.length !== 1 ? "s" : ""}
           </p>

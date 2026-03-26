@@ -513,14 +513,21 @@ export default function ProtocoloDetailPage() {
     if (!protocolo) return;
     setIsDeleting(true);
     try {
-      // If there's a process, we might need to delete it first if not cascading
-      // But usually protocols have on delete cascade processes.
-      // Let's delete explicit to be safe.
       if (processo) {
-        await supabase.from("vistorias").delete().eq("processo_id", processo.id);
-        await supabase.from("pausas").delete().eq("processo_id", processo.id);
-        await supabase.from("termos_compromisso").delete().eq("processo_id", processo.id);
-        await supabase.from("processos").delete().eq("id", processo.id);
+        const { error: errNotif } = await supabase.from("notificacoes").delete().eq("processo_id", processo.id);
+        if (errNotif) throw errNotif;
+
+        const { error: errVist } = await supabase.from("vistorias").delete().eq("processo_id", processo.id);
+        if (errVist) throw errVist;
+
+        const { error: errPausa } = await supabase.from("pausas").delete().eq("processo_id", processo.id);
+        if (errPausa) throw errPausa;
+
+        const { error: errTermo } = await supabase.from("termos_compromisso").delete().eq("processo_id", processo.id);
+        if (errTermo) throw errTermo;
+
+        const { error: errProc } = await supabase.from("processos").delete().eq("id", processo.id);
+        if (errProc) throw errProc;
       }
       
       const { error } = await supabase
@@ -574,8 +581,9 @@ export default function ProtocoloDetailPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate("/protocolos")}
+          onClick={() => navigate(-1)}
           className="p-2 rounded-lg hover:bg-muted transition-colors"
+          title="Voltar"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>

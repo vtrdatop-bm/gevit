@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell, AlertTriangle, Clock, CheckCircle2, MessageSquare } from "lucide-react";
+import { Bell, AlertTriangle, Clock, CheckCircle2, MessageSquare, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const iconMap: Record<string, { icon: typeof Bell; color: string }> = {
   warning: { icon: AlertTriangle, color: "text-status-risk bg-status-risk/10" },
@@ -33,6 +34,7 @@ function timeAgo(dateStr: string) {
 }
 
 export default function NotificationsPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notificacao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +82,16 @@ export default function NotificationsPage() {
     <div className="p-4 md:p-6 space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Notificações</h2>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Voltar"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-foreground">Notificações</h2>
+          </div>
           <p className="text-sm text-muted-foreground mt-1">
             Alertas de prazos, expiração e atualizações
           </p>
