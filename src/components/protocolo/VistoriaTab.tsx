@@ -3,6 +3,7 @@ import { Vistoriador } from "@/types/user";
 import {
   VistoriaData,
   computeProcessStatus,
+  getCurrentVistoriadorId,
 } from "@/lib/vistoriaStatus";
 import {
   Select,
@@ -123,10 +124,16 @@ export default function VistoriaTab({
 
       if (latestVistData) {
         const newGlobalStatus = computeProcessStatus(latestVistData);
-        if (newGlobalStatus) {
+        const currentVistoriadorId = getCurrentVistoriadorId(null, latestVistData);
+        
+        const updatePayload: any = {};
+        if (newGlobalStatus) updatePayload.status = newGlobalStatus;
+        if (currentVistoriadorId) updatePayload.vistoriador_id = currentVistoriadorId;
+
+        if (Object.keys(updatePayload).length > 0) {
           await supabase
             .from("processos")
-            .update({ status: newGlobalStatus as any })
+            .update(updatePayload)
             .eq("id", processoId);
         }
       }

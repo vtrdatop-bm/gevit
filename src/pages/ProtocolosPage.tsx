@@ -12,6 +12,7 @@ import {
   computeStage,
   displayStatusLabels,
   displayStatusBadgeClass,
+  getCurrentVistoriadorId,
 } from "@/lib/vistoriaStatus";
 import { computeDeadline, deadlineColorClass, DeadlineResult, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
 
@@ -104,7 +105,7 @@ export default function ProtocolosPage() {
     Promise.all([
       supabase.from("protocolos").select("*").order("created_at", { ascending: false }),
       supabase.from("processos").select("id, protocolo_id, status, regional_id, data_prevista, vistoriador_id"),
-      supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
+      supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
       supabase.from("termos_compromisso").select("processo_id, data_validade"),
@@ -126,6 +127,17 @@ export default function ProtocolosPage() {
       const tMap: Record<string, string> = {};
       (termos || []).forEach((t: any) => { tMap[t.processo_id] = t.data_validade; });
       setTermosMap(tMap);
+      
+      // Update the processes with the correct vistoriador_id from vistorias if available
+      const updatedProcessos = (proc || []).map(p => {
+        const v = vm[p.id];
+        if (v) {
+          return { ...p, vistoriador_id: getCurrentVistoriadorId(p.vistoriador_id, v) };
+        }
+        return p;
+      });
+      setProcessos(updatedProcessos as Processo[]);
+      
       setLoading(false);
     });
   }, []);
