@@ -429,6 +429,9 @@ export type Database = {
             | Database["public"]["Enums"]["inspection_result"]
             | null
           updated_at: string
+          vistoriador_1_id: string | null
+          vistoriador_2_id: string | null
+          vistoriador_3_id: string | null
         }
         Insert: {
           created_at?: string
@@ -453,6 +456,9 @@ export type Database = {
             | Database["public"]["Enums"]["inspection_result"]
             | null
           updated_at?: string
+          vistoriador_1_id?: string | null
+          vistoriador_2_id?: string | null
+          vistoriador_3_id?: string | null
         }
         Update: {
           created_at?: string
@@ -477,6 +483,9 @@ export type Database = {
             | Database["public"]["Enums"]["inspection_result"]
             | null
           updated_at?: string
+          vistoriador_1_id?: string | null
+          vistoriador_2_id?: string | null
+          vistoriador_3_id?: string | null
         }
         Relationships: [
           {
@@ -488,6 +497,7 @@ export type Database = {
           },
         ]
       }
+
     }
     Views: {
       [_ in never]: never
