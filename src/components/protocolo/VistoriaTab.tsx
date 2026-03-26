@@ -15,7 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "lucide-react";
+import { Calendar, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -206,18 +206,33 @@ export default function VistoriaTab({
         {/* Inspector Selector */}
         <div className="space-y-2">
           <Label htmlFor={`vistoriador-${numero}`} className="text-sm font-medium">Vistoriador</Label>
-          <Select value={vistoriador} onValueChange={setVistoriador}>
-            <SelectTrigger id={`vistoriador-${numero}`} className="w-full">
-              <SelectValue placeholder="Selecione o vistoriador" />
-            </SelectTrigger>
-            <SelectContent>
-              {vistoriadores.map((v) => (
-                <SelectItem key={v.user_id} value={v.user_id}>
-                  {[v.patente, v.nome_guerra].filter(Boolean).join(" ")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Select value={vistoriador} onValueChange={setVistoriador}>
+              <SelectTrigger id={`vistoriador-${numero}`} className="w-full pr-10">
+                <SelectValue placeholder="Selecione o vistoriador" />
+              </SelectTrigger>
+              <SelectContent>
+                {vistoriadores.map((v) => (
+                  <SelectItem key={v.user_id} value={v.user_id}>
+                    {[v.patente, v.nome_guerra].filter(Boolean).join(" ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {vistoriador && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setVistoriador("");
+                }}
+                className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Limpar vistoriador"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Inspection Date */}

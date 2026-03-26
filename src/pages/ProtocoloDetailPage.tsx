@@ -434,16 +434,42 @@ export default function ProtocoloDetailPage() {
         } catch { /* fallback */ }
       }
 
+      // Multiple fallback search strategies
+      const searchStrategies = [];
+      const municipioStr = editForm.municipio || "";
+      const bairroStr = editForm.bairro || "";
+      const baseEndereco = endereco.split(",")[0].trim(); // Pega só o logradouro base
+      
+      if (baseEndereco && bairroStr && municipioStr) {
+        searchStrategies.push(`${baseEndereco}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
+      }
+      if (baseEndereco && municipioStr) {
+        searchStrategies.push(`${baseEndereco}, ${municipioStr}, Acre, Brasil`);
+      }
+      if (bairroStr && municipioStr) {
+        searchStrategies.push(`${bairroStr}, ${municipioStr}, Acre, Brasil`);
+      }
+      if (municipioStr) {
+        searchStrategies.push(`${municipioStr}, Acre, Brasil`);
+      }
+
       if (!lat || !lon) {
-        const addr = `${endereco}, ${editForm.bairro}, ${editForm.municipio}, Acre, Brasil`;
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`,
-          { headers: { "User-Agent": "GEVIT-App/1.0" } }
-        );
-        const data = await res.json();
-        if (data && data.length > 0) {
-          lat = parseFloat(data[0].lat).toFixed(6);
-          lon = parseFloat(data[0].lon).toFixed(6);
+        // Try strategies iteratively until a result is found
+        for (const query of searchStrategies) {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+              { headers: { "User-Agent": "GEVIT-App/1.0" } }
+            );
+            const data = await res.json();
+            if (data && data.length > 0) {
+              lat = parseFloat(data[0].lat).toFixed(6);
+              lon = parseFloat(data[0].lon).toFixed(6);
+              break; // Found it!
+            }
+          } catch {
+            // ignore network err and try next
+          }
         }
       }
 

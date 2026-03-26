@@ -241,6 +241,9 @@ export default function ManualProtocolForm() {
       const numMatch = endereco.match(/(\d+)\s*$/);
       const numero = numMatch ? numMatch[1] : "";
 
+      let lat: string | null = null;
+      let lon: string | null = null;
+
       if (cepClean.length === 8) {
         try {
           const viaCepRes = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
@@ -269,17 +272,50 @@ export default function ManualProtocolForm() {
         } catch { /* fallback */ }
       }
 
-      const addr = `${endereco}, ${form.bairro}, ${form.municipio}, Acre, Brasil`;
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`,
-        { headers: { "User-Agent": "GEVIT-App/1.0" } }
-      );
-      const data = await res.json();
-      if (data && data.length > 0) {
+      // Multiple fallback search strategies
+      const searchStrategies = [];
+      const municipioStr = form.municipio || "";
+      const bairroStr = form.bairro || "";
+      const baseEndereco = endereco.split(",")[0].trim(); // Pega só o logradouro base
+      
+      if (baseEndereco && bairroStr && municipioStr) {
+        searchStrategies.push(`${baseEndereco}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
+      }
+      if (baseEndereco && municipioStr) {
+        searchStrategies.push(`${baseEndereco}, ${municipioStr}, Acre, Brasil`);
+      }
+      if (bairroStr && municipioStr) {
+        searchStrategies.push(`${bairroStr}, ${municipioStr}, Acre, Brasil`);
+      }
+      if (municipioStr) {
+        searchStrategies.push(`${municipioStr}, Acre, Brasil`);
+      }
+
+      if (!lat || !lon) {
+        // Try strategies iteratively until a result is found
+        for (const query of searchStrategies) {
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+              { headers: { "User-Agent": "GEVIT-App/1.0" } }
+            );
+            const data = await res.json();
+            if (data && data.length > 0) {
+              lat = parseFloat(data[0].lat).toFixed(6);
+              lon = parseFloat(data[0].lon).toFixed(6);
+              break; // Found it!
+            }
+          } catch {
+            // ignore network err and try next
+          }
+        }
+      }
+
+      if (lat && lon) {
         setForm((prev) => ({
           ...prev,
-          latitude: parseFloat(data[0].lat).toFixed(6),
-          longitude: parseFloat(data[0].lon).toFixed(6),
+          latitude: lat,
+          longitude: lon,
         }));
         toast.success("Coordenadas encontradas!");
       } else {
