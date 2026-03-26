@@ -1,15 +1,22 @@
 import { useState, useEffect } from "react";
 import { Vistoriador } from "@/types/user";
 import {
-  VistoriaStage,
   VistoriaData,
-  computeDisplayStatus,
   computeProcessStatus,
 } from "@/lib/vistoriaStatus";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-// interface Vistoriador mapping moved to @/types/user;
 
 interface TermoData {
   id: string;
@@ -29,22 +36,16 @@ interface VistoriaTabProps {
   vistoriadores: Vistoriador[];
   processoId: string;
   vistoriaId: string;
-  dataAtribuicao: string | null;
+  dataAtribuicao?: string | null;
   termo: TermoData | null;
   onUpdate: () => void;
 }
 
 const statusOptions = [
+  { value: "aprovado", label: "Aprovado" },
+  { value: "reprovado", label: "Reprovado" },
   { value: "pendencia", label: "Vistoria com Pendência" },
-  { value: "aprovado", label: "Certificado Provisório" },
-  { value: "reprovado", label: "Certificado" },
 ];
-
-const inputClass =
-  "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-const labelClass = "text-sm font-medium text-foreground";
-const selectClass =
-  "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export default function VistoriaTab({
   numero,
@@ -69,8 +70,7 @@ export default function VistoriaTab({
   const [validadeTermo, setValidadeTermo] = useState(termo?.data_validade || "");
   const [saving, setSaving] = useState(false);
 
-  // With the 'key' prop in the parent, we don't need manual sync here for vistorias.
-  // We only need it for the termo if it loads later.
+  // Sync Termo data if it loads later
   useEffect(() => {
     if (termo) {
       setNumeroTermo(termo.numero_termo || "");
@@ -79,221 +79,199 @@ export default function VistoriaTab({
   }, [termo]);
 
   const handleSave = async () => {
+    if (!vistoriaId) {
+      toast.error("Erro: Registro de vistoria não encontrado.");
+      return;
+    }
+
     setSaving(true);
     try {
-      // Update vistoria fields
-      const vistoriaUpdate: Record<string, string | null> = {};
+      const vistoriaUpdate: any = {};
       if (numero === 1) {
         vistoriaUpdate.data_1_atribuicao = atribuicao || null;
+        vistoriaUpdate.vistoriador_1_id = vistoriador || null;
         vistoriaUpdate.data_1_vistoria = data || null;
         vistoriaUpdate.status_1_vistoria = status || null;
-        if (status === "pendencia") {
-          vistoriaUpdate.data_1_retorno = retorno || null;
-        }
+        vistoriaUpdate.data_1_retorno = retorno || null;
       } else if (numero === 2) {
         vistoriaUpdate.data_2_atribuicao = atribuicao || null;
+        vistoriaUpdate.vistoriador_2_id = vistoriador || null;
         vistoriaUpdate.data_2_vistoria = data || null;
         vistoriaUpdate.status_2_vistoria = status || null;
-        vistoriaUpdate.data_1_retorno = retorno || null;
-        if (status === "pendencia") {
-          vistoriaUpdate.data_2_retorno = retorno || null;
-        }
+        vistoriaUpdate.data_2_retorno = retorno || null;
       } else {
         vistoriaUpdate.data_3_atribuicao = atribuicao || null;
+        vistoriaUpdate.vistoriador_3_id = vistoriador || null;
         vistoriaUpdate.data_3_vistoria = data || null;
         vistoriaUpdate.status_3_vistoria = status || null;
-        vistoriaUpdate.data_2_retorno = retorno || null;
       }
 
-      const vistColumn = `vistoriador_${numero}_id`;
-      (vistoriaUpdate as any)[vistColumn] = vistoriador || null;
-
-      const { error: vErr } = await supabase
+      // Update the vistoria record
+      const { error: vistError } = await supabase
         .from("vistorias")
         .update(vistoriaUpdate)
         .eq("id", vistoriaId);
-      if (vErr) throw vErr;
 
-      // Update global process inspector (fallback for UI that hasn't changed yet)
-      const { error: pErr } = await supabase
-        .from("processos")
-        .update({ vistoriador_id: vistoriador || null })
-        .eq("id", processoId);
-      if (pErr) throw pErr;
+      if (vistError) throw vistError;
 
-      // Handle termo for "aprovado" (Certificado Provisório) on any tab
-      if (status === "aprovado") {
-        if (termo) {
-          await supabase
-            .from("termos_compromisso")
-            .update({
-              numero_termo: numeroTermo,
-              data_validade: validadeTermo,
-              data_assinatura: data || dataSolicitacao,
-            })
-            .eq("id", termo.id);
-        } else if (numeroTermo) {
-          await supabase.from("termos_compromisso").insert({
-            processo_id: processoId,
-            numero_termo: numeroTermo,
-            data_validade: validadeTermo || dataSolicitacao,
-            data_assinatura: data || dataSolicitacao,
-          });
-        }
-      }
-
-      // Calculate the global process status correctly by looking at ALL stages
-      // We need the full vistoria data to do this accurately
-      const { data: fullVistoria } = await supabase
+      // Compute and update global process status
+      const { data: latestVistData } = await supabase
         .from("vistorias")
         .select("*")
         .eq("id", vistoriaId)
         .single();
 
-      if (fullVistoria) {
-        const globalStatus = computeProcessStatus(fullVistoria);
-        if (globalStatus) {
-          await supabase.from("processos").update({ status: globalStatus as any }).eq("id", processoId);
+      if (latestVistData) {
+        const newGlobalStatus = computeProcessStatus(latestVistData);
+        if (newGlobalStatus) {
+          await supabase
+            .from("processos")
+            .update({ status: newGlobalStatus })
+            .eq("id", processoId);
         }
       }
 
-      toast.success("Dados salvos com sucesso");
+      // Handle Termo de Compromisso if status is approved
+      if (status === "aprovado" && (numeroTermo || validadeTermo)) {
+        if (termo?.id) {
+          await supabase
+            .from("termos_compromisso")
+            .update({
+              numero_termo: numeroTermo,
+              data_validade: validadeTermo || null,
+            })
+            .eq("id", termo.id);
+        } else {
+          await supabase.from("termos_compromisso").insert({
+            processo_id: processoId,
+            numero_termo: numeroTermo,
+            data_validade: validadeTermo || null,
+          });
+        }
+      }
+
+      toast.success("Dados salvos com sucesso!");
       onUpdate();
-    } catch (err: any) {
-      toast.error("Erro ao salvar: " + (err.message || ""));
+    } catch (error: any) {
+      console.error("Erro ao salvar:", error);
+      toast.error("Erro ao salvar dados.");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-4 pt-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Data de Solicitação - only on 1st tab */}
-        {numero === 1 && (
-          <div className="space-y-1.5">
-            <label className={labelClass}>Data de Solicitação</label>
-            <input
-              type="date"
-              value={dataSolicitacao}
-              disabled
-              className={`${inputClass} bg-muted cursor-not-allowed`}
-            />
+    <div className="space-y-6 pt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Date Display */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Data de Solicitação</Label>
+          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm items-center gap-2 text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            {dataSolicitacao ? new Date(dataSolicitacao).toLocaleDateString("pt-BR") : "Não informada"}
           </div>
-        )}
+        </div>
 
-        {/* Data do 1º Retorno - only on 2nd tab */}
-        {numero === 2 && (
-          <div className="space-y-1.5">
-            <label className={labelClass}>Data do 1º Retorno</label>
-            <input
-              type="date"
-              value={retorno}
-              onChange={(e) => setRetorno(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-        )}
-
-        {/* Data do 2º Retorno - only on 3rd tab */}
-        {numero === 3 && (
-          <div className="space-y-1.5">
-            <label className={labelClass}>Data do 2º Retorno</label>
-            <input
-              type="date"
-              value={retorno}
-              onChange={(e) => setRetorno(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-        )}
-
-        {/* Data da atribuição */}
-        <div className="space-y-1.5">
-          <label className={labelClass}>Data da {numero}ª Atribuição</label>
-          <input
+        {/* Attribution Date */}
+        <div className="space-y-2">
+          <Label htmlFor={`atribuicao-${numero}`} className="text-sm font-medium">Data da {numero}ª Atribuição</Label>
+          <Input
+            id={`atribuicao-${numero}`}
             type="date"
             value={atribuicao}
             onChange={(e) => setAtribuicao(e.target.value)}
-            className={inputClass}
           />
         </div>
 
-        {/* Vistoriador */}
-        <div className="space-y-1.5">
-          <label className={labelClass}>Vistoriador</label>
-          <select
-            value={vistoriadorId || ""}
-            onChange={(e) => setVistoriador(e.target.value)}
-            title="Selecionar Vistoriador"
-            className={selectClass}
-          >
-            <option value="">Selecione...</option>
-            {vistoriadores.map((v) => (
-              <option key={v.user_id} value={v.user_id}>
-                {[v.patente, v.nome_guerra].filter(Boolean).join(" ")}
-              </option>
-            ))}
-          </select>
+        {/* Inspector Selector */}
+        <div className="space-y-2">
+          <Label htmlFor={`vistoriador-${numero}`} className="text-sm font-medium">Vistoriador</Label>
+          <Select value={vistoriador} onValueChange={setVistoriador}>
+            <SelectTrigger id={`vistoriador-${numero}`} className="w-full">
+              <SelectValue placeholder="Selecione o vistoriador" />
+            </SelectTrigger>
+            <SelectContent>
+              {vistoriadores.map((v) => (
+                <SelectItem key={v.user_id} value={v.user_id}>
+                  {[v.patente, v.nome_guerra].filter(Boolean).join(" ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Data da vistoria */}
-        <div className="space-y-1.5">
-          <label className={labelClass}>Data da {numero}ª Vistoria</label>
-          <input
+        {/* Inspection Date */}
+        <div className="space-y-2">
+          <Label htmlFor={`data-vistoria-${numero}`} className="text-sm font-medium">Data da {numero}ª Vistoria</Label>
+          <Input
+            id={`data-vistoria-${numero}`}
             type="date"
             value={data}
             onChange={(e) => {
               setData(e.target.value);
               if (!e.target.value) setStatus("");
             }}
-            className={inputClass}
           />
         </div>
 
-        {/* Status */}
-        <div className="space-y-1.5">
-          <label className={labelClass}>
-            Status
-            {!data && <span className="text-xs text-muted-foreground ml-1">(preencha a data da vistoria)</span>}
-          </label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            disabled={!data}
-            className={`${selectClass} ${!data ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            <option value="">Selecione...</option>
-            {statusOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+        {/* Status Selector */}
+        <div className="space-y-2">
+          <Label htmlFor={`status-${numero}`} className="text-sm font-medium">
+            Status da {numero}ª Vistoria
+            {!data && <span className="text-[10px] text-muted-foreground ml-1">(preencha a data)</span>}
+          </Label>
+          <Select value={status} onValueChange={setStatus} disabled={!data}>
+            <SelectTrigger id={`status-${numero}`} className="w-full">
+              <SelectValue placeholder="Selecione o status" />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+
+        {/* Return Date (only for 1st and 2nd) */}
+        {numero < 3 && (
+          <div className="space-y-2">
+            <Label htmlFor={`retorno-${numero}`} className="text-sm font-medium">Data de {numero + 1}º Retorno</Label>
+            <Input
+              id={`retorno-${numero}`}
+              type="date"
+              value={retorno}
+              onChange={(e) => setRetorno(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Termo fields for Certificado Provisório */}
+      {/* Termo de Compromisso (only when approved) */}
       {status === "aprovado" && (
-        <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-4">
-          <p className="text-sm font-semibold text-foreground">Termo de Compromisso</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className={labelClass}>Nº do Termo de Compromisso</label>
-              <input
+        <div className="border border-border rounded-lg p-4 bg-muted/20 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            Termo de Compromisso
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor={`numero-termo-${numero}`}>Nº do Termo</Label>
+              <Input
+                id={`numero-termo-${numero}`}
                 value={numeroTermo}
                 onChange={(e) => setNumeroTermo(e.target.value)}
                 placeholder="Ex: TC-001/2026"
-                className={inputClass}
               />
             </div>
-            <div className="space-y-1.5">
-              <label className={labelClass}>Validade do Certificado Provisório</label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor={`validade-termo-${numero}`}>Validade do Certificado Provisório</Label>
+              <Input
+                id={`validade-termo-${numero}`}
                 type="date"
                 value={validadeTermo}
                 onChange={(e) => setValidadeTermo(e.target.value)}
-                className={inputClass}
               />
             </div>
           </div>
@@ -301,13 +279,14 @@ export default function VistoriaTab({
       )}
 
       <div className="flex justify-end pt-2">
-        <button
+        <Button
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          size="lg"
+          className="min-w-[120px]"
         >
           {saving ? "Salvando..." : "Salvar"}
-        </button>
+        </Button>
       </div>
     </div>
   );
