@@ -459,26 +459,19 @@ export default function ProtocoloDetailPage() {
 
         // Save coordinates immediately to DB
         if (protocolo) {
-      const cepClean = (editForm.cep || "").replace(/\D/g, "");
-      const { error: protError } = await supabase
-        .from("protocolos")
-        .update({
-          razao_social: editForm.razao_social,
-          nome_fantasia: editForm.nome_fantasia || null,
-          endereco: editForm.endereco,
-          // numero: editForm.numero, // 'numero' field not in ProtocoloData for address number
-          bairro: editForm.bairro,
-          municipio: editForm.municipio,
-          cep: cepClean || null,
-          area: parseAreaToNumber(editForm.area),
-          latitude: editForm.latitude ? parseFloat(editForm.latitude) : null,
-          longitude: editForm.longitude ? parseFloat(editForm.longitude) : null,
-          solicitante: editForm.solicitante || null,
-          tipo_empresa: editForm.tipo_empresa || null,
-          tipo_servico: editForm.tipo_servico || null,
-        })
-        .eq("id", id);
+          const { error: protError } = await supabase
+            .from("protocolos")
+            .update({
+              latitude: parseFloat(lat!),
+              longitude: parseFloat(lon!),
+            })
+            .eq("id", id);
+
+          if (protError) {
+            console.error("Erro ao salvar coordenadas:", protError.message);
+          }
         }
+
 
         toast.success("Coordenadas encontradas e salvas!");
       } else {
