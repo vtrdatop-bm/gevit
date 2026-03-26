@@ -26,37 +26,57 @@ export interface VistoriaData {
   status_3_vistoria?: string | null;
   data_1_retorno?: string | null;
   data_2_retorno?: string | null;
+  vistoriador_1_id?: string | null;
+  vistoriador_2_id?: string | null;
+  vistoriador_3_id?: string | null;
+  observacoes?: string | null;
 }
 
 export function computeDisplayStatus(
   dbStatus: string,
   vistoria?: VistoriaData | null
 ): DisplayStatus {
-  // If DB status already reflects a result, use it
-  if (
-    dbStatus === "pendencias" ||
-    dbStatus === "certificado_termo" ||
-    dbStatus === "certificado" ||
-    dbStatus === "expirado"
-  ) {
-    return dbStatus as DisplayStatus;
-  }
+  // If no vistoria data, fall back to DB status
+  if (!vistoria) return dbStatus as DisplayStatus;
 
-  // Return date filled but next inspection not done → back to "aguardando vistoria"
-  // Note: We check this before database "atribuido" to give priority to the return flow
-  if (vistoria) {
-    if (vistoria.data_2_retorno && !vistoria.data_3_vistoria && !vistoria.status_3_vistoria) return "regional";
-    if (vistoria.data_1_retorno && !vistoria.data_2_vistoria && !vistoria.status_2_vistoria) return "regional";
-  }
+  // We determine the status by looking from the latest stage backwards.
+  // The goal is to show the *current* activity.
 
-  // For "regional" or "pendencias" status, check vistoria data for virtual statuses
-  if (dbStatus === "regional" && vistoria) {
-    // Attribution without a result → "atribuído"
-    if (vistoria.data_3_atribuicao && !vistoria.status_3_vistoria) return "atribuido";
-    if (vistoria.data_2_atribuicao && !vistoria.status_2_vistoria) return "atribuido";
-    if (vistoria.data_1_atribuicao && !vistoria.status_1_vistoria) return "atribuido";
+  // --- STAGE 3 ---
+  // If 3ª vistoria has a result, that's the final word
+  if (vistoria.status_3_vistoria) {
+    if (vistoria.status_3_vistoria === "pendencia") return "pendencias";
+    if (vistoria.status_3_vistoria === "aprovado") return "certificado_termo";
+    if (vistoria.status_3_vistoria === "reprovado") return "certificado";
   }
+  // If 3ª attribution is set but no result yet -> "atribuido"
+  if (vistoria.data_3_atribuicao) return "atribuido";
+  // If 2º retorno is set -> "regional" (waiting for 3rd visit)
+  if (vistoria.data_2_retorno) return "regional";
 
+  // --- STAGE 2 ---
+  // If 2ª vistoria has a result
+  if (vistoria.status_2_vistoria) {
+    if (vistoria.status_2_vistoria === "pendencia") return "pendencias";
+    if (vistoria.status_2_vistoria === "aprovado") return "certificado_termo";
+    if (vistoria.status_2_vistoria === "reprovado") return "certificado";
+  }
+  // If 2ª attribution is set
+  if (vistoria.data_2_atribuicao) return "atribuido";
+  // If 1º retorno is set
+  if (vistoria.data_1_retorno) return "regional";
+
+  // --- STAGE 1 ---
+  // If 1ª vistoria has a result
+  if (vistoria.status_1_vistoria) {
+    if (vistoria.status_1_vistoria === "pendencia") return "pendencias";
+    if (vistoria.status_1_vistoria === "aprovado") return "certificado_termo";
+    if (vistoria.status_1_vistoria === "reprovado") return "certificado";
+  }
+  // If 1ª attribution is set
+  if (vistoria.data_1_atribuicao) return "atribuido";
+
+  // Fallback to base DB status (e.g. regional or expired)
   return dbStatus as DisplayStatus;
 }
 
@@ -84,9 +104,28 @@ export function computeStage(vistoria?: VistoriaData | null): VistoriaStage {
   if (vistoria.status_1_vistoria || vistoria.data_1_vistoria) return 1;
 
   // If no result yet, stage is based on attribution/return dates
+  // If stage 3 had any activity
   if (vistoria.data_2_retorno || vistoria.data_3_atribuicao) return 3;
+  // If stage 2 had any activity
   if (vistoria.data_1_retorno || vistoria.data_2_atribuicao) return 2;
   return 1;
+}
+
+/**
+ * Determines the "current" inspector ID based on the latest filled stage.
+ */
+export function getCurrentVistoriadorId(
+  dbVistoriadorId: string | null,
+  vistoria?: VistoriaData | null
+): string | null {
+  if (!vistoria) return dbVistoriadorId;
+
+  // Check from latest stage downwards
+  if (vistoria.data_3_atribuicao || vistoria.vistoriador_3_id) return vistoria.vistoriador_3_id;
+  if (vistoria.data_2_atribuicao || vistoria.vistoriador_2_id) return vistoria.vistoriador_2_id;
+  if (vistoria.data_1_atribuicao || vistoria.vistoriador_1_id) return vistoria.vistoriador_1_id || dbVistoriadorId;
+
+  return dbVistoriadorId;
 }
 
 export const displayStatusLabels: Record<DisplayStatus, string> = {

@@ -10,6 +10,8 @@ import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber
 import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { computeDisplayStatus, computeStage } from "@/lib/vistoriaStatus";
+import { Vistoriador } from "@/types/user";
+import { useCallback } from "react";
 
 interface ProtocoloData {
   id: string;
@@ -25,6 +27,9 @@ interface ProtocoloData {
   latitude: number | null;
   longitude: number | null;
   cep: string | null;
+  solicitante: string | null;
+  tipo_empresa: string | null;
+  tipo_servico: string | null;
 }
 
 interface VistoriaData {
@@ -38,6 +43,9 @@ interface VistoriaData {
   data_2_retorno: string | null;
   data_3_vistoria: string | null;
   status_3_vistoria: string | null;
+  vistoriador_1_id: string | null;
+  vistoriador_2_id: string | null;
+  vistoriador_3_id: string | null;
   observacoes: string | null;
 }
 
@@ -50,10 +58,7 @@ interface ProcessoData {
   data_prevista: string | null;
 }
 
-interface Vistoriador {
-  user_id: string;
-  nome_completo: string;
-}
+// interface Vistoriador moved to @/types/user
 
 interface TermoData {
   id: string;
@@ -129,7 +134,7 @@ export default function ProtocoloDetailPage() {
 
   const bairroNotFound = bairroSearch.length > 0 && bairrosFiltered.length === 0 && editForm.municipio;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
 
@@ -191,11 +196,23 @@ export default function ProtocoloDetailPage() {
     }
 
     setLoading(false);
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchData();
-  }, [id]);
+
+    const channel = supabase
+      .channel(`protocolo-detail-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "processos", filter: `protocolo_id=eq.${id}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, fetchData]);
 
   const startEdit = () => {
     if (!protocolo) return;
@@ -212,6 +229,9 @@ export default function ProtocoloDetailPage() {
       cep: protocolo.cep || "",
       latitude: protocolo.latitude?.toString() || "",
       longitude: protocolo.longitude?.toString() || "",
+      solicitante: protocolo.solicitante || "",
+      tipo_empresa: protocolo.tipo_empresa || "",
+      tipo_servico: protocolo.tipo_servico || "",
     });
     setEditing(true);
   };
@@ -243,6 +263,9 @@ export default function ProtocoloDetailPage() {
       cep: editForm.cep ? editForm.cep.replace(/\D/g, "") : null,
       latitude: editForm.latitude ? parseFloat(String(editForm.latitude).replace(",", ".")) : null,
       longitude: editForm.longitude ? parseFloat(String(editForm.longitude).replace(",", ".")) : null,
+      solicitante: editForm.solicitante || null,
+      tipo_empresa: editForm.tipo_empresa || null,
+      tipo_servico: editForm.tipo_servico || null,
     }).eq("id", protocolo.id).select();
 
     if (error) {
@@ -257,7 +280,6 @@ export default function ProtocoloDetailPage() {
     setSaving(false);
   };
 
-  const textFields = ["numero", "razao_social", "nome_fantasia", "solicitante", "endereco", "bairro", "municipio", "tipo_servico", "tipo_empresa"];
   const handleEditChange = (key: string, value: string) => {
     let finalValue = value;
     if (key === "municipio" || key === "bairro") finalValue = value.toUpperCase();
@@ -417,7 +439,7 @@ export default function ProtocoloDetailPage() {
           razao_social: editForm.razao_social,
           nome_fantasia: editForm.nome_fantasia || null,
           endereco: editForm.endereco,
-          numero: editForm.numero,
+          // numero: editForm.numero, // 'numero' field not in ProtocoloData for address number
           bairro: editForm.bairro,
           municipio: editForm.municipio,
           cep: cepClean || null,
@@ -542,27 +564,20 @@ export default function ProtocoloDetailPage() {
             Empresa
           </div>
           {editing ? (
-            <div className="space-y-2">
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Nº Protocolo</label>
-                <input value={editForm.numero || ""} onChange={(e) => handleEditChange("numero", formatProtocoloNumero(e.target.value))} className={inputClass} />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="numero" className="text-sm font-medium">Nº Protocolo</label>
+                <input id="numero" value={editForm.numero || ""} onChange={(e) => handleEditChange("numero", formatProtocoloNumero(e.target.value))} className={inputClass} />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Data Solicitação</label>
-                <input type="date" value={editForm.data_solicitacao || ""} onChange={(e) => handleEditChange("data_solicitacao", e.target.value)} className={inputClass} />
+              <div className="space-y-1.5">
+                <label htmlFor="data_solicitacao" className="text-sm font-medium">Data Solicitação</label>
+                <input id="data_solicitacao" type="date" value={editForm.data_solicitacao || ""} onChange={(e) => handleEditChange("data_solicitacao", e.target.value)} className={inputClass} />
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Razão Social</label>
-                <input value={editForm.razao_social || ""} onChange={(e) => handleEditChange("razao_social", e.target.value)} className={inputClass} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Nome Fantasia</label>
-                <input value={editForm.nome_fantasia || ""} onChange={(e) => handleEditChange("nome_fantasia", e.target.value)} className={inputClass} />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">CPF/CNPJ</label>
+              <div className="space-y-1.5">
+                <label htmlFor="cnpj" className="text-sm font-medium">CPF/CNPJ</label>
                 <div className="flex gap-2">
                   <input
+                    id="cnpj"
                     value={editForm.cnpj || ""}
                     onChange={(e) => {
                       const formatted = formatCpfCnpjInput(e.target.value);
@@ -583,6 +598,30 @@ export default function ProtocoloDetailPage() {
                   </button>
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <label htmlFor="razao_social" className="text-sm font-medium">Razão Social</label>
+                <input id="razao_social" value={editForm.razao_social || ""} onChange={(e) => handleEditChange("razao_social", e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="nome_fantasia" className="text-sm font-medium">Nome Fantasia</label>
+                <input id="nome_fantasia" value={editForm.nome_fantasia || ""} onChange={(e) => handleEditChange("nome_fantasia", e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="solicitante" className="text-sm font-medium">Solicitante</label>
+                <input id="solicitante" value={editForm.solicitante || ""} onChange={(e) => handleEditChange("solicitante", e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="tipo_empresa" className="text-sm font-medium">Tipo de Empresa</label>
+                <select id="tipo_empresa" value={editForm.tipo_empresa || ""} onChange={(e) => handleEditChange("tipo_empresa", e.target.value)} className={inputClass}>
+                  <option value="">Selecione</option>
+                  <option value="Pessoa Física">Pessoa Física</option>
+                  <option value="Pessoa Jurídica">Pessoa Jurídica</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="tipo_servico" className="text-sm font-medium">Tipo de Serviço</label>
+                <input id="tipo_servico" value={editForm.tipo_servico || ""} onChange={(e) => handleEditChange("tipo_servico", e.target.value)} className={inputClass} />
+              </div>
             </div>
           ) : (
             <div className="space-y-1 text-sm">
@@ -591,6 +630,9 @@ export default function ProtocoloDetailPage() {
                 <p className="text-muted-foreground text-xs">{protocolo.razao_social}</p>
               )}
               <p className="text-muted-foreground font-mono text-xs">{formatCpfCnpj(protocolo.cnpj)}</p>
+              {protocolo.solicitante && <p className="text-muted-foreground text-xs">Solicitante: {protocolo.solicitante}</p>}
+              {protocolo.tipo_empresa && <p className="text-muted-foreground text-xs">Tipo de Empresa: {protocolo.tipo_empresa}</p>}
+              {protocolo.tipo_servico && <p className="text-muted-foreground text-xs">Tipo de Serviço: {protocolo.tipo_servico}</p>}
             </div>
           )}
         </div>
@@ -602,23 +644,24 @@ export default function ProtocoloDetailPage() {
            {editing ? (
             <div className="space-y-2">
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">CEP</label>
-                <input value={editForm.cep || ""} onChange={(e) => handleEditChange("cep", formatCep(e.target.value))} placeholder="00000-000" className={inputClass} />
+                <label htmlFor="cep" className="text-xs text-muted-foreground">CEP</label>
+                <input id="cep" value={editForm.cep || ""} onChange={(e) => handleEditChange("cep", formatCep(e.target.value))} placeholder="00000-000" className={inputClass} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Endereço</label>
-                <input value={editForm.endereco || ""} onChange={(e) => handleEditChange("endereco", e.target.value)} className={inputClass} />
+                <label htmlFor="endereco" className="text-xs text-muted-foreground">Endereço</label>
+                <input id="endereco" value={editForm.endereco || ""} onChange={(e) => handleEditChange("endereco", e.target.value)} className={inputClass} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Município</label>
-                <select value={editForm.municipio || ""} onChange={(e) => handleEditChange("municipio", e.target.value)} className={inputClass}>
+                <label htmlFor="municipio" className="text-xs text-muted-foreground">Município</label>
+                <select id="municipio" value={editForm.municipio || ""} onChange={(e) => handleEditChange("municipio", e.target.value)} className={inputClass}>
                   <option value="">Selecione</option>
                   {municipios.map((m) => <option key={m.id} value={m.nome}>{m.nome}</option>)}
                 </select>
               </div>
               <div className="space-y-1 relative" ref={bairroRef}>
-                <label className="text-xs text-muted-foreground">Bairro</label>
+                <label htmlFor="bairro" className="text-xs text-muted-foreground">Bairro</label>
                 <input
+                  id="bairro"
                   value={bairroDropdownOpen ? bairroSearch : (editForm.bairro || "")}
                   onChange={(e) => {
                     setBairroSearch(e.target.value);
@@ -666,17 +709,17 @@ export default function ProtocoloDetailPage() {
                 )}
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Área (m²)</label>
-                <input type="text" value={editForm.area || ""} onChange={(e) => handleEditChange("area", e.target.value)} className={inputClass} placeholder="Ex: 1.234,56" />
+                <label htmlFor="area" className="text-xs text-muted-foreground">Área (m²)</label>
+                <input id="area" type="text" value={editForm.area || ""} onChange={(e) => handleEditChange("area", e.target.value)} className={inputClass} placeholder="Ex: 1.234,56" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Latitude</label>
-                  <input type="text" inputMode="decimal" value={editForm.latitude || ""} onChange={(e) => handleEditChange("latitude", e.target.value.replace(",", "."))} placeholder="-9.975403" className={inputClass} />
+                  <label htmlFor="latitude" className="text-xs text-muted-foreground">Latitude</label>
+                  <input id="latitude" type="text" inputMode="decimal" value={editForm.latitude || ""} onChange={(e) => handleEditChange("latitude", e.target.value.replace(",", "."))} placeholder="-9.975403" className={inputClass} />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Longitude</label>
-                  <input type="text" inputMode="decimal" value={editForm.longitude || ""} onChange={(e) => handleEditChange("longitude", e.target.value.replace(",", "."))} placeholder="-67.842870" className={inputClass} />
+                  <label htmlFor="longitude" className="text-xs text-muted-foreground">Longitude</label>
+                  <input id="longitude" type="text" inputMode="decimal" value={editForm.longitude || ""} onChange={(e) => handleEditChange("longitude", e.target.value.replace(",", "."))} placeholder="-67.842870" className={inputClass} />
                 </div>
               </div>
               <button
@@ -780,7 +823,7 @@ export default function ProtocoloDetailPage() {
                 dataVistoria={vistoria.data_1_vistoria}
                 statusVistoria={vistoria.status_1_vistoria}
                 dataRetorno={vistoria.data_1_retorno}
-                vistoriadorId={processo.vistoriador_id}
+                vistoriadorId={vistoria.vistoriador_1_id}
                 vistoriadores={vistoriadores}
                 processoId={processo.id}
                 vistoriaId={vistoria.id}
@@ -796,7 +839,7 @@ export default function ProtocoloDetailPage() {
                 dataVistoria={vistoria.data_2_vistoria}
                 statusVistoria={vistoria.status_2_vistoria}
                 dataRetorno={vistoria.data_1_retorno}
-                vistoriadorId={processo.vistoriador_id}
+                vistoriadorId={vistoria.vistoriador_2_id}
                 vistoriadores={vistoriadores}
                 processoId={processo.id}
                 vistoriaId={vistoria.id}
@@ -812,7 +855,7 @@ export default function ProtocoloDetailPage() {
                 dataVistoria={vistoria.data_3_vistoria}
                 statusVistoria={vistoria.status_3_vistoria}
                 dataRetorno={vistoria.data_2_retorno}
-                vistoriadorId={processo.vistoriador_id}
+                vistoriadorId={vistoria.vistoriador_3_id}
                 vistoriadores={vistoriadores}
                 processoId={processo.id}
                 vistoriaId={vistoria.id}
@@ -832,12 +875,13 @@ export default function ProtocoloDetailPage() {
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Município</label>
-              <input value={editForm.municipio || ""} disabled className={cn(inputClass, "opacity-60")} />
+              <label htmlFor="novoBairroMunicipio" className="text-xs text-muted-foreground">Município</label>
+              <input id="novoBairroMunicipio" value={editForm.municipio || ""} disabled className={cn(inputClass, "opacity-60")} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Nome do Bairro</label>
+              <label htmlFor="novoBairroNome" className="text-xs text-muted-foreground">Nome do Bairro</label>
               <input
+                id="novoBairroNome"
                 value={novoBairroNome}
                 onChange={(e) => setNovoBairroNome(e.target.value)}
                 placeholder="Digite o nome do bairro"
@@ -846,8 +890,9 @@ export default function ProtocoloDetailPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Regional</label>
+              <label htmlFor="novoBairroRegional" className="text-xs text-muted-foreground">Regional</label>
               <select
+                id="novoBairroRegional"
                 value={novoBairroRegional}
                 onChange={(e) => setNovoBairroRegional(e.target.value)}
                 className={inputClass}

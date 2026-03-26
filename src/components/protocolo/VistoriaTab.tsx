@@ -1,12 +1,9 @@
 import { useState } from "react";
+import { Vistoriador } from "@/types/user";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface Vistoriador {
-  user_id: string;
-  patente?: string;
-  nome_guerra: string;
-}
+// interface Vistoriador mapping moved to @/types/user;
 
 interface TermoData {
   id: string;
@@ -93,13 +90,16 @@ export default function VistoriaTab({
         vistoriaUpdate.data_2_retorno = retorno || null;
       }
 
+      const vistColumn = `vistoriador_${numero}_id`;
+      (vistoriaUpdate as any)[vistColumn] = vistoriador || null;
+
       const { error: vErr } = await supabase
         .from("vistorias")
         .update(vistoriaUpdate)
         .eq("id", vistoriaId);
       if (vErr) throw vErr;
 
-      // Update processo vistoriador
+      // Update global process inspector (fallback for UI that hasn't changed yet)
       const { error: pErr } = await supabase
         .from("processos")
         .update({ vistoriador_id: vistoriador || null })
@@ -127,14 +127,19 @@ export default function VistoriaTab({
         }
       }
 
-      // Update processo status based on inspection result
-      let newStatus: string | null = null;
-      if (status === "pendencia") newStatus = "pendencias";
-      else if (status === "aprovado") newStatus = "certificado_termo";
-      else if (status === "reprovado") newStatus = "certificado";
+      // Calculate the global process status correctly by looking at ALL stages
+      // We need the full vistoria data to do this accurately
+      const { data: fullVistoria } = await supabase
+        .from("vistorias")
+        .select("*")
+        .eq("id", vistoriaId)
+        .single();
 
-      if (newStatus) {
-        await supabase.from("processos").update({ status: newStatus as any }).eq("id", processoId);
+      if (fullVistoria) {
+        const globalStatus = computeProcessStatus(fullVistoria);
+        if (globalStatus) {
+          await supabase.from("processos").update({ status: globalStatus as any }).eq("id", processoId);
+        }
       }
 
       toast.success("Dados salvos com sucesso");
@@ -203,8 +208,9 @@ export default function VistoriaTab({
         <div className="space-y-1.5">
           <label className={labelClass}>Vistoriador</label>
           <select
-            value={vistoriador}
+            value={vistoriadorId || ""}
             onChange={(e) => setVistoriador(e.target.value)}
+            title="Selecionar Vistoriador"
             className={selectClass}
           >
             <option value="">Selecione...</option>

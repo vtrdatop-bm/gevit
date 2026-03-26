@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ProcessStatus } from "@/types/process";
-import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel } from "@/lib/vistoriaStatus";
+import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
 import { Filter } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
@@ -123,7 +123,7 @@ export default function MapPage() {
         .select("id, status, data_prevista, vistoriador_id, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
         .neq("status", "expirado"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
-      supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria"),
+      supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
     ]);
 
@@ -151,20 +151,23 @@ export default function MapPage() {
     const profMap: Record<string, string> = {};
     (profilesData || []).forEach((p) => { profMap[p.user_id] = [p.patente, p.nome_guerra].filter(Boolean).join(" "); });
 
-    const vistMap: Record<string, any> = {};
-    (vistorias || []).forEach((v) => { vistMap[v.processo_id] = v; });
+    const vistoriaMap: Record<string, any> = {};
+    (vistorias || []).forEach((v) => { vistoriaMap[v.processo_id] = v; });
 
-    const mapped: MapProcess[] = (procs || []).map((p) => {
-      const vistoria = vistMap[p.id] || null;
+    const mapped: MapProcess[] = (procs || []).map((p: any) => {
+      const vist = vistoriaMap[p.id] || null;
+      const dStatus = computeDisplayStatus(p.status, vist);
+      const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vist);
+
       return {
         id: p.id,
-        vistoriador_id: p.vistoriador_id || null,
-        status: p.status as ProcessStatus,
-        displayStatus: computeDisplayStatus(p.status, vistoria),
+        vistoriador_id: activeVistoriadorId,
+        status: p.status,
+        displayStatus: dStatus,
         data_prevista: p.data_prevista,
-        vistoriador_nome: p.vistoriador_id ? profMap[p.vistoriador_id] || null : null,
-        protocolo: p.protocolos as any,
-        vistoria,
+        vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
+        vistoria: vist,
+        protocolo: p.protocolos,
       };
     });
 

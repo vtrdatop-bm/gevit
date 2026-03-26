@@ -16,6 +16,7 @@ import {
   displayStatusLabels,
   displayStatusDotColor,
   getDisplayStatusLabel,
+  getCurrentVistoriadorId,
 } from "@/lib/vistoriaStatus";
 
 const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] = [
@@ -159,7 +160,7 @@ export default function KanbanPage() {
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("bairros").select("nome, municipio, regional_id"),
-        supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
+        supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
         supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
         supabase.from("termos_compromisso").select("processo_id, data_validade"),
       ]);
@@ -198,6 +199,7 @@ export default function KanbanPage() {
         }
         const vistoria = vistoriaMap[p.id] || null;
         const dStatus = computeDisplayStatus(p.status, vistoria);
+        const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vistoria);
         const deadlineResult = computeDeadline(vistoria, pausasByProcesso[p.id] || [], dStatus, termosMap[p.id] || null);
         return {
           id: p.id,
@@ -207,11 +209,11 @@ export default function KanbanPage() {
           stage: computeStage(vistoria),
           data_prevista: p.data_prevista,
           data_solicitacao: p.protocolos?.data_solicitacao || "",
-          vistoriador_id: p.vistoriador_id,
+          vistoriador_id: activeVistoriadorId,
           regional_id: resolvedRegionalId,
           protocolos: p.protocolos,
-          regional_nome: resolvedRegionalId ? regMap[resolvedRegionalId] : undefined,
-          vistoriador_nome: p.vistoriador_id ? profMap[p.vistoriador_id] : undefined,
+          regional_nome: regMap[resolvedRegionalId || ""] || "",
+          vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
           dias_restantes: p.data_prevista
             ? differenceInDays(new Date(p.data_prevista), new Date())
             : 999,
@@ -227,7 +229,18 @@ export default function KanbanPage() {
       setLoading(false);
     };
     fetchData();
-  }, []);
+
+    const channel = supabase
+      .channel("kanban-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "protocolos" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isDev]);
 
   const groupedByRegional = (() => {
     const groups: Record<string, { nome: string; processos: ProcessoWithProtocolo[] }> = {};
