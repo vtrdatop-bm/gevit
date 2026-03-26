@@ -827,14 +827,18 @@ export default function ProtocoloDetailPage() {
                 else if (stVist === "reprovado") dotColor = "bg-[hsl(var(--status-certified))]";
                 else if (atrib) dotColor = "bg-[hsl(var(--status-assigned))]";
                 return (
-                  <TabsTrigger key={n} value={`vistoria${n}`} className="flex items-center gap-1.5">
+                  <TabsTrigger 
+                    key={n} 
+                    value={`vistoria${n}`} 
+                    className="flex items-center gap-1.5 data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary border-2 border-transparent py-2 shadow-none transition-all"
+                  >
                     <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
                     {n}ª Vistoria
                   </TabsTrigger>
                 );
               })}
             </TabsList>
-            <TabsContent value="vistoria1">
+            <TabsContent value="vistoria1" className="mt-4 p-4 border-2 border-primary/20 rounded-xl bg-primary/[0.02]">
               <VistoriaTab
                 key={`stage1-${id}-${vistoria?.id}`}
                 numero={1}
@@ -851,7 +855,7 @@ export default function ProtocoloDetailPage() {
                 onUpdate={fetchData}
               />
             </TabsContent>
-            <TabsContent value="vistoria2">
+            <TabsContent value="vistoria2" className="mt-4 p-4 border-2 border-primary/20 rounded-xl bg-primary/[0.02]">
               <VistoriaTab
                 key={`stage2-${id}-${vistoria?.id}`}
                 numero={2}
@@ -868,7 +872,7 @@ export default function ProtocoloDetailPage() {
                 onUpdate={fetchData}
               />
             </TabsContent>
-            <TabsContent value="vistoria3">
+            <TabsContent value="vistoria3" className="mt-4 p-4 border-2 border-primary/20 rounded-xl bg-primary/[0.02]">
               <VistoriaTab
                 key={`stage3-${id}-${vistoria?.id}`}
                 numero={3}

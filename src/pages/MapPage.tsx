@@ -123,7 +123,7 @@ export default function MapPage() {
         .select("id, status, data_prevista, vistoriador_id, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
         .neq("status", "expirado"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
-      supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
+      supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
     ]);
 
