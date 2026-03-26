@@ -164,14 +164,26 @@ export default function VistoriaTab({
   return (
     <div className="space-y-6 pt-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Date Display */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Data de Solicitação</Label>
-          <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            {dataSolicitacao ? new Date(dataSolicitacao).toLocaleDateString("pt-BR") : "Não informada"}
+        {/* Stage specific top date */}
+        {numero === 1 ? (
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Data de Solicitação</Label>
+            <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm items-center gap-2 text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              {dataSolicitacao ? new Date(dataSolicitacao).toLocaleDateString("pt-BR") : "Não informada"}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor={`retorno-${numero}`} className="text-sm font-medium">Data do {numero - 1}º Retorno</Label>
+            <Input
+              id={`retorno-${numero}`}
+              type="date"
+              value={retorno}
+              onChange={(e) => setRetorno(e.target.value)}
+            />
+          </div>
+        )}
 
         {/* Attribution Date */}
         <div className="space-y-2">
@@ -234,19 +246,6 @@ export default function VistoriaTab({
             </SelectContent>
           </Select>
         </div>
-
-        {/* Return Date (only for 1st and 2nd) */}
-        {numero < 3 && (
-          <div className="space-y-2">
-            <Label htmlFor={`retorno-${numero}`} className="text-sm font-medium">Data de {numero + 1}º Retorno</Label>
-            <Input
-              id={`retorno-${numero}`}
-              type="date"
-              value={retorno}
-              onChange={(e) => setRetorno(e.target.value)}
-            />
-          </div>
-        )}
       </div>
 
       {/* Termo de Compromisso (only when approved) */}
