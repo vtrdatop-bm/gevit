@@ -82,7 +82,7 @@ export default function KanbanPage() {
   const navigate = useNavigate();
   const { isDev, user } = useAuth();
   const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
-  const [collapsedRegionais, setCollapsedRegionais] = useState<Set<string>>(new Set());
+  const [expandedRegionais, setExpandedRegionais] = useState<Set<string>>(new Set());
   const [processos, setProcessos] = useState<ProcessoWithProtocolo[]>([]);
   const [regionaisMap, setRegionaisMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -265,8 +265,8 @@ export default function KanbanPage() {
       });
   })();
 
-  const toggleCollapse = (id: string) => {
-    setCollapsedRegionais((prev) => {
+  const toggleExpand = (id: string) => {
+    setExpandedRegionais((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -326,7 +326,7 @@ export default function KanbanPage() {
         )}
 
         {groupedByRegional.map(([regId, group]) => {
-          const isCollapsed = collapsedRegionais.has(regId);
+          const isExpanded = expandedRegionais.has(regId);
           const regIndex = groupedByRegional.findIndex(([id]) => id === regId);
           const borderColor = regId === "__sem_regional__" ? "border-l-muted-foreground" : regionalColors[regIndex % regionalColors.length];
           const headerBg = regId === "__sem_regional__" ? "bg-muted/30" : regionalBgColors[regIndex % regionalBgColors.length];
@@ -334,10 +334,10 @@ export default function KanbanPage() {
           return (
             <div key={regId} className={cn("rounded-xl border border-border overflow-hidden border-l-4", borderColor)}>
               <button
-                onClick={() => toggleCollapse(regId)}
+                onClick={() => toggleExpand(regId)}
                 className={cn("w-full flex items-center gap-3 px-5 py-3.5 transition-colors", headerBg)}
               >
-                {isCollapsed ? (
+                {!isExpanded ? (
                   <ChevronRight className="w-4 h-4 text-foreground/60" />
                 ) : (
                   <ChevronDown className="w-4 h-4 text-foreground/60" />
@@ -361,7 +361,7 @@ export default function KanbanPage() {
                 </div>
               </button>
 
-              {!isCollapsed && (
+              {isExpanded && (
                 <div className="px-4 pb-4 overflow-x-auto">
                   <div className="flex gap-3 min-h-[200px]">
                     {statusColumns.map((col) => {
