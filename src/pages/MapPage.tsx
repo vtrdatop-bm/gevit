@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ProcessStatus } from "@/types/process";
 import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
 import { Filter, Layers, Navigation, MousePointerClick, MapPin, Search, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 
 const statusMarkerColors: Record<DisplayStatus, string> = {
@@ -61,6 +61,9 @@ const getVistoriaResult = (v: any): string | null => {
 
 export default function MapPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const focusProcessoId = location.state?.focusProcessoId as string | undefined;
+
   const { isDev, user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -240,6 +243,8 @@ export default function MapPage() {
       });
 
       const bounds: [number, number][] = [];
+      let focusMarker: L.CircleMarker | null = null;
+      let focusCoords: [number, number] | null = null;
 
       filteredProcesses.forEach((process) => {
         const lat = process.protocolo?.latitude;
@@ -272,13 +277,21 @@ export default function MapPage() {
             ${process.vistoriador_nome ? `<div style="font-size: 11px; color: #888;">👤 ${process.vistoriador_nome}</div>` : ""}
           </div>
         `);
+
+        if (focusProcessoId && process.id === focusProcessoId) {
+          focusMarker = marker;
+          focusCoords = [lat, lng];
+        }
       });
 
-      if (bounds.length > 0) {
+      if (focusMarker && focusCoords) {
+        map.setView(focusCoords, 18);
+        (focusMarker as any).openPopup();
+      } else if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
       }
     });
-  }, [filteredProcesses, mapReady]);
+  }, [filteredProcesses, mapReady, focusProcessoId]);
 
   const processesWithCoords = processos.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
 

@@ -806,7 +806,7 @@ export default function ProtocoloDetailPage() {
               {(editForm.latitude && editForm.longitude) && (
                 <button
                   type="button"
-                  onClick={() => navigate("/mapa")}
+                  onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })}
                   className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors w-full justify-center text-primary"
                 >
                   <MapPin className="w-3.5 h-3.5" />
@@ -826,7 +826,7 @@ export default function ProtocoloDetailPage() {
                     📍 {Number(protocolo.latitude).toFixed(6)}, {Number(protocolo.longitude).toFixed(6)}
                   </p>
                   <button
-                    onClick={() => navigate("/mapa")}
+                    onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })}
                     className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline mt-1"
                   >
                     <MapPin className="w-3 h-3" />
