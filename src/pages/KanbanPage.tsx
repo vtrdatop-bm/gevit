@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { Calendar, User, MapPin, Clock, Building2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft } from "lucide-react";
+import { Calendar, User, MapPin, Clock, Building2, Maximize2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 import { computeDeadline, deadlineColorClass, deadlineLabel, DeadlineResult, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
@@ -415,13 +415,15 @@ export default function KanbanPage() {
                                   <span className="text-xs font-mono text-muted-foreground shrink-0">
                                     {process.protocolos.numero}
                                   </span>
-                                  <div className="flex flex-wrap items-center justify-end gap-1">
-                                    <StatusBadge 
-                                      status={process.displayStatus} 
-                                      stage={process.stage} 
-                                      customLabel={getDisplayStatusLabel(process.displayStatus, process.vistoria_completa)}
-                                    />
-                                  </div>
+                                  {selectedProcess === process.id && (
+                                    <div className="flex flex-wrap items-center justify-end gap-1">
+                                      <StatusBadge 
+                                        status={process.displayStatus} 
+                                        stage={process.stage} 
+                                        customLabel={getDisplayStatusLabel(process.displayStatus, process.vistoria_completa)}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
 
                                 <h4 className="text-sm font-semibold text-foreground mb-1">

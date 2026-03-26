@@ -203,10 +203,9 @@ export default function ProtocoloDetailPage() {
       return;
     }
 
-    const [{ data: prot }, { data: procs }, { data: allRoles }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
+    const [{ data: prot }, { data: procs }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
       supabase.from("protocolos").select("*").eq("id", id).single(),
       supabase.from("processos").select("*").eq("protocolo_id", id),
-      supabase.from("user_roles").select("user_id, role"),
       supabase.from("municipios").select("id, nome").order("nome"),
       supabase.from("bairros").select("id, nome, municipio").order("nome"),
       supabase.from("regionais").select("id, nome").order("nome"),
@@ -220,18 +219,24 @@ export default function ProtocoloDetailPage() {
     setRegionaisMunicipios(regMuns || []);
 
     // Load vistoriadores profiles (users who have the 'vistoriador' role)
-    if (allRoles && allRoles.length > 0) {
-      const vistoriadorUserIds = allRoles
-        .filter((r: any) => r.role === "vistoriador")
-        .map((r: any) => r.user_id);
-        
-      if (vistoriadorUserIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, patente, nome_guerra")
-          .in("user_id", vistoriadorUserIds);
-        setVistoriadores(profiles || []);
+    const { data: vRoles, error: rolesErr } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "vistoriador");
+
+    if (vRoles && vRoles.length > 0) {
+      const vistoriadorUserIds = vRoles.map((r: any) => r.user_id);
+      const { data: profiles, error: profErr } = await supabase
+        .from("profiles")
+        .select("user_id, patente, nome_guerra")
+        .in("user_id", vistoriadorUserIds);
+      
+      if (profErr) {
+        console.error("Erro ao carregar perfis de vistoriadores:", profErr.message);
       }
+      setVistoriadores(profiles || []);
+    } else if (rolesErr) {
+      console.error("Erro ao carregar papéis de vistoriadores:", rolesErr.message);
     }
 
     if (procs && procs.length > 0) {
