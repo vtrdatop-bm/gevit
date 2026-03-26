@@ -43,9 +43,9 @@ interface VistoriaTabProps {
 }
 
 const statusOptions = [
-  { value: "aprovado", label: "Aprovado" },
-  { value: "reprovado", label: "Reprovado" },
-  { value: "pendencia", label: "Vistoria com Pendência" },
+  { value: "pendencia", label: "Vistoria com pendência" },
+  { value: "aprovado", label: "Certificado Provisório" },
+  { value: "reprovado", label: "Certificado" },
 ];
 
 export default function VistoriaTab({
