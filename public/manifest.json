@@ -1,0 +1,17 @@
+{
+  "name": "GEVIT - Gestão de Vistorias Técnicas",
+  "short_name": "GEVIT",
+  "description": "Sistema de Gestão de Vistorias Técnicas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ea384c",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

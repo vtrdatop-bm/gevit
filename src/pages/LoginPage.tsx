@@ -46,8 +46,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center">
-            <Flame className="w-8 h-8 text-primary-foreground" />
+          <div className="w-24 h-24 flex items-center justify-center overflow-hidden">
+            <img src="/logo.png" alt="GEVIT Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">GEVIT</h1>
           <p className="text-sm text-muted-foreground">Gestão de Vistorias Técnicas</p>
