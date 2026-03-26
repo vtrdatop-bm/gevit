@@ -134,9 +134,13 @@ export default function ProtocoloDetailPage() {
 
   const bairroNotFound = bairroSearch.length > 0 && bairrosFiltered.length === 0 && editForm.municipio;
 
+  const initialLoadRef = useRef(true);
   const fetchData = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
+    if (initialLoadRef.current) {
+      setLoading(true);
+      initialLoadRef.current = false;
+    }
 
     const [{ data: prot }, { data: procs }, { data: vistoriasRoles }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
       supabase.from("protocolos").select("*").eq("id", id).single(),
@@ -224,31 +228,35 @@ export default function ProtocoloDetailPage() {
     };
   }, [id, fetchData]);
 
+  useEffect(() => {
+    if (protocolo) {
+      setEditForm({
+        numero: protocolo.numero,
+        data_solicitacao: protocolo.data_solicitacao,
+        cnpj: formatCpfCnpj(protocolo.cnpj),
+        razao_social: protocolo.razao_social,
+        nome_fantasia: protocolo.nome_fantasia || "",
+        endereco: protocolo.endereco,
+        bairro: (protocolo.bairro || "").toUpperCase(),
+        municipio: (protocolo.municipio || "").toUpperCase(),
+        area: protocolo.area ? formatArea(protocolo.area) : "",
+        cep: protocolo.cep || "",
+        latitude: protocolo.latitude?.toString() || "",
+        longitude: protocolo.longitude?.toString() || "",
+        solicitante: protocolo.solicitante || "",
+        tipo_empresa: protocolo.tipo_empresa || "",
+        tipo_servico: protocolo.tipo_servico || "",
+      });
+    }
+  }, [protocolo]);
+
   const startEdit = () => {
     if (!protocolo) return;
-    setEditForm({
-      numero: protocolo.numero,
-      data_solicitacao: protocolo.data_solicitacao,
-      cnpj: formatCpfCnpj(protocolo.cnpj),
-      razao_social: protocolo.razao_social,
-      nome_fantasia: protocolo.nome_fantasia || "",
-      endereco: protocolo.endereco,
-      bairro: (protocolo.bairro || "").toUpperCase(),
-      municipio: (protocolo.municipio || "").toUpperCase(),
-      area: protocolo.area ? formatArea(protocolo.area) : "",
-      cep: protocolo.cep || "",
-      latitude: protocolo.latitude?.toString() || "",
-      longitude: protocolo.longitude?.toString() || "",
-      solicitante: protocolo.solicitante || "",
-      tipo_empresa: protocolo.tipo_empresa || "",
-      tipo_servico: protocolo.tipo_servico || "",
-    });
     setEditing(true);
   };
 
   const cancelEdit = () => {
     setEditing(false);
-    setEditForm({});
   };
 
   const saveEdit = async () => {
@@ -828,6 +836,7 @@ export default function ProtocoloDetailPage() {
             </TabsList>
             <TabsContent value="vistoria1">
               <VistoriaTab
+                key={`stage1-${id}-${vistoria?.id}`}
                 numero={1}
                 dataSolicitacao={protocolo.data_solicitacao}
                 dataVistoria={vistoria?.data_1_vistoria}
@@ -844,6 +853,7 @@ export default function ProtocoloDetailPage() {
             </TabsContent>
             <TabsContent value="vistoria2">
               <VistoriaTab
+                key={`stage2-${id}-${vistoria?.id}`}
                 numero={2}
                 dataSolicitacao={protocolo.data_solicitacao}
                 dataVistoria={vistoria?.data_2_vistoria}
@@ -860,6 +870,7 @@ export default function ProtocoloDetailPage() {
             </TabsContent>
             <TabsContent value="vistoria3">
               <VistoriaTab
+                key={`stage3-${id}-${vistoria?.id}`}
                 numero={3}
                 dataSolicitacao={protocolo.data_solicitacao}
                 dataVistoria={vistoria?.data_3_vistoria}
