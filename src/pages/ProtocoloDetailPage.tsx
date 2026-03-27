@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Building2, MapPin, FileText, Pencil, X, Save, LocateFixed, Loader2, Plus, Search, Trash2, AlertCircle } from "lucide-react";
@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { computeDisplayStatus, computeStage } from "@/lib/vistoriaStatus";
 import { Vistoriador } from "@/types/user";
-import { useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface ProtocoloData {
@@ -27,7 +26,6 @@ interface ProtocoloData {
   area: number | null;
   latitude: number | null;
   longitude: number | null;
-  cep: string | null;
   cep: string | null;
 }
 
@@ -88,7 +86,6 @@ export default function ProtocoloDetailPage() {
   const [editForm, setEditForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
-  const [cnpjLoading, setCnpjLoading] = useState(false);
   const [municipios, setMunicipios] = useState<{ id: string; nome: string }[]>([]);
   const [bairros, setBairros] = useState<{ id: string; nome: string; municipio: string }[]>([]);
   const [regionais, setRegionais] = useState<{ id: string; nome: string }[]>([]);
@@ -380,13 +377,22 @@ export default function ProtocoloDetailPage() {
     });
   };
 
-  const lookupCnpj = async (cnpjDigits: string) => {
-    if (cnpjDigits.length !== 14) return;
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+  const lastCnpjSearched = useRef<string>("");
+
+  const lookupCnpj = useCallback(async (cnpjDigits: string, quiet = false) => {
+    if (cnpjDigits.length !== 14 || cnpjDigits === lastCnpjSearched.current) return;
+    
+    lastCnpjSearched.current = cnpjDigits;
     setCnpjLoading(true);
     try {
       const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjDigits}`);
       if (!res.ok) {
-        toast.error("CNPJ não encontrado na Receita Federal");
+        if (res.status === 404) {
+          toast.error("CNPJ não encontrado na Receita Federal");
+        } else if (!quiet) {
+          toast.error("Erro no servidor da Receita Federal. Tente novamente em instantes.");
+        }
         setCnpjLoading(false);
         return;
       }
@@ -409,10 +415,24 @@ export default function ProtocoloDetailPage() {
       }));
       toast.success("Dados do CNPJ preenchidos!");
     } catch {
-      toast.error("Erro ao consultar CNPJ");
+      if (!quiet) {
+        toast.error("Erro ao completar a busca do CNPJ.");
+      }
+    } finally {
+      setCnpjLoading(false);
     }
-    setCnpjLoading(false);
-  };
+  }, []);
+
+  // Debounced CNPJ lookup for automatic search
+  useEffect(() => {
+    const digits = (editForm.cnpj || "").replace(/\D/g, "");
+    if (digits.length === 14 && digits !== lastCnpjSearched.current) {
+      const timer = setTimeout(() => {
+        lookupCnpj(digits, true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [editForm.cnpj, lookupCnpj]);
 
   const openNovoBairroDialog = (nome: string) => {
     setNovoBairroNome(nome);
@@ -712,8 +732,6 @@ export default function ProtocoloDetailPage() {
                     onChange={(e) => {
                       const formatted = formatCpfCnpjInput(e.target.value);
                       handleEditChange("cnpj", formatted);
-                      const digits = formatted.replace(/\D/g, "");
-                      if (digits.length === 14) lookupCnpj(digits);
                     }}
                     className={inputClass}
                   />

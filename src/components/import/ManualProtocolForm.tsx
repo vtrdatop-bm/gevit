@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2, Search, MapPin } from "lucide-react";
@@ -96,17 +96,26 @@ export default function ManualProtocolForm() {
 
   // CNPJ lookup
   const [cnpjLoading, setCnpjLoading] = useState(false);
+  const lastCnpjSearched = useRef<string>("");
 
-  const lookupCnpj = async (cnpjDigits: string) => {
-    if (cnpjDigits.length !== 14) return;
+  const lookupCnpj = useCallback(async (cnpjDigits: string, quiet = false) => {
+    if (cnpjDigits.length !== 14 || cnpjDigits === lastCnpjSearched.current) return;
+    
+    lastCnpjSearched.current = cnpjDigits;
     setCnpjLoading(true);
     try {
       const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjDigits}`);
+      
       if (!res.ok) {
-        toast.error("CNPJ não encontrado na Receita Federal");
+        if (res.status === 404) {
+          toast.error("CNPJ não encontrado na Receita Federal");
+        } else if (!quiet) {
+          toast.error("Erro no servidor da Receita Federal. Tente novamente em instantes.");
+        }
         setCnpjLoading(false);
         return;
       }
+      
       const data = await res.json();
       const numero = data.numero || "";
       const complemento = data.complemento || "";
@@ -125,11 +134,25 @@ export default function ManualProtocolForm() {
         cep: data.cep ? formatCep(data.cep.toString().replace(/\D/g, "")) : prev.cep || "",
       }));
       toast.success("Dados do CNPJ preenchidos!");
-    } catch {
-      toast.error("Erro ao consultar CNPJ");
+    } catch (err) {
+      if (!quiet) {
+        toast.error("Erro ao conectar com o serviço de busca de CNPJ.");
+      }
+    } finally {
+      setCnpjLoading(false);
     }
-    setCnpjLoading(false);
-  };
+  }, []);
+
+  // Debounced CNPJ lookup for automatic search
+  useEffect(() => {
+    const digits = (form.cnpj || "").replace(/\D/g, "");
+    if (digits.length === 14 && digits !== lastCnpjSearched.current) {
+      const timer = setTimeout(() => {
+        lookupCnpj(digits, true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [form.cnpj, lookupCnpj]);
 
   useEffect(() => {
     sessionStorage.setItem("manual_protocol_form", JSON.stringify(form));
@@ -434,8 +457,6 @@ export default function ManualProtocolForm() {
                 onChange={(e) => {
                   const formatted = formatCpfCnpj(e.target.value);
                   handleChange("cnpj", formatted);
-                  const digits = formatted.replace(/\D/g, "");
-                  if (digits.length === 14) lookupCnpj(digits);
                 }}
                 required
                 placeholder="000.000.000-00 ou 00.000.000/0000-00"
