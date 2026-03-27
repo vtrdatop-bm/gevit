@@ -10,7 +10,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/pages/DashboardPage";
 import KanbanPage from "@/pages/KanbanPage";
 import MapPage from "@/pages/MapPage";
-import ImportPage from "@/pages/ImportPage";
+
 import RoutesPage from "@/pages/RoutesPage";
 import InspectionsPage from "@/pages/InspectionsPage";
 import NotificationsPage from "@/pages/NotificationsPage";
@@ -76,7 +76,7 @@ function ProtectedRoutes() {
         {!isVistoriador && <Route path="/protocolos" element={<ProtocolosPage />} />}
         {!isVistoriador && <Route path="/cadastro-protocolo" element={<CadastroProtocoloPage />} />}
         {!isVistoriador && <Route path="/protocolo/:id" element={<ProtocoloDetailPage />} />}
-        {!isVistoriador && <Route path="/importar" element={<ImportPage />} />}
+
         <Route path="/rotas" element={<RoutesPage />} />
         <Route path="/vistorias" element={<InspectionsPage />} />
         <Route path="/notificacoes" element={<NotificationsPage />} />

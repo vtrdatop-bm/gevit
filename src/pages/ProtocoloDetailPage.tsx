@@ -28,9 +28,7 @@ interface ProtocoloData {
   latitude: number | null;
   longitude: number | null;
   cep: string | null;
-  solicitante: string | null;
-  tipo_empresa: string | null;
-  tipo_servico: string | null;
+  cep: string | null;
 }
 
 interface VistoriaData {
@@ -162,9 +160,6 @@ export default function ProtocoloDetailPage() {
         latitude: -9.974,
         longitude: -67.807,
         cep: "69900-000",
-        solicitante: "João Silva",
-        tipo_empresa: "Comércio",
-        tipo_servico: "Vistoria",
       });
       setMunicipios([{ id: "m1", nome: "RIO BRANCO" }]);
       setBairros([{ id: "b1", nome: "CENTRO", municipio: "RIO BRANCO" }]);
@@ -321,9 +316,6 @@ export default function ProtocoloDetailPage() {
         cep: protocolo.cep || "",
         latitude: protocolo.latitude?.toString() || "",
         longitude: protocolo.longitude?.toString() || "",
-        solicitante: protocolo.solicitante || "",
-        tipo_empresa: protocolo.tipo_empresa || "",
-        tipo_servico: protocolo.tipo_servico || "",
       });
     }
   }, [protocolo]);
@@ -359,9 +351,6 @@ export default function ProtocoloDetailPage() {
       cep: editForm.cep ? editForm.cep.replace(/\D/g, "") : null,
       latitude: editForm.latitude ? parseFloat(String(editForm.latitude).replace(",", ".")) : null,
       longitude: editForm.longitude ? parseFloat(String(editForm.longitude).replace(",", ".")) : null,
-      solicitante: editForm.solicitante || null,
-      tipo_empresa: editForm.tipo_empresa || null,
-      tipo_servico: editForm.tipo_servico || null,
     }).eq("id", protocolo.id).select();
 
     if (error) {
@@ -747,22 +736,6 @@ export default function ProtocoloDetailPage() {
                 <label htmlFor="nome_fantasia" className="text-sm font-medium">Nome Fantasia</label>
                 <input id="nome_fantasia" value={editForm.nome_fantasia || ""} onChange={(e) => handleEditChange("nome_fantasia", e.target.value)} className={inputClass} />
               </div>
-              <div className="space-y-1.5">
-                <label htmlFor="solicitante" className="text-sm font-medium">Solicitante</label>
-                <input id="solicitante" value={editForm.solicitante || ""} onChange={(e) => handleEditChange("solicitante", e.target.value)} className={inputClass} />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="tipo_empresa" className="text-sm font-medium">Tipo de Empresa</label>
-                <select id="tipo_empresa" value={editForm.tipo_empresa || ""} onChange={(e) => handleEditChange("tipo_empresa", e.target.value)} className={inputClass}>
-                  <option value="">Selecione</option>
-                  <option value="Pessoa Física">Pessoa Física</option>
-                  <option value="Pessoa Jurídica">Pessoa Jurídica</option>
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="tipo_servico" className="text-sm font-medium">Tipo de Serviço</label>
-                <input id="tipo_servico" value={editForm.tipo_servico || ""} onChange={(e) => handleEditChange("tipo_servico", e.target.value)} className={inputClass} />
-              </div>
             </div>
           ) : (
             <div className="space-y-1 text-sm">
@@ -771,9 +744,6 @@ export default function ProtocoloDetailPage() {
                 <p className="text-muted-foreground text-xs">{protocolo.razao_social}</p>
               )}
               <p className="text-muted-foreground font-mono text-xs">{formatCpfCnpj(protocolo.cnpj)}</p>
-              {protocolo.solicitante && <p className="text-muted-foreground text-xs">Solicitante: {protocolo.solicitante}</p>}
-              {protocolo.tipo_empresa && <p className="text-muted-foreground text-xs">Tipo de Empresa: {protocolo.tipo_empresa}</p>}
-              {protocolo.tipo_servico && <p className="text-muted-foreground text-xs">Tipo de Serviço: {protocolo.tipo_servico}</p>}
             </div>
           )}
         </div>

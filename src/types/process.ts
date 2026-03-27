@@ -4,12 +4,9 @@ export interface Protocolo {
   id: string;
   numero: string;
   data_solicitacao: string;
-  tipo_servico: string;
-  tipo_empresa: string;
   cnpj: string;
   razao_social: string;
   nome_fantasia: string;
-  solicitante: string;
   endereco: string;
   bairro: string;
   municipio: string;

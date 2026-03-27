@@ -28,7 +28,7 @@ const allNavItems = [
   { path: "/vistorias", label: "Minhas Vistorias", icon: ClipboardList, roles: ["admin", "distribuidor", "vistoriador"] },
   { path: "/mapa", label: "Mapa", icon: Map, roles: ["admin", "distribuidor", "vistoriador"] },
   { path: "/rotas", label: "Rotas", icon: Route, roles: ["admin", "distribuidor", "vistoriador"] },
-  { path: "/importar", label: "Importar", icon: Upload, roles: ["admin", "distribuidor"] },
+
   { path: "/notificacoes", label: "Notificações", icon: Bell, roles: ["admin", "distribuidor", "vistoriador"] },
   { path: "/configuracoes", label: "Configurações", icon: Settings, roles: ["admin", "distribuidor", "vistoriador"] },
 ];

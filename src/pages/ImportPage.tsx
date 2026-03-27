@@ -6,12 +6,9 @@ import { cn } from "@/lib/utils";
 interface ImportRow {
   numero: string;
   data_solicitacao: string;
-  tipo_servico: string;
-  tipo_empresa: string;
   cnpj: string;
   razao_social: string;
   nome_fantasia: string;
-  solicitante: string;
   endereco: string;
   bairro: string;
   municipio: string;
@@ -165,7 +162,7 @@ export default function ImportPage() {
       <div className="bg-card rounded-xl border border-border p-4">
         <h3 className="text-sm font-semibold text-foreground mb-3">Colunas esperadas</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {["numero", "data_solicitacao", "tipo_servico", "tipo_empresa", "cnpj", "razao_social", "nome_fantasia", "solicitante", "endereco", "bairro", "municipio", "area"].map((col) => (
+          {["numero", "data_solicitacao", "cnpj", "razao_social", "nome_fantasia", "endereco", "bairro", "municipio", "area"].map((col) => (
             <span key={col} className="text-xs font-mono bg-accent px-2 py-1 rounded text-muted-foreground">{col}</span>
           ))}
         </div>

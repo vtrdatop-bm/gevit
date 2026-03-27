@@ -254,9 +254,8 @@ export type Database = {
           nome_fantasia: string | null
           numero: string
           razao_social: string
-          solicitante: string | null
-          tipo_empresa: string | null
-          tipo_servico: string | null
+
+
           updated_at: string
         }
         Insert: {
@@ -274,9 +273,8 @@ export type Database = {
           nome_fantasia?: string | null
           numero: string
           razao_social: string
-          solicitante?: string | null
-          tipo_empresa?: string | null
-          tipo_servico?: string | null
+
+
           updated_at?: string
         }
         Update: {
@@ -294,9 +292,8 @@ export type Database = {
           nome_fantasia?: string | null
           numero?: string
           razao_social?: string
-          solicitante?: string | null
-          tipo_empresa?: string | null
-          tipo_servico?: string | null
+
+
           updated_at?: string
         }
         Relationships: []
