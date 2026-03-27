@@ -68,7 +68,10 @@ function Field({ label, required, children }: { label: string; required?: boolea
 
 export default function ManualProtocolForm() {
   const navigate = useNavigate();
-  const [form, setForm] = useState<FormData>({});
+  const [form, setForm] = useState<FormData>(() => {
+    const saved = sessionStorage.getItem("manual_protocol_form");
+    return saved ? JSON.parse(saved) : {};
+  });
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
@@ -127,6 +130,10 @@ export default function ManualProtocolForm() {
     }
     setCnpjLoading(false);
   };
+
+  useEffect(() => {
+    sessionStorage.setItem("manual_protocol_form", JSON.stringify(form));
+  }, [form]);
 
   useEffect(() => {
     Promise.all([
@@ -404,6 +411,7 @@ export default function ManualProtocolForm() {
 
       setResult({ type: "success", message: "Protocolo cadastrado com sucesso!" });
       setForm({});
+      sessionStorage.removeItem("manual_protocol_form");
       setBairroSearch("");
     }
     setSaving(false);
@@ -560,7 +568,7 @@ export default function ManualProtocolForm() {
                 className="flex items-center gap-1.5 px-3 h-10 rounded-md bg-accent/50 text-accent-foreground text-sm font-medium hover:bg-accent transition-colors w-full justify-center"
               >
                 <MapPin className="w-4 h-4" />
-                Abrir no mapa do sistema
+                Abrir no mapa
               </button>
             )}
           </div>
