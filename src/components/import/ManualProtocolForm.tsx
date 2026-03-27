@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2, Search, Map, ExternalLink } from "lucide-react";
+import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2, Search, MapPin } from "lucide-react";
 import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -66,6 +67,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 export default function ManualProtocolForm() {
+  const navigate = useNavigate();
   const [form, setForm] = useState<FormData>({});
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -552,16 +554,14 @@ export default function ManualProtocolForm() {
             </Field>
 
             {form.latitude && form.longitude && (
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${form.latitude},${form.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => navigate("/mapa", { state: { focusCoords: [parseFloat(form.latitude), parseFloat(form.longitude)] } })}
                 className="flex items-center gap-1.5 px-3 h-10 rounded-md bg-accent/50 text-accent-foreground text-sm font-medium hover:bg-accent transition-colors w-full justify-center"
               >
-                <Map className="w-4 h-4" />
-                Abrir no Google Maps
-                <ExternalLink className="w-3.5 h-3.5 opacity-50" />
-              </a>
+                <MapPin className="w-4 h-4" />
+                Abrir no mapa do sistema
+              </button>
             )}
           </div>
         </div>

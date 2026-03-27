@@ -64,6 +64,7 @@ export default function MapPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const focusProcessoId = location.state?.focusProcessoId as string | undefined;
+  const focusCoords = location.state?.focusCoords as [number, number] | undefined;
 
   const { isDev, user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -246,8 +247,8 @@ export default function MapPage() {
       });
 
       const bounds: [number, number][] = [];
-      let focusMarker: L.CircleMarker | null = null;
-      let focusCoords: [number, number] | null = null;
+      let focusMarker: L.CircleMarker | L.Marker | null = null;
+      let targetCoords: [number, number] | null = focusCoords || null;
 
       const groups = new Map<string, MapProcess[]>();
       filteredProcesses.forEach((p) => {
@@ -332,18 +333,21 @@ export default function MapPage() {
 
         if (focusProcessoId && groupProcesses.some(p => p.id === focusProcessoId)) {
           focusMarker = marker;
-          focusCoords = [lat, lng];
+          targetCoords = [lat, lng];
         }
       });
 
-      if (focusMarker && focusCoords) {
-        map.setView(focusCoords, 18);
+      if (focusMarker && targetCoords) {
+        map.setView(targetCoords, 18);
         (focusMarker as any).openPopup();
+      } else if (targetCoords) {
+        map.setView(targetCoords, 18);
+        L.marker(targetCoords).addTo(map).bindPopup("Localização selecionada").openPopup();
       } else if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
       }
     });
-  }, [filteredProcesses, mapReady, focusProcessoId]);
+  }, [filteredProcesses, mapReady, focusProcessoId, focusCoords]);
 
   useEffect(() => {
     const handleOpenProtocolo = (e: any) => {
