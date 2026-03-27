@@ -258,9 +258,7 @@ export default function MapPage() {
         }
       });
 
-      const bounds: [number, number][] = [];
-      let focusMarker: L.CircleMarker | null = null;
-      let focusCoords: [number, number] | null = null;
+
 
       groups.forEach((groupProcesses, coordsKey) => {
         const [lat, lng] = coordsKey.split(",").map(Number);
