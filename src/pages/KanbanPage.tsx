@@ -415,15 +415,9 @@ export default function KanbanPage() {
                                   <span className="text-xs font-mono text-muted-foreground shrink-0">
                                     {process.protocolos.numero}
                                   </span>
-                                  {selectedProcess === process.id && (
-                                    <div className="flex flex-wrap items-center justify-end gap-1">
-                                      <StatusBadge 
-                                        status={process.displayStatus} 
-                                        stage={process.stage} 
-                                        customLabel={getDisplayStatusLabel(process.displayStatus, process.vistoria_completa)}
-                                      />
-                                    </div>
-                                  )}
+                                  <span className="text-[10px] font-bold uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap">
+                                    {process.stage}ª Vist.
+                                  </span>
                                 </div>
 
                                 <h4 className="text-sm font-semibold text-foreground mb-1">
