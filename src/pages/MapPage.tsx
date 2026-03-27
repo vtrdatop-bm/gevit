@@ -249,66 +249,90 @@ export default function MapPage() {
       let focusMarker: L.CircleMarker | null = null;
       let focusCoords: [number, number] | null = null;
 
-      filteredProcesses.forEach((process) => {
-        const lat = process.protocolo?.latitude;
-        const lng = process.protocolo?.longitude;
-        if (!lat || !lng) return;
+      const groups = new Map<string, MapProcess[]>();
+      filteredProcesses.forEach((p) => {
+        if (p.protocolo?.latitude && p.protocolo?.longitude) {
+          const key = `${p.protocolo.latitude},${p.protocolo.longitude}`;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(p);
+        }
+      });
 
+      const bounds: [number, number][] = [];
+      let focusMarker: L.CircleMarker | null = null;
+      let focusCoords: [number, number] | null = null;
+
+      groups.forEach((groupProcesses, coordsKey) => {
+        const [lat, lng] = coordsKey.split(",").map(Number);
         bounds.push([lat, lng]);
-        const color = statusMarkerColors[process.displayStatus];
+
+        // If multiple, use a special style or just the status of the first one
+        // Better: count and maybe show a badge (though CircleMarker is limited)
+        const primaryProcess = groupProcesses[0];
+        const color = statusMarkerColors[primaryProcess.displayStatus];
+        const isMultiple = groupProcesses.length > 1;
 
         const marker = L.circleMarker([lat, lng], {
-          radius: 10,
+          radius: isMultiple ? 12 : 10,
           fillColor: color,
-          color: color,
-          weight: 2,
-          opacity: 0.9,
-          fillOpacity: 0.6,
+          color: isMultiple ? "#ffffff" : color,
+          weight: isMultiple ? 3 : 2,
+          opacity: 1,
+          fillOpacity: 0.7,
         }).addTo(map);
 
-        const stage = getVistoriaStage(process.vistoria);
-        const result = getVistoriaResult(process.vistoria);
-
-        marker.bindPopup(`
-          <div style="font-family: system-ui, sans-serif; min-width: 220px; padding: 4px;">
-            <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px; color: #1a1a1a;">
-              ${process.protocolo.nome_fantasia || process.protocolo.razao_social}
-            </div>
-            <div style="font-size: 12px; color: #666; margin-bottom: 10px; line-height: 1.4;">
-              ${process.protocolo.razao_social}
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
-              <div style="font-size: 11px; color: #444; display: flex; align-items: start; gap: 4px;">
-                <span>📍</span> <span>${process.protocolo.endereco}, ${process.protocolo.bairro}</span>
-              </div>
-              <div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
-                <span>📋</span> <span>${getDisplayStatusLabel(process.displayStatus, process.vistoria)}</span>
-              </div>
-              ${stage ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
-                <span>🔍</span> <span>${stage}${result ? ` — ${result}` : ""}</span>
-              </div>` : ""}
-              ${process.data_prevista ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
-                <span>📅</span> <span>Previsto: ${process.data_prevista}</span>
-              </div>` : ""}
-              ${process.vistoriador_nome ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
-                <span>👤</span> <span>${process.vistoriador_nome}</span>
-              </div>` : ""}
-            </div>
-            <button 
-              onclick="window.dispatchEvent(new CustomEvent('open-protocolo', { detail: '${process.protocolo.id}' }))"
-              style="width: 100%; background: hsl(var(--primary)); color: white; border: none; padding: 8px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;"
-              onmouseover="this.style.opacity='0.9'"
-              onmouseout="this.style.opacity='1'"
-            >
-              Ver Detalhes do Protocolo
-            </button>
+        const popupContent = `
+          <div style="font-family: system-ui, sans-serif; min-width: 250px; max-height: 400px; overflow-y: auto; padding: 4px;">
+            ${isMultiple ? `<div style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #ef4444; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+              <span>⚠️</span> <span>${groupProcesses.length} protocolos neste local</span>
+            </div>` : ""}
+            
+            ${groupProcesses.map((process, idx) => {
+              const stage = getVistoriaStage(process.vistoria);
+              const result = getVistoriaResult(process.vistoria);
+              return `
+                <div style="${idx > 0 ? "margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;" : ""}">
+                  <div style="font-weight: 700; font-size: 14px; margin-bottom: 2px; color: #1a1a1a;">
+                    ${process.protocolo.numero}
+                  </div>
+                  <div style="font-weight: 600; font-size: 13px; margin-bottom: 2px; color: #333;">
+                    ${process.protocolo.nome_fantasia || process.protocolo.razao_social}
+                  </div>
+                  <div style="font-size: 11px; color: #666; margin-bottom: 8px; line-height: 1.3;">
+                    ${process.protocolo.razao_social}
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px;">
+                    <div style="font-size: 11px; color: #444; display: flex; align-items: start; gap: 4px;">
+                      <span>📍</span> <span>${process.protocolo.endereco}, ${process.protocolo.bairro}</span>
+                    </div>
+                    <div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
+                      <span>📋</span> <span>${getDisplayStatusLabel(process.displayStatus, process.vistoria)}</span>
+                    </div>
+                    ${stage ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
+                      <span>🔍</span> <span>${stage}${result ? ` — ${result}` : ""}</span>
+                    </div>` : ""}
+                    ${process.vistoriador_nome ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
+                      <span>👤</span> <span>${process.vistoriador_nome}</span>
+                    </div>` : ""}
+                  </div>
+                  <button 
+                    onclick="window.dispatchEvent(new CustomEvent('open-protocolo', { detail: '${process.protocolo.id}' }))"
+                    style="width: 100%; background: hsl(var(--primary)); color: white; border: none; padding: 7px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px;"
+                  >
+                    Ver Detalhes
+                  </button>
+                </div>
+              `;
+            }).join("")}
           </div>
-        `, {
+        `;
+
+        marker.bindPopup(popupContent, {
           className: 'protocolo-popup',
           maxWidth: 300
         });
 
-        if (focusProcessoId && process.id === focusProcessoId) {
+        if (focusProcessoId && groupProcesses.some(p => p.id === focusProcessoId)) {
           focusMarker = marker;
           focusCoords = [lat, lng];
         }
