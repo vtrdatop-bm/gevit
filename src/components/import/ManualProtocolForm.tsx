@@ -234,105 +234,125 @@ export default function ManualProtocolForm() {
 
   const geocodeAddress = async () => {
     setGeocoding(true);
-    let viaCepData: any = null;
     try {
       const cepClean = (form.cep || "").replace(/\D/g, "");
       const endereco = form.endereco || "";
       const numMatch = endereco.match(/(?:,|nº|num|número)\s*(\d+)/i) || endereco.match(/\b(\d+)\b/);
       const numero = numMatch ? numMatch[1] : "";
-
+      
+      const municipioStr = form.municipio || "";
+      const bairroStr = form.bairro || "";
+      
+      // Clean logradouro: remove number and common suffixes
+      const logradouro = endereco.split(/,|nº|num|número|-/i)[0].trim();
+      
       let lat: string | null = null;
       let lon: string | null = null;
 
+      const callNominatim = async (params: Record<string, string>) => {
+        const queryParams = new URLSearchParams({
+          format: "json",
+          limit: "1",
+          countrycodes: "br",
+          addressdetails: "1",
+          ...params,
+        });
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?${queryParams.toString()}`,
+          { headers: { "User-Agent": "GEVIT-App/1.0" } }
+        );
+        return await res.json();
+      };
+
+      // 1. Try with ViaCEP data + Number if CEP is available
       if (cepClean.length === 8) {
         try {
           const viaCepRes = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
-          viaCepData = await viaCepRes.json();
-          const viaCep = viaCepData;
-          if (viaCep && !viaCep.erro && viaCep.logradouro) {
-            const parts = [
-              numero ? `${viaCep.logradouro}, ${numero}` : viaCep.logradouro,
-              viaCep.bairro || form.bairro,
-              viaCep.localidade || form.municipio,
-              viaCep.uf || "Acre",
-              "Brasil",
-            ].filter(Boolean);
-            const q = parts.join(", ");
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,
-              { headers: { "User-Agent": "GEVIT-App/1.0" } }
-            );
-            const data = await res.json();
+          const viaCep = await viaCepRes.json();
+          if (viaCep && !viaCep.erro) {
+            // Try structured first
+            const data = await callNominatim({
+              street: numero ? `${viaCep.logradouro}, ${numero}` : viaCep.logradouro,
+              city: viaCep.localidade || municipioStr,
+              postalcode: viaCep.cep,
+              state: viaCep.uf || "Acre"
+            });
+            
             if (data && data.length > 0) {
+              lat = data[0].lat;
+              lon = data[0].lon;
+              
+              // Update bairro/municipio if empty
               setForm((prev) => ({
                 ...prev,
-                latitude: parseFloat(data[0].lat).toFixed(6),
-                longitude: parseFloat(data[0].lon).toFixed(6),
-                bairro: prev.bairro || (viaCepData?.bairro?.toUpperCase() || ""),
-                municipio: prev.municipio || (viaCepData?.localidade?.toUpperCase() || ""),
+                bairro: prev.bairro || (viaCep.bairro?.toUpperCase() || ""),
+                municipio: prev.municipio || (viaCep.localidade?.toUpperCase() || ""),
               }));
-              toast.success("Coordenadas encontradas!");
-              setGeocoding(false);
-              return;
             }
           }
         } catch { /* fallback */ }
       }
 
-      // Multiple fallback search strategies
-      const searchStrategies = [];
-      const municipioStr = form.municipio || "";
-      const bairroStr = form.bairro || "";
-      const addressClean = endereco.split('-')[0].trim(); // Rua + Número sem complemento
-      const baseEndereco = endereco.split(",")[0].trim(); // Só a rua
-      
-      if (addressClean && bairroStr && municipioStr) {
-        searchStrategies.push(`${addressClean}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
-      }
-      if (baseEndereco && baseEndereco !== addressClean && bairroStr && municipioStr) {
-        searchStrategies.push(`${baseEndereco}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
-      }
-      if (addressClean && municipioStr) {
-        searchStrategies.push(`${addressClean}, ${municipioStr}, Acre, Brasil`);
-      }
-      if (bairroStr && municipioStr) {
-        searchStrategies.push(`${bairroStr}, ${municipioStr}, Acre, Brasil`);
-      }
-      if (municipioStr) {
-        searchStrategies.push(`${municipioStr}, Acre, Brasil`);
+      // 2. Try structured query with form data if not found yet
+      if (!lat && logradouro && municipioStr) {
+        const data = await callNominatim({
+          street: numero ? `${logradouro}, ${numero}` : logradouro,
+          city: municipioStr,
+          state: "Acre"
+        });
+        if (data && data.length > 0) {
+          lat = data[0].lat;
+          lon = data[0].lon;
+        }
       }
 
-      if (!lat || !lon) {
-        // Try strategies iteratively until a result is found
-        for (const query of searchStrategies) {
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
-              { headers: { "User-Agent": "GEVIT-App/1.0" } }
-            );
-            const data = await res.json();
-            if (data && data.length > 0) {
-              lat = parseFloat(data[0].lat).toFixed(6);
-              lon = parseFloat(data[0].lon).toFixed(6);
-              break; // Found it!
-            }
-          } catch {
-            // ignore network err and try next
+      // 3. Try "fuzzy" search with 'q'
+      if (!lat) {
+        const strategies = [
+          `${logradouro}${numero ? `, ${numero}` : ""}, ${bairroStr}, ${municipioStr}, Acre, Brasil`,
+          `${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre, Brasil`,
+          `${endereco}, ${municipioStr}, Acre, Brasil`,
+          `${bairroStr}, ${municipioStr}, Acre, Brasil`,
+          `${municipioStr}, Acre, Brasil`
+        ].filter(Boolean);
+
+        for (const q of strategies) {
+          const data = await callNominatim({ q });
+          if (data && data.length > 0) {
+            lat = data[0].lat;
+            lon = data[0].lon;
+            break;
           }
         }
+      }
+
+      // 4. Try Photon (fuzzy matching) as a last resort
+      if (!lat) {
+        try {
+          const photonRes = await fetch(
+            `https://photon.komoot.io/api/?q=${encodeURIComponent(`${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre, Brasil`)}&limit=1`
+          );
+          const photonData = await photonRes.json();
+          if (photonData?.features?.[0]) {
+            const feat = photonData.features[0];
+            lat = feat.geometry.coordinates[1].toString();
+            lon = feat.geometry.coordinates[0].toString();
+          }
+        } catch { /* ignore photon error */ }
       }
 
       if (lat && lon) {
         setForm((prev) => ({
           ...prev,
-          latitude: lat,
-          longitude: lon,
+          latitude: parseFloat(lat).toFixed(6),
+          longitude: parseFloat(lon).toFixed(6),
         }));
         toast.success("Coordenadas encontradas!");
       } else {
         toast.error("Endereço não encontrado no mapa");
       }
-    } catch {
+    } catch (error) {
+      console.error("Geocoding error:", error);
       toast.error("Erro ao buscar coordenadas");
     }
     setGeocoding(false);
