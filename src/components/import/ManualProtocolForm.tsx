@@ -133,7 +133,7 @@ export default function ManualProtocolForm() {
         municipio: (data.municipio || prev.municipio || "").toUpperCase(),
         cep: data.cep ? formatCep(data.cep.toString().replace(/\D/g, "")) : prev.cep || "",
       }));
-      toast.success("Dados do CNPJ preenchidos!");
+      if (!quiet) toast.success("Dados do CNPJ preenchidos!");
     } catch (err) {
       if (!quiet) {
         toast.error("Erro ao conectar com o serviço de busca de CNPJ.");
@@ -269,53 +269,80 @@ export default function ManualProtocolForm() {
     try {
       const cepClean = (form.cep || "").replace(/\D/g, "");
       const endereco = form.endereco || "";
+      const municipioStr = form.municipio || "";
+      const bairroStr = form.bairro || "";
+
+      // 1. Extract number and clean street name
       const numMatch = endereco.match(/(?:,|nº|num|número)\s*(\d+)/i) || endereco.match(/\b(\d+)\b/);
       const numero = numMatch ? numMatch[1] : "";
       
-      const municipioStr = form.municipio || "";
-      const bairroStr = form.bairro || "";
+      const cleanStreet = (addr: string) => {
+        return addr
+          .split(/,|nº|num|número|-/i)[0]
+          .replace(/\b(S\/N|S\.N\.|SEM N[ÚU]MERO)\b/gi, "")
+          .replace(/\b(LOTEAMENTO|CONDOM[ÍI]NIO|RESIDENCIAL|QUADRA|LOTE|Q\.|L\.)\b/gi, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      };
+
+      const logradouro = cleanStreet(endereco);
       
-      // Clean logradouro: remove number and common suffixes
-      const logradouro = endereco.split(/,|nº|num|número|-/i)[0].trim();
-      
-      let lat: string | null = null;
-      let lon: string | null = null;
+      let bestLat: string | null = null;
+      let bestLon: string | null = null;
+
+      const acreBounds = {
+        viewbox: "-74.02,-11.14,-66.62,-7.11",
+        bounded: "1"
+      };
+
+      const scoreResult = (res: any) => {
+        let score = 0;
+        const displayName = (res.display_name || "").toUpperCase();
+        if (municipioStr && displayName.includes(municipioStr.toUpperCase())) score += 10;
+        if (bairroStr && displayName.includes(bairroStr.toUpperCase())) score += 20;
+        if (["house", "building", "service", "residential"].includes(res.type)) score += 5;
+        if (res.class === "highway") score += 3;
+        return score;
+      };
 
       const callNominatim = async (params: Record<string, string>) => {
         const queryParams = new URLSearchParams({
           format: "json",
-          limit: "1",
+          limit: "5",
           countrycodes: "br",
           addressdetails: "1",
+          ...acreBounds,
           ...params,
         });
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?${queryParams.toString()}`,
-          { headers: { "User-Agent": "GEVIT-App/1.0" } }
+          { headers: { "User-Agent": "GEVIT-App/1.1" } }
         );
-        return await res.json();
+        const data = await res.json();
+        if (!data || data.length === 0) return null;
+        
+        // Sort by score and return the best
+        return data.sort((a: any, b: any) => scoreResult(b) - scoreResult(a))[0];
       };
 
-      // 1. Try with ViaCEP data + Number if CEP is available
+      // Execution Chain
+      
+      // Strategy A: ViaCEP + Number
       if (cepClean.length === 8) {
         try {
           const viaCepRes = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
           const viaCep = await viaCepRes.json();
           if (viaCep && !viaCep.erro) {
-            // Try structured first
-            const data = await callNominatim({
+            const result = await callNominatim({
               street: numero ? `${viaCep.logradouro}, ${numero}` : viaCep.logradouro,
               city: viaCep.localidade || municipioStr,
               postalcode: viaCep.cep,
               state: viaCep.uf || "Acre"
             });
-            
-            if (data && data.length > 0) {
-              lat = data[0].lat;
-              lon = data[0].lon;
-              
-              // Update bairro/municipio if empty
-              setForm((prev) => ({
+            if (result) {
+              bestLat = result.lat;
+              bestLon = result.lon;
+              setForm(prev => ({
                 ...prev,
                 bairro: prev.bairro || (viaCep.bairro?.toUpperCase() || ""),
                 municipio: prev.municipio || (viaCep.localidade?.toUpperCase() || ""),
@@ -325,59 +352,69 @@ export default function ManualProtocolForm() {
         } catch { /* fallback */ }
       }
 
-      // 2. Try structured query with form data if not found yet
-      if (!lat && logradouro && municipioStr) {
-        const data = await callNominatim({
+      // Strategy B: Structured search
+      if (!bestLat && logradouro && municipioStr) {
+        const result = await callNominatim({
           street: numero ? `${logradouro}, ${numero}` : logradouro,
           city: municipioStr,
           state: "Acre"
         });
-        if (data && data.length > 0) {
-          lat = data[0].lat;
-          lon = data[0].lon;
+        if (result) {
+          bestLat = result.lat;
+          bestLon = result.lon;
         }
       }
 
-      // 3. Try "fuzzy" search with 'q'
-      if (!lat) {
-        const strategies = [
-          `${logradouro}${numero ? `, ${numero}` : ""}, ${bairroStr}, ${municipioStr}, Acre, Brasil`,
-          `${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre, Brasil`,
-          `${endereco}, ${municipioStr}, Acre, Brasil`,
-          `${bairroStr}, ${municipioStr}, Acre, Brasil`,
-          `${municipioStr}, Acre, Brasil`
+      // Strategy C: Multiple Fuzzy combinations
+      if (!bestLat) {
+        const fuzzyStrategies = [
+          `${logradouro}${numero ? `, ${numero}` : ""}, ${bairroStr}, ${municipioStr}, Acre`,
+          `${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre`,
+          `${endereco}, ${municipioStr}, Acre`,
+          `${bairroStr}, ${municipioStr}, Acre`
         ].filter(Boolean);
 
-        for (const q of strategies) {
-          const data = await callNominatim({ q });
-          if (data && data.length > 0) {
-            lat = data[0].lat;
-            lon = data[0].lon;
+        for (const q of fuzzyStrategies) {
+          const result = await callNominatim({ q });
+          if (result) {
+            bestLat = result.lat;
+            bestLon = result.lon;
             break;
           }
         }
       }
 
-      // 4. Try Photon (fuzzy matching) as a last resort
-      if (!lat) {
+      // Strategy D: Photon fallback with location bias
+      if (!bestLat) {
         try {
           const photonRes = await fetch(
-            `https://photon.komoot.io/api/?q=${encodeURIComponent(`${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre, Brasil`)}&limit=1`
+            `https://photon.komoot.io/api/?q=${encodeURIComponent(`${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre`)}&lat=-9.974&lon=-67.807&limit=5`
           );
           const photonData = await photonRes.json();
-          if (photonData?.features?.[0]) {
-            const feat = photonData.features[0];
-            lat = feat.geometry.coordinates[1].toString();
-            lon = feat.geometry.coordinates[0].toString();
+          if (photonData?.features?.length > 0) {
+            const bestPhoton = photonData.features
+              .map((f: any) => ({
+                lat: f.geometry.coordinates[1].toString(),
+                lon: f.geometry.coordinates[0].toString(),
+                display_name: Object.values(f.properties).join(", "),
+                type: f.properties.type,
+                class: f.properties.osm_key
+              }))
+              .sort((a: any, b: any) => scoreResult(b) - scoreResult(a))[0];
+
+            if (bestPhoton) {
+              bestLat = bestPhoton.lat;
+              bestLon = bestPhoton.lon;
+            }
           }
         } catch { /* ignore photon error */ }
       }
 
-      if (lat && lon) {
+      if (bestLat && bestLon) {
         setForm((prev) => ({
           ...prev,
-          latitude: parseFloat(lat).toFixed(6),
-          longitude: parseFloat(lon).toFixed(6),
+          latitude: parseFloat(bestLat!).toFixed(6),
+          longitude: parseFloat(bestLon!).toFixed(6),
         }));
         toast.success("Coordenadas encontradas!");
       } else {

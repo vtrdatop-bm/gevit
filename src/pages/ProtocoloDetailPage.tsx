@@ -55,8 +55,6 @@ interface ProcessoData {
   data_prevista: string | null;
 }
 
-// interface Vistoriador moved to @/types/user
-
 interface TermoData {
   id: string;
   processo_id: string;
@@ -69,6 +67,13 @@ const formatCpfCnpj = (val: string) => {
   if (val.length === 11) return val.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   if (val.length === 14) return val.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
   return val;
+};
+
+const formatCep = (value: string): string => {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return digits.replace(/(\d{2})(\d)/, "$1.$2");
+  return digits.replace(/(\d{2})(\d{3})(\d)/, "$1.$2-$3");
 };
 
 export default function ProtocoloDetailPage() {
@@ -98,6 +103,8 @@ export default function ProtocoloDetailPage() {
   const [novoBairroRegional, setNovoBairroRegional] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [cnpjLoading, setCnpjLoading] = useState(false);
+  const lastCnpjSearched = useRef<string>("");
   const bairroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -142,7 +149,6 @@ export default function ProtocoloDetailPage() {
     }
 
     if (isDev) {
-      // Mock data for dev mode
       setProtocolo({
         id: "p1",
         numero: "VT2024.0001.0001-01",
@@ -210,7 +216,6 @@ export default function ProtocoloDetailPage() {
     setRegionais(regs || []);
     setRegionaisMunicipios(regMuns || []);
 
-    // Load vistoriadores profiles (users who have the 'vistoriador' role)
     const { data: vRoles, error: rolesErr } = await supabase
       .from("user_roles")
       .select("user_id")
@@ -254,7 +259,6 @@ export default function ProtocoloDetailPage() {
       setTermo(termoRes.data);
       setPausas(pausasRes.data || []);
     } else {
-      // Create processo automatically
       const { data: newProc } = await supabase
         .from("processos")
         .insert({ protocolo_id: id })
@@ -262,7 +266,6 @@ export default function ProtocoloDetailPage() {
         .single();
       if (newProc) {
         setProcesso(newProc);
-        // Create vistoria record
         const { data: newVist } = await supabase
           .from("vistorias")
           .insert({ processo_id: newProc.id })
@@ -282,9 +285,9 @@ export default function ProtocoloDetailPage() {
   const stage = useMemo(() => {
     return computeStage(vistoria);
   }, [vistoria]);
+
   useEffect(() => {
     fetchData();
-
     const channel = supabase
       .channel(`protocolo-detail-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "processos", filter: `protocolo_id=eq.${id}` }, () => fetchData())
@@ -292,7 +295,6 @@ export default function ProtocoloDetailPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
       .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
@@ -377,9 +379,6 @@ export default function ProtocoloDetailPage() {
     });
   };
 
-  const [cnpjLoading, setCnpjLoading] = useState(false);
-  const lastCnpjSearched = useRef<string>("");
-
   const lookupCnpj = useCallback(async (cnpjDigits: string, quiet = false) => {
     if (cnpjDigits.length !== 14 || cnpjDigits === lastCnpjSearched.current) return;
     
@@ -413,7 +412,7 @@ export default function ProtocoloDetailPage() {
         municipio: (data.municipio || prev.municipio || "").toUpperCase(),
         cep: data.cep ? formatCep(data.cep.toString().replace(/\D/g, "")) : prev.cep || "",
       }));
-      toast.success("Dados do CNPJ preenchidos!");
+      if (!quiet) toast.success("Dados do CNPJ preenchidos!");
     } catch {
       if (!quiet) {
         toast.error("Erro ao completar a busca do CNPJ.");
@@ -423,7 +422,6 @@ export default function ProtocoloDetailPage() {
     }
   }, []);
 
-  // Debounced CNPJ lookup for automatic search
   useEffect(() => {
     const digits = (editForm.cnpj || "").replace(/\D/g, "");
     if (digits.length === 14 && digits !== lastCnpjSearched.current) {
@@ -463,115 +461,153 @@ export default function ProtocoloDetailPage() {
     setSavingBairro(false);
   };
 
-
-  const formatCep = (value: string): string => {
-    const digits = value.replace(/\D/g, "").slice(0, 8);
-    if (digits.length <= 2) return digits;
-    if (digits.length <= 5) return digits.replace(/(\d{2})(\d)/, "$1.$2");
-    return digits.replace(/(\d{2})(\d{3})(\d)/, "$1.$2-$3");
-  };
-
   const geocodeAddress = async () => {
     setGeocoding(true);
-    let viaCepData: any = null;
     try {
       const cepClean = (editForm.cep || "").replace(/\D/g, "");
       const endereco = editForm.endereco || "";
+      const municipioStr = editForm.municipio || "";
+      const bairroStr = editForm.bairro || "";
+
       const numMatch = endereco.match(/(?:,|nº|num|número)\s*(\d+)/i) || endereco.match(/\b(\d+)\b/);
       const numero = numMatch ? numMatch[1] : "";
+      
+      const cleanStreet = (addr: string) => {
+        return addr
+          .split(/,|nº|num|número|-/i)[0]
+          .replace(/\b(S\/N|S\.N\.|SEM N[ÚU]MERO)\b/gi, "")
+          .replace(/\b(LOTEAMENTO|CONDOM[ÍI]NIO|RESIDENCIAL|QUADRA|LOTE|Q\.|L\.)\b/gi, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      };
 
-      let lat: string | null = null;
-      let lon: string | null = null;
+      const logradouro = cleanStreet(endereco);
+      
+      let bestLat: string | null = null;
+      let bestLon: string | null = null;
+
+      const acreBounds = {
+        viewbox: "-74.02,-11.14,-66.62,-7.11",
+        bounded: "1"
+      };
+
+      const scoreResult = (res: { display_name?: string; type?: string; class?: string }) => {
+        let score = 0;
+        const displayName = (res.display_name || "").toUpperCase();
+        if (municipioStr && displayName.includes(municipioStr.toUpperCase())) score += 10;
+        if (bairroStr && displayName.includes(bairroStr.toUpperCase())) score += 20;
+        if (["house", "building", "service", "residential"].includes(res.type || "")) score += 5;
+        if (res.class === "highway") score += 3;
+        return score;
+      };
+
+      const callNominatim = async (params: Record<string, string>) => {
+        const queryParams = new URLSearchParams({
+          format: "json",
+          limit: "5",
+          countrycodes: "br",
+          addressdetails: "1",
+          ...acreBounds,
+          ...params,
+        });
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?${queryParams.toString()}`,
+          { headers: { "User-Agent": "GEVIT-App/1.1" } }
+        );
+        const data = await res.json();
+        if (!data || data.length === 0) return null;
+        return data.sort((a: any, b: any) => scoreResult(b) - scoreResult(a))[0];
+      };
 
       if (cepClean.length === 8) {
         try {
           const viaCepRes = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
-          viaCepData = await viaCepRes.json();
-          const viaCep = viaCepData;
-
-          if (viaCep && !viaCep.erro && viaCep.logradouro) {
-            const parts = [
-              numero ? `${viaCep.logradouro}, ${numero}` : viaCep.logradouro,
-              viaCep.bairro || editForm.bairro,
-              viaCep.localidade || editForm.municipio,
-              viaCep.uf,
-              "Brasil",
-            ].filter(Boolean);
-            const addr = parts.join(", ");
-
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`,
-              { headers: { "User-Agent": "GEVIT-App/1.0" } }
-            );
-            const data = await res.json();
-            if (data && data.length > 0) {
-              lat = parseFloat(data[0].lat).toFixed(6);
-              lon = parseFloat(data[0].lon).toFixed(6);
+          const viaCep = await viaCepRes.json();
+          if (viaCep && !viaCep.erro) {
+            const result = await callNominatim({
+              street: numero ? `${viaCep.logradouro}, ${numero}` : viaCep.logradouro,
+              city: viaCep.localidade || municipioStr,
+              postalcode: viaCep.cep,
+              state: viaCep.uf || "Acre"
+            });
+            if (result) {
+              bestLat = result.lat;
+              bestLon = result.lon;
             }
           }
         } catch { /* fallback */ }
       }
 
-      // Multiple fallback search strategies
-      const searchStrategies = [];
-      const municipioStr = editForm.municipio || "";
-      const bairroStr = editForm.bairro || "";
-      const addressClean = endereco.split('-')[0].trim(); // Rua + Número sem complemento
-      const baseEndereco = endereco.split(",")[0].trim(); // Só a rua
-      
-      if (addressClean && bairroStr && municipioStr) {
-        searchStrategies.push(`${addressClean}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
-      }
-      if (baseEndereco && baseEndereco !== addressClean && bairroStr && municipioStr) {
-        searchStrategies.push(`${baseEndereco}, ${bairroStr}, ${municipioStr}, Acre, Brasil`);
-      }
-      if (addressClean && municipioStr) {
-        searchStrategies.push(`${addressClean}, ${municipioStr}, Acre, Brasil`);
-      }
-      if (bairroStr && municipioStr) {
-        searchStrategies.push(`${bairroStr}, ${municipioStr}, Acre, Brasil`);
-      }
-      if (municipioStr) {
-        searchStrategies.push(`${municipioStr}, Acre, Brasil`);
+      if (!bestLat && logradouro && municipioStr) {
+        const result = await callNominatim({
+          street: numero ? `${logradouro}, ${numero}` : logradouro,
+          city: municipioStr,
+          state: "Acre"
+        });
+        if (result) {
+          bestLat = result.lat;
+          bestLon = result.lon;
+        }
       }
 
-      if (!lat || !lon) {
-        // Try strategies iteratively until a result is found
-        for (const query of searchStrategies) {
-          try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
-              { headers: { "User-Agent": "GEVIT-App/1.0" } }
-            );
-            const data = await res.json();
-            if (data && data.length > 0) {
-              lat = parseFloat(data[0].lat).toFixed(6);
-              lon = parseFloat(data[0].lon).toFixed(6);
-              break; // Found it!
-            }
-          } catch {
-            // ignore network err and try next
+      if (!bestLat) {
+        const fuzzyStrategies = [
+          `${logradouro}${numero ? `, ${numero}` : ""}, ${bairroStr}, ${municipioStr}, Acre`,
+          `${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre`,
+          `${endereco}, ${municipioStr}, Acre`
+        ].filter(Boolean);
+
+        for (const q of fuzzyStrategies) {
+          const result = await callNominatim({ q });
+          if (result) {
+            bestLat = result.lat;
+            bestLon = result.lon;
+            break;
           }
         }
       }
 
-      if (lat && lon) {
+      if (!bestLat) {
+        try {
+          const photonRes = await fetch(
+            `https://photon.komoot.io/api/?q=${encodeURIComponent(`${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre`)}&lat=-9.974&lon=-67.807&limit=5`
+          );
+          const photonData = await photonRes.json();
+          if (photonData?.features?.length > 0) {
+            const bestPhoton = photonData.features
+              .map((f: any) => ({
+                lat: f.geometry.coordinates[1].toString(),
+                lon: f.geometry.coordinates[0].toString(),
+                display_name: Object.values(f.properties).join(", "),
+                type: f.properties.type,
+                class: f.properties.osm_key
+              }))
+              .sort((a: any, b: any) => scoreResult(b) - scoreResult(a))[0];
+
+            if (bestPhoton) {
+              bestLat = bestPhoton.lat;
+              bestLon = bestPhoton.lon;
+            }
+          }
+        } catch { /* ignore photon error */ }
+      }
+
+      if (bestLat && bestLon) {
+        const finalLat = parseFloat(bestLat).toFixed(6);
+        const finalLon = parseFloat(bestLon).toFixed(6);
+
         setEditForm((prev) => ({
           ...prev,
-          latitude: lat!,
-          longitude: lon!,
-          // Also update address if it was empty
-          bairro: prev.bairro || (viaCepData?.bairro?.toUpperCase() || ""),
-          municipio: prev.municipio || (viaCepData?.localidade?.toUpperCase() || ""),
+          latitude: finalLat,
+          longitude: finalLon,
         }));
 
-        // Save coordinates immediately to DB
         if (protocolo) {
           const { error: protError } = await supabase
             .from("protocolos")
             .update({
-              latitude: parseFloat(lat!),
-              longitude: parseFloat(lon!),
+              latitude: parseFloat(finalLat),
+              longitude: parseFloat(finalLon),
             })
             .eq("id", id);
 
@@ -579,13 +615,12 @@ export default function ProtocoloDetailPage() {
             console.error("Erro ao salvar coordenadas:", protError.message);
           }
         }
-
-
         toast.success("Coordenadas encontradas e salvas!");
       } else {
         toast.error("Endereço não encontrado no mapa");
       }
-    } catch {
+    } catch (error) {
+      console.error("Geocoding error:", error);
       toast.error("Erro ao buscar coordenadas");
     }
     setGeocoding(false);
@@ -596,29 +631,17 @@ export default function ProtocoloDetailPage() {
     setIsDeleting(true);
     try {
       if (processo) {
-        const { error: errNotif } = await supabase.from("notificacoes").delete().eq("processo_id", processo.id);
-        if (errNotif) throw errNotif;
-
-        const { error: errVist } = await supabase.from("vistorias").delete().eq("processo_id", processo.id);
-        if (errVist) throw errVist;
-
-        const { error: errPausa } = await supabase.from("pausas").delete().eq("processo_id", processo.id);
-        if (errPausa) throw errPausa;
-
-        const { error: errTermo } = await supabase.from("termos_compromisso").delete().eq("processo_id", processo.id);
-        if (errTermo) throw errTermo;
-
+        await Promise.all([
+          supabase.from("notificacoes").delete().eq("processo_id", processo.id),
+          supabase.from("vistorias").delete().eq("processo_id", processo.id),
+          supabase.from("pausas").delete().eq("processo_id", processo.id),
+          supabase.from("termos_compromisso").delete().eq("processo_id", processo.id),
+        ]);
         const { error: errProc } = await supabase.from("processos").delete().eq("id", processo.id);
         if (errProc) throw errProc;
       }
-      
-      const { error } = await supabase
-        .from("protocolos")
-        .delete()
-        .eq("id", protocolo.id);
-
+      const { error } = await supabase.from("protocolos").delete().eq("id", protocolo.id);
       if (error) throw error;
-
       toast.success("Protocolo excluído com sucesso");
       navigate("/protocolos");
     } catch (error: any) {
@@ -660,23 +683,16 @@ export default function ProtocoloDetailPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl">
-      {/* Header */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-lg hover:bg-muted transition-colors"
-          title="Voltar"
-        >
+        <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-muted transition-colors" title="Voltar">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-2xl font-bold text-foreground">{protocolo.numero}</h2>
-            {protocolo && (
-              <div className="flex items-center gap-2">
-                <StatusBadge status={dStatus} />
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <StatusBadge status={dStatus} />
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">
             Solicitado em {new Date(protocolo.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}
@@ -684,10 +700,7 @@ export default function ProtocoloDetailPage() {
         </div>
         {!editing ? (
           <div className="flex gap-2">
-            <button 
-              onClick={() => setDeleteDialogOpen(true)} 
-              className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors"
-            >
+            <button onClick={() => setDeleteDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors">
               <Trash2 className="w-3.5 h-3.5" /> Excluir
             </button>
             <button onClick={startEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">
@@ -706,7 +719,6 @@ export default function ProtocoloDetailPage() {
         )}
       </div>
 
-      {/* Info cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-card rounded-xl border border-border p-4 space-y-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -726,22 +738,8 @@ export default function ProtocoloDetailPage() {
               <div className="space-y-1.5">
                 <label htmlFor="cnpj" className="text-sm font-medium">CPF/CNPJ</label>
                 <div className="flex gap-2">
-                  <input
-                    id="cnpj"
-                    value={editForm.cnpj || ""}
-                    onChange={(e) => {
-                      const formatted = formatCpfCnpjInput(e.target.value);
-                      handleEditChange("cnpj", formatted);
-                    }}
-                    className={inputClass}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => lookupCnpj((editForm.cnpj || "").replace(/\D/g, ""))}
-                    disabled={cnpjLoading || (editForm.cnpj || "").replace(/\D/g, "").length !== 14}
-                    title="Buscar dados do CNPJ"
-                    className="flex items-center justify-center px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 shrink-0"
-                  >
+                  <input id="cnpj" value={editForm.cnpj || ""} onChange={(e) => handleEditChange("cnpj", formatCpfCnpjInput(e.target.value))} className={inputClass} />
+                  <button type="button" onClick={() => lookupCnpj((editForm.cnpj || "").replace(/\D/g, ""))} disabled={cnpjLoading || (editForm.cnpj || "").replace(/\D/g, "").length !== 14} className="flex items-center justify-center px-3 h-9 rounded-md border border-input hover:bg-accent transition-colors disabled:opacity-50 shrink-0">
                     {cnpjLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   </button>
                 </div>
@@ -758,9 +756,7 @@ export default function ProtocoloDetailPage() {
           ) : (
             <div className="space-y-1 text-sm">
               <p className="font-medium">{protocolo.nome_fantasia || protocolo.razao_social}</p>
-              {protocolo.nome_fantasia && (
-                <p className="text-muted-foreground text-xs">{protocolo.razao_social}</p>
-              )}
+              {protocolo.nome_fantasia && <p className="text-muted-foreground text-xs">{protocolo.razao_social}</p>}
               <p className="text-muted-foreground font-mono text-xs">{formatCpfCnpj(protocolo.cnpj)}</p>
             </div>
           )}
@@ -770,7 +766,7 @@ export default function ProtocoloDetailPage() {
             <MapPin className="w-4 h-4 text-primary" />
             Localização
           </div>
-           {editing ? (
+          {editing ? (
             <div className="space-y-2">
               <div className="space-y-1">
                 <label htmlFor="cep" className="text-xs text-muted-foreground">CEP</label>
@@ -789,83 +785,43 @@ export default function ProtocoloDetailPage() {
               </div>
               <div className="space-y-1 relative" ref={bairroRef}>
                 <label htmlFor="bairro" className="text-xs text-muted-foreground">Bairro</label>
-                <input
-                  id="bairro"
-                  value={bairroDropdownOpen ? bairroSearch : (editForm.bairro || "")}
-                  onChange={(e) => {
-                    setBairroSearch(e.target.value);
-                    if (!bairroDropdownOpen) setBairroDropdownOpen(true);
-                  }}
-                  onFocus={() => {
-                    setBairroSearch(editForm.bairro || "");
-                    setBairroDropdownOpen(true);
-                  }}
-                  placeholder={editForm.municipio ? "Digite para buscar..." : "Selecione o município primeiro"}
-                  disabled={!editForm.municipio}
-                  className={cn(inputClass, !editForm.municipio && "opacity-50")}
-                />
+                <input id="bairro" value={bairroDropdownOpen ? bairroSearch : (editForm.bairro || "")} onChange={(e) => { setBairroSearch(e.target.value); if (!bairroDropdownOpen) setBairroDropdownOpen(true); }} onFocus={() => { setBairroSearch(editForm.bairro || ""); setBairroDropdownOpen(true); }} placeholder={editForm.municipio ? "Digite para buscar..." : "Selecione o município primeiro"} disabled={!editForm.municipio} className={cn(inputClass, !editForm.municipio && "opacity-50")} />
                 {bairroDropdownOpen && editForm.municipio && (
                   <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-md max-h-48 overflow-y-auto">
                     {bairrosFiltered.map((b) => (
-                      <button
-                        key={b.id}
-                        type="button"
-                        onClick={() => {
-                          handleEditChange("bairro", b.nome);
-                          setBairroSearch("");
-                          setBairroDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
-                      >
+                      <button key={b.id} type="button" onClick={() => { handleEditChange("bairro", b.nome); setBairroSearch(""); setBairroDropdownOpen(false); }} className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors">
                         {b.nome}
                       </button>
                     ))}
                     {bairroNotFound && (
-                      <button
-                        type="button"
-                        onClick={() => openNovoBairroDialog(bairroSearch)}
-                        disabled={savingBairro}
-                        className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent transition-colors flex items-center gap-1.5 border-t border-border"
-                      >
+                      <button type="button" onClick={() => openNovoBairroDialog(bairroSearch)} disabled={savingBairro} className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent transition-colors flex items-center gap-1.5 border-t border-border">
                         <Plus className="w-3.5 h-3.5" />
                         {savingBairro ? "Cadastrando..." : `Cadastrar "${bairroSearch}"`}
                       </button>
-                    )}
-                    {bairrosFiltered.length === 0 && !bairroNotFound && (
-                      <div className="px-3 py-2 text-xs text-muted-foreground">Nenhum bairro encontrado</div>
                     )}
                   </div>
                 )}
               </div>
               <div className="space-y-1">
                 <label htmlFor="area" className="text-xs text-muted-foreground">Área (m²)</label>
-                <input id="area" type="text" value={editForm.area || ""} onChange={(e) => handleEditChange("area", e.target.value)} className={inputClass} placeholder="Ex: 1.234,56" />
+                <input id="area" value={editForm.area || ""} onChange={(e) => handleEditChange("area", e.target.value)} className={inputClass} placeholder="Ex: 1.234,56" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <label htmlFor="latitude" className="text-xs text-muted-foreground">Latitude</label>
-                  <input id="latitude" type="text" inputMode="decimal" value={editForm.latitude || ""} onChange={(e) => handleEditChange("latitude", e.target.value.replace(",", "."))} placeholder="-9.975403" className={inputClass} />
+                  <input id="latitude" value={editForm.latitude || ""} onChange={(e) => handleEditChange("latitude", e.target.value.replace(",", "."))} className={inputClass} />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="longitude" className="text-xs text-muted-foreground">Longitude</label>
-                  <input id="longitude" type="text" inputMode="decimal" value={editForm.longitude || ""} onChange={(e) => handleEditChange("longitude", e.target.value.replace(",", "."))} placeholder="-67.842870" className={inputClass} />
+                  <input id="longitude" value={editForm.longitude || ""} onChange={(e) => handleEditChange("longitude", e.target.value.replace(",", "."))} className={inputClass} />
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={geocodeAddress}
-                disabled={geocoding || (!editForm.cep && (!editForm.endereco || !editForm.municipio))}
-                className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50 w-full justify-center"
-              >
+              <button type="button" onClick={geocodeAddress} disabled={geocoding || (!editForm.cep && (!editForm.endereco || !editForm.municipio))} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50 w-full justify-center">
                 {geocoding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
                 {geocoding ? "Buscando..." : "Buscar coordenadas"}
               </button>
               {(editForm.latitude && editForm.longitude) && (
-                <button
-                  type="button"
-                  onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })}
-                  className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors w-full justify-center text-primary"
-                >
+                <button type="button" onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors w-full justify-center text-primary">
                   <MapPin className="w-3.5 h-3.5" />
                   Abrir no mapa
                 </button>
@@ -879,13 +835,8 @@ export default function ProtocoloDetailPage() {
               {protocolo.area && <p className="text-muted-foreground">Área: {protocolo.area} m²</p>}
               {protocolo.latitude && protocolo.longitude && (
                 <>
-                  <p className="text-muted-foreground text-xs font-mono">
-                    📍 {Number(protocolo.latitude).toFixed(6)}, {Number(protocolo.longitude).toFixed(6)}
-                  </p>
-                  <button
-                    onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })}
-                    className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline mt-1"
-                  >
+                  <p className="text-muted-foreground text-xs font-mono">📍 {Number(protocolo.latitude).toFixed(6)}, {Number(protocolo.longitude).toFixed(6)}</p>
+                  <button onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })} className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline mt-1">
                     <MapPin className="w-3 h-3" />
                     Abrir no mapa
                   </button>
@@ -896,7 +847,6 @@ export default function ProtocoloDetailPage() {
         </div>
       </div>
 
-      {/* Expiration Warning */}
       {processo && vistoria && (
         <ExpirationWarning
           vistoria={vistoria}
@@ -908,7 +858,6 @@ export default function ProtocoloDetailPage() {
         />
       )}
 
-      {/* Vistoria Tabs */}
       {processo && vistoria && (
         <div className="bg-card rounded-xl border border-border p-4">
           <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-foreground">
@@ -918,171 +867,82 @@ export default function ProtocoloDetailPage() {
           <Tabs defaultValue="vistoria1">
             <TabsList className="w-full grid grid-cols-3">
               {[1, 2, 3].map((n) => {
-                const atrib = (vistoria as any)?.[`data_${n}_atribuicao`];
                 const stVist = (vistoria as any)?.[`status_${n}_vistoria`];
-                let dotColor = "bg-muted-foreground/30"; // sem dados
+                let dotColor = "bg-muted-foreground/30";
                 if (stVist === "pendencia") dotColor = "bg-[hsl(var(--status-pending))]";
                 else if (stVist === "aprovado") dotColor = "bg-[hsl(var(--status-certified-term))]";
                 else if (stVist === "reprovado") dotColor = "bg-[hsl(var(--status-certified))]";
-                else if (atrib) dotColor = "bg-[hsl(var(--status-assigned))]";
+                else if ((vistoria as any)?.[`data_${n}_atribuicao`]) dotColor = "bg-[hsl(var(--status-assigned))]";
                 return (
-                  <TabsTrigger 
-                    key={n} 
-                    value={`vistoria${n}`} 
-                    className="flex items-center gap-1.5 data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary border-2 border-transparent py-2 shadow-none transition-all"
-                  >
+                  <TabsTrigger key={n} value={`vistoria${n}`} className="flex items-center gap-1.5 data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary border-2 border-transparent py-2 shadow-none transition-all">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
                     {n}ª Vistoria
                   </TabsTrigger>
                 );
               })}
             </TabsList>
-            <TabsContent value="vistoria1" className="mt-4 p-4 border-2 border-primary/20 rounded-xl bg-primary/[0.02]">
-              <VistoriaTab
-                key={`stage1-${id}-${vistoria?.id}`}
-                numero={1}
-                dataSolicitacao={protocolo.data_solicitacao}
-                dataVistoria={vistoria?.data_1_vistoria}
-                statusVistoria={vistoria?.status_1_vistoria}
-                dataRetorno={vistoria?.data_1_retorno}
-                vistoriadorId={vistoria?.vistoriador_1_id}
-                vistoriadores={vistoriadores}
-                processoId={processo.id}
-                vistoriaId={vistoria?.id}
-                dataAtribuicao={(vistoria as any)?.data_1_atribuicao}
-                termo={termo}
-                onUpdate={fetchData}
-              />
-            </TabsContent>
-            <TabsContent value="vistoria2" className="mt-4 p-4 border-2 border-primary/20 rounded-xl bg-primary/[0.02]">
-              <VistoriaTab
-                key={`stage2-${id}-${vistoria?.id}`}
-                numero={2}
-                dataSolicitacao={protocolo.data_solicitacao}
-                dataVistoria={vistoria?.data_2_vistoria}
-                statusVistoria={vistoria?.status_2_vistoria}
-                dataRetorno={vistoria?.data_1_retorno}
-                vistoriadorId={vistoria?.vistoriador_2_id}
-                vistoriadores={vistoriadores}
-                processoId={processo.id}
-                vistoriaId={vistoria?.id}
-                dataAtribuicao={(vistoria as any)?.data_2_atribuicao}
-                termo={termo}
-                onUpdate={fetchData}
-              />
-            </TabsContent>
-            <TabsContent value="vistoria3" className="mt-4 p-4 border-2 border-primary/20 rounded-xl bg-primary/[0.02]">
-              <VistoriaTab
-                key={`stage3-${id}-${vistoria?.id}`}
-                numero={3}
-                dataSolicitacao={protocolo.data_solicitacao}
-                dataVistoria={vistoria?.data_3_vistoria}
-                statusVistoria={vistoria?.status_3_vistoria}
-                dataRetorno={vistoria?.data_2_retorno}
-                vistoriadorId={vistoria?.vistoriador_3_id}
-                vistoriadores={vistoriadores}
-                processoId={processo.id}
-                vistoriaId={vistoria?.id}
-                dataAtribuicao={(vistoria as any)?.data_3_atribuicao}
-                termo={termo}
-                onUpdate={fetchData}
-              />
-            </TabsContent>
+            {[1, 2, 3].map((n) => (
+              <TabsContent key={n} value={`vistoria${n}`} className="mt-4 p-4 border-2 border-primary/20 rounded-xl bg-primary/[0.02]">
+                <VistoriaTab
+                  numero={n}
+                  dataSolicitacao={protocolo.data_solicitacao}
+                  dataVistoria={(vistoria as any)?.[`data_${n}_vistoria`]}
+                  statusVistoria={(vistoria as any)?.[`status_${n}_vistoria`]}
+                  dataRetorno={(vistoria as any)?.[`data_${n === 1 ? 1 : n - 1}_retorno`]}
+                  vistoriadorId={(vistoria as any)?.[`vistoriador_${n}_id`]}
+                  vistoriadores={vistoriadores}
+                  processoId={processo.id}
+                  vistoriaId={vistoria?.id}
+                  dataAtribuicao={(vistoria as any)?.[`data_${n}_atribuicao`]}
+                  termo={termo}
+                  onUpdate={fetchData}
+                />
+              </TabsContent>
+            ))}
           </Tabs>
         </div>
       )}
-      {/* Dialog novo bairro */}
+
       <Dialog open={novoBairroDialog} onOpenChange={setNovoBairroDialog}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Cadastrar novo bairro</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Cadastrar novo bairro</DialogTitle></DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1">
-              <label htmlFor="novoBairroMunicipio" className="text-xs text-muted-foreground">Município</label>
-              <input id="novoBairroMunicipio" value={editForm.municipio || ""} disabled className={cn(inputClass, "opacity-60")} />
+              <label className="text-xs text-muted-foreground">Município</label>
+              <input value={editForm.municipio || ""} disabled className={cn(inputClass, "opacity-60")} />
             </div>
             <div className="space-y-1">
-              <label htmlFor="novoBairroNome" className="text-xs text-muted-foreground">Nome do Bairro</label>
-              <input
-                id="novoBairroNome"
-                value={novoBairroNome}
-                onChange={(e) => setNovoBairroNome(e.target.value)}
-                placeholder="Digite o nome do bairro"
-                className={inputClass}
-                autoFocus
-              />
+              <label className="text-xs text-muted-foreground">Nome do Bairro</label>
+              <input value={novoBairroNome} onChange={(e) => setNovoBairroNome(e.target.value)} placeholder="Digite o nome do bairro" className={inputClass} autoFocus />
             </div>
             <div className="space-y-1">
-              <label htmlFor="novoBairroRegional" className="text-xs text-muted-foreground">Regional</label>
-              <select
-                id="novoBairroRegional"
-                value={novoBairroRegional}
-                onChange={(e) => setNovoBairroRegional(e.target.value)}
-                className={inputClass}
-              >
+              <label className="text-xs text-muted-foreground">Regional</label>
+              <select value={novoBairroRegional} onChange={(e) => setNovoBairroRegional(e.target.value)} className={inputClass}>
                 <option value="">Selecione a regional</option>
                 {regionaisFiltradas.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setNovoBairroDialog(false)}
-                className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={saveNovoBairro}
-                disabled={savingBairro || !novoBairroNome.trim()}
-                className="px-4 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                <Save className="w-3.5 h-3.5" />
-                {savingBairro ? "Salvando..." : "Salvar"}
+              <button onClick={() => setNovoBairroDialog(false)} className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">Cancelar</button>
+              <button onClick={saveNovoBairro} disabled={savingBairro || !novoBairroNome.trim()} className="px-4 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2">
+                <Save className="w-3.5 h-3.5" /> {savingBairro ? "Salvando..." : "Salvar"}
               </button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-      {/* Delete Confirmation Dialog */}
+
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="w-5 h-5" />
-              Confirmar Exclusão
-            </DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center gap-2 text-destructive"><AlertCircle className="w-5 h-5" />Confirmar Exclusão</DialogTitle></DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-sm text-foreground">
-              Você tem certeza que deseja excluir o protocolo **{protocolo.numero}**?
-            </p>
-            <p className="text-xs text-muted-foreground p-3 bg-destructive/10 rounded-lg border border-destructive/20 text-destructive-foreground">
-              Esta ação é permanente e excluirá também todas as vistorias, documentos e históricos associados a este protocolo.
-            </p>
+            <p className="text-sm text-foreground">Você tem certeza que deseja excluir o protocolo **{protocolo.numero}**?</p>
+            <p className="text-xs text-muted-foreground p-3 bg-destructive/10 rounded-lg border border-destructive/20 text-destructive-foreground">Esta ação é permanente e excluirá também todas as vistorias, documentos e históricos associados a este protocolo.</p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button 
-              onClick={() => setDeleteDialogOpen(false)} 
-              disabled={isDeleting}
-              className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors"
-            >
-              Cancelar
-            </button>
-            <button 
-              onClick={handleDeleteProtocolo} 
-              disabled={isDeleting}
-              className="px-4 h-9 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />Excluindo...
-                </>
-              ) : (
-                "Sim, Excluir"
-              )}
+            <button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting} className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">Cancelar</button>
+            <button onClick={handleDeleteProtocolo} disabled={isDeleting} className="px-4 h-9 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2">
+              {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin" />Excluindo...</> : "Sim, Excluir"}
             </button>
           </div>
         </DialogContent>
