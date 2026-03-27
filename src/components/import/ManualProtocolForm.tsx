@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2, Search } from "lucide-react";
+import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2, Search, Map, ExternalLink } from "lucide-react";
 import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -538,17 +538,32 @@ export default function ManualProtocolForm() {
             </div>
           </Field>
 
-          <Field label="">
-            <button
-              type="button"
-              onClick={geocodeAddress}
-              disabled={geocoding || (!form.cep && (!form.endereco || !form.municipio))}
-              className="flex items-center gap-1.5 px-3 h-10 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 w-full justify-center"
-            >
-              {geocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
-              {geocoding ? "Buscando..." : "Buscar coordenadas"}
-            </button>
-          </Field>
+          <div className="flex flex-col gap-2">
+            <Field label="">
+              <button
+                type="button"
+                onClick={geocodeAddress}
+                disabled={geocoding || (!form.cep && (!form.endereco || !form.municipio))}
+                className="flex items-center gap-1.5 px-3 h-10 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50 w-full justify-center"
+              >
+                {geocoding ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+                {geocoding ? "Buscando..." : "Buscar coordenadas"}
+              </button>
+            </Field>
+
+            {form.latitude && form.longitude && (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${form.latitude},${form.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 h-10 rounded-md bg-accent/50 text-accent-foreground text-sm font-medium hover:bg-accent transition-colors w-full justify-center"
+              >
+                <Map className="w-4 h-4" />
+                Abrir no Google Maps
+                <ExternalLink className="w-3.5 h-3.5 opacity-50" />
+              </a>
+            )}
+          </div>
         </div>
 
         {result && (
