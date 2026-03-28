@@ -420,10 +420,23 @@ export default function KanbanPage() {
                                   <span className="text-xs font-mono text-muted-foreground shrink-0">
                                     {process.protocolos.numero}
                                   </span>
-                                  <span className="text-[10px] font-bold uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap">
-                                    {process.stage}ª Vist.
-                                  </span>
+                                  {process.stage > 1 && (
+                                    <span className="ml-auto font-medium text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                                      {process.stage}ª Vist.
+                                    </span>
+                                  )}
                                 </div>
+
+                                {process.deadline.active && process.deadline.type === "expiration" && process.deadline.remaining <= 10 && (
+                                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-destructive mb-2">
+                                    <AlertCircle className="w-3.5 h-3.5" />
+                                    <span>
+                                      {process.deadline.remaining <= 0 
+                                        ? "Prazo expirado!" 
+                                        : `Expira em ${process.deadline.remaining} ${process.deadline.remaining === 1 ? 'dia' : 'dias'}`}
+                                    </span>
+                                  </div>
+                                )}
 
                                 <h4 className="text-[13px] font-semibold text-foreground mb-1">
                                   {process.protocolos.nome_fantasia || process.protocolos.razao_social}

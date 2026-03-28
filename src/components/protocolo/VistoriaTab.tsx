@@ -126,16 +126,15 @@ export default function VistoriaTab({
         const newGlobalStatus = computeProcessStatus(latestVistData);
         const currentVistoriadorId = getCurrentVistoriadorId(null, latestVistData);
         
-        const updatePayload: any = {};
-        if (newGlobalStatus) updatePayload.status = newGlobalStatus;
-        if (currentVistoriadorId) updatePayload.vistoriador_id = currentVistoriadorId;
+        const updatePayload: any = {
+          status: newGlobalStatus || "regional",
+          vistoriador_id: currentVistoriadorId || null
+        };
 
-        if (Object.keys(updatePayload).length > 0) {
-          await supabase
-            .from("processos")
-            .update(updatePayload)
-            .eq("id", processoId);
-        }
+        await supabase
+          .from("processos")
+          .update(updatePayload)
+          .eq("id", processoId);
       }
 
       // Handle Termo de Compromisso if status is approved
@@ -255,18 +254,34 @@ export default function VistoriaTab({
             Status da {numero}ª Vistoria
             {!data && <span className="text-[10px] text-muted-foreground ml-1">(preencha a data)</span>}
           </Label>
-          <Select value={status} onValueChange={setStatus} disabled={!data}>
-            <SelectTrigger id={`status-${numero}`} className="w-full">
-              <SelectValue placeholder="Selecione o status" />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Select value={status} onValueChange={setStatus} disabled={!data}>
+              <SelectTrigger id={`status-${numero}`} className="w-full pr-10">
+                <SelectValue placeholder="Selecione o status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {status && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStatus("");
+                }}
+                className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                title="Limpar status"
+                disabled={!data}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
