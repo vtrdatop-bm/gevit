@@ -408,7 +408,7 @@ export default function KanbanPage() {
                                 className={cn(
                                   "kanban-card cursor-pointer",
                                   process.stage === 2 && "!bg-amber-100/50 !border-amber-200",
-                                  process.stage === 3 && "!bg-orange-100/50 !border-orange-200",
+                                  process.stage === 3 && "!bg-rose-100/60 !border-rose-300",
                                   selectedProcess === process.id && "ring-2 ring-primary ring-offset-1"
                                 )}
                                 onClick={() =>
