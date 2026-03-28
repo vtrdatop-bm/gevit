@@ -1,5 +1,5 @@
 export const STATUS_MARKER_COLORS = {
-  regional: "#f59e0b", // Amarelo escuro
+  regional: "#eab308", // Amarelo escuro (mais amarelo)
   pendencias: "#ef4444", // Vermelho
   atribuido: "#8b5cf6", // Roxo
   certificado: "#10b981", // Verde
