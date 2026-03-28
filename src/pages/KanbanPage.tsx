@@ -393,8 +393,8 @@ export default function KanbanPage() {
               </button>
 
               {isExpanded && (
-                <div className="px-4 pb-4 overflow-x-auto">
-                  <div className="flex gap-3 min-h-[200px]">
+                <div className="px-4 pb-4 overflow-x-auto [transform:rotateX(180deg)]">
+                  <div className="flex gap-3 min-h-[200px] [transform:rotateX(180deg)]">
                     {statusColumns.map((col) => {
                       const procs = getByStatus(group.processos, col.key);
                       return (
