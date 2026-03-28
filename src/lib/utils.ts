@@ -45,57 +45,60 @@ export function formatArea(value: number | string | null | undefined): string {
 export function applyAreaMask(value: string): string {
   if (!value) return "";
   
-  // 1. Normalização: Se o usuário digitou ponto no final ou em algum lugar que pareça decimal, 
-  // tratamos como vírgula para respeitar a intenção de "casa decimal".
-  let normalized = value;
-  // Se o usuário digitou um ponto ou vírgula no final bruto da string
-  if (value.endsWith(".") || value.endsWith(",")) {
-    normalized = value.slice(0, -1) + ",";
-  }
+  // 1. Identifica a ÚLTIMA pontuação (. ou ,) para decidir o que é decimal
+  const lastComma = value.lastIndexOf(",");
+  const lastDot = value.lastIndexOf(".");
+  const lastPuncIdx = Math.max(lastComma, lastDot);
+  
+  let intDigits = "";
+  let decDigits = "";
 
-  // Se houver um ponto que NÃO parece milhar (não tem 3 dígitos depois dele), convertemos para vírgula
-  // Ex: 3075.1 -> 3075,1
-  const points = normalized.match(/\./g) || [];
-  if (points.length === 1 && !normalized.includes(",")) {
-    const parts = normalized.split(".");
-    if (parts[1].length < 3) {
-      normalized = parts[0] + "," + parts[1];
+  if (lastPuncIdx === -1) {
+    // Sem pontuação: trate tudo como inteiro
+    intDigits = value.replace(/\D/g, "");
+    decDigits = "00";
+  } else {
+    // Heurística: se a pontuação for vírgula, OU for um ponto seguido de 1, 2 ou >3 dígitos, é decimal.
+    // Se for ponto seguido de EXATAMENTE 3 dígitos, é milhar (gerado pela máscara).
+    const distFromRight = value.length - 1 - lastPuncIdx;
+    const isManualTrigger = value.endsWith(".") || value.endsWith(",");
+    const isDecimal = isManualTrigger || value[lastPuncIdx] === "," || distFromRight !== 3;
+
+    if (isDecimal) {
+      intDigits = value.slice(0, lastPuncIdx).replace(/\D/g, "");
+      decDigits = value.slice(lastPuncIdx + 1).replace(/\D/g, "");
+    } else {
+      // Provável ponto de milhar gerado pela máscara (ex: 3.075)
+      intDigits = value.replace(/\D/g, "");
+      decDigits = "00";
     }
   }
 
-  // 2. Limpeza de pontos de milhar remanescentes
-  const clean = normalized.replace(/\./g, "");
-  const parts = clean.split(",");
-  let intPart = parts[0].replace(/\D/g, "");
-  let decPart = parts.length > 1 ? parts[1].replace(/\D/g, "") : null;
-
-  // 3. Backspace em decimais
-  if (clean.includes(",") && (decPart === "" || decPart === "0") && !normalized.endsWith(",00")) {
-    intPart = intPart.slice(0, -1);
-    const fmtInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return intPart ? `${fmtInt},00` : "";
+  // 2. Limpeza de sufixo automático (ex: 18,00 + 5 -> decDigits "005" -> Queremos "5")
+  if (decDigits.startsWith("00") && decDigits.length > 2) {
+    decDigits = decDigits.slice(2);
+  }
+  
+  // 3. Lógica de Backspace nos decimais (para não travar)
+  // Se o usuário apagou um dos zeros ou a vírgula (ex: "185,0")
+  if (value.includes(",") && (decDigits === "" || decDigits === "0") && !value.endsWith(",00")) {
+    intDigits = intDigits.slice(0, -1);
+    decDigits = "00";
   }
 
-  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  if (!intDigits) return "";
 
-  if (decPart === null) {
-    return `${formattedInt},00`;
+  // 4. Formata Inteiro com ponto
+  const formattedInt = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  
+  // 5. Formata Decimais com vírgula e 2 casas
+  // Se o usuário acabou de digitar a primeira casa decimal (ex: 18,5), não completamos o zero 
+  // imediatamente SE ele ainda estiver editando, para permitir o backspace.
+  if (decDigits.length === 1 && !value.endsWith("0")) {
+    return `${formattedInt},${decDigits}`;
   }
 
-  // 4. Inserção após ,00 automático
-  if (decPart.startsWith("00") && decPart.length > 2) {
-    decPart = decPart.slice(2);
-    const combined = intPart + decPart;
-    const finalInt = combined.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return `${finalInt},00`;
-  }
-
-  // 5. Backspace suave nos decimais
-  if (decPart.length === 1 && !normalized.endsWith("0")) {
-    return `${formattedInt},${decPart}`;
-  }
-
-  const finalDec = decPart.slice(0, 2).padEnd(2, "0");
+  const finalDec = decDigits.slice(0, 2).padEnd(2, "0");
   return `${formattedInt},${finalDec}`;
 }
 
