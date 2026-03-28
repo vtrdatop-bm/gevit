@@ -45,19 +45,25 @@ export function formatArea(value: number | string | null | undefined): string {
 export function applyAreaMask(value: string): string {
   if (!value) return "";
   
-  // Pegamos apenas a parte antes da vírgula para evitar processar 
-  // os zeros que nós mesmos adicionamos na rodada anterior.
-  const baseValue = value.split(",")[0];
+  let digits = value.replace(/\D/g, "");
   
-  // Remove tudo que não é dígito da parte inteira
-  const digits = baseValue.replace(/\D/g, "");
+  // Se o usuário digitou algo após os zeros automáticos (ex: 123,00 + 4 -> 123004)
+  // removemos os dois zeros do meio para permitir a progressão.
+  if (value.includes(",00") && digits.length > 2) {
+    digits = digits.replace(/00(\d+)$/, "$1");
+  }
+  
+  // Trata o Backspace: se o usuário apagou parte do ",00"
+  // removemos o último dígito real também para que o campo mude.
+  if (value.includes(",") && !value.endsWith(",00")) {
+    digits = digits.slice(0, -2);
+  }
+
   if (!digits) return "";
   
   // Formata o inteiro com separador de milhar (ponto)
-  // Ex: 13552 -> 13.552
   const formattedInt = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   
-  // Retorna o valor formatado com o sufixo fixo ,00 solicitado
   return `${formattedInt},00`;
 }
 
