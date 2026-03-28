@@ -1,26 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ProcessStatus } from "@/types/process";
-import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
-import { Filter, Layers, Navigation, MousePointerClick, MapPin, Search, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-import "leaflet/dist/leaflet.css";
-
-const statusMarkerColors: Record<DisplayStatus, string> = {
-  regional: "#eab308",
-  atribuido: "#8b5cf6",
-  pendencias: "#ef4444",
-  certificado_termo: "#3b82f6",
-  certificado: "#22c55e",
-  expirado: "#737373",
-};
-
-interface Vistoriador {
-  user_id: string;
-  patente: string | null;
-  nome_guerra: string | null;
-}
+import { STATUS_MARKER_COLORS } from "@/lib/constants";
+import { MAP_MOCK_PROCESSOS } from "@/mocks/mockData";
+import { ProtocoloData, VistoriaData, ProcessStatus } from "@/types/database";
+import { Vistoriador } from "@/types/user";
 
 interface MapProcess {
   id: string;
@@ -29,21 +13,11 @@ interface MapProcess {
   displayStatus: DisplayStatus;
   data_prevista: string | null;
   vistoriador_nome: string | null;
-  vistoria: any | null;
-  protocolo: {
-    id: string;
-    numero: string;
-    nome_fantasia: string | null;
-    razao_social: string;
-    endereco: string;
-    bairro: string;
-    municipio: string;
-    latitude: number | null;
-    longitude: number | null;
-  };
+  vistoria: VistoriaData | null;
+  protocolo: ProtocoloData;
 }
 
-const getVistoriaStage = (v: any): string | null => {
+const getVistoriaStage = (v: VistoriaData | null): string | null => {
   if (!v) return null;
   if (v.data_3_atribuicao || v.data_3_vistoria) return "3ª Vistoria";
   if (v.data_2_atribuicao || v.data_2_vistoria) return "2ª Vistoria";
@@ -51,7 +25,7 @@ const getVistoriaStage = (v: any): string | null => {
   return null;
 };
 
-const getVistoriaResult = (v: any): string | null => {
+const getVistoriaResult = (v: VistoriaData | null): string | null => {
   if (!v) return null;
   const labels: Record<string, string> = { aprovado: "Aprovado", pendencia: "Pendência", reprovado: "Reprovado" };
   if (v.status_3_vistoria) return labels[v.status_3_vistoria] || v.status_3_vistoria;
@@ -79,49 +53,7 @@ export default function MapPage() {
 
   const fetchData = useCallback(async () => {
     if (isDev) {
-      const mockMapped: MapProcess[] = [
-        {
-          id: "proc1",
-          vistoriador_id: "dev-id",
-          status: "regional" as any,
-          displayStatus: "regional",
-          data_prevista: "2024-04-05",
-          vistoriador_nome: "Administrador (Dev)",
-          vistoria: { data_1_atribuicao: "2024-03-22" },
-          protocolo: {
-            id: "p1",
-            numero: "VT2024.0001.0001-01",
-            nome_fantasia: "Mercado Silva",
-            razao_social: "Comércio de Alimentos Silva Ltda",
-            endereco: "Rua das Flores, 123",
-            bairro: "Centro",
-            municipio: "Rio Branco",
-            latitude: -9.975403,
-            longitude: -67.812870,
-          },
-        },
-        {
-          id: "proc2",
-          vistoriador_id: "dev-id",
-          status: "certificado" as any,
-          displayStatus: "certificado",
-          data_prevista: "2024-03-25",
-          vistoriador_nome: "Administrador (Dev)",
-          vistoria: { data_1_atribuicao: "2024-03-22", status_1_vistoria: "aprovado" },
-          protocolo: {
-            id: "p2",
-            numero: "VT2024.0001.0002-02",
-            nome_fantasia: null,
-            razao_social: "Posto de Combustíveis Acreano",
-            endereco: "Av. Brasil, s/n",
-            bairro: "Distrito Industrial",
-            municipio: "Senador Guiomard",
-            latitude: -9.915,
-            longitude: -67.68,
-          },
-        }
-      ];
-      setProcessos(mockMapped);
+      setProcessos(MAP_MOCK_PROCESSOS as any);
       setLoading(false);
       return;
     }
@@ -268,7 +200,7 @@ export default function MapPage() {
         // If multiple, use a special style or just the status of the first one
         // Better: count and maybe show a badge (though CircleMarker is limited)
         const primaryProcess = groupProcesses[0];
-        const color = statusMarkerColors[primaryProcess.displayStatus];
+        const color = STATUS_MARKER_COLORS[primaryProcess.displayStatus];
         const isMultiple = groupProcesses.length > 1;
 
         const marker = L.circleMarker([lat, lng], {
@@ -450,7 +382,7 @@ export default function MapPage() {
 
       {/* Legend */}
       <div className="flex items-center gap-4 flex-wrap">
-        {Object.entries(statusMarkerColors).map(([status, color]) => (
+        {Object.entries(STATUS_MARKER_COLORS).map(([status, color]) => (
           <div key={status} className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
             <span className="text-xs text-muted-foreground">

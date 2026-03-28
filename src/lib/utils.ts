@@ -66,3 +66,24 @@ export function parseAreaToNumber(value: string): number {
   const clean = value.replace(/\./g, "").replace(",", ".");
   return parseFloat(clean) || 0;
 }
+
+/**
+ * Validates a CNPJ string (check length only for simplicity of this cleanup).
+ */
+export function validateCNPJ(cnpj: string): boolean {
+  return cnpj.replace(/\D/g, "").length === 14;
+}
+
+/**
+ * Formats a CPF (11 digits) or CNPJ (14 digits) string.
+ */
+export function formatCpfCnpj(val: string): string {
+  const digits = val.replace(/\D/g, "");
+  if (digits.length === 11) {
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  } else if (digits.length === 14) {
+    return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  }
+  return val;
+}
+

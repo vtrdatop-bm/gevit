@@ -10,43 +10,29 @@ import { computeDeadline, deadlineColorClass, deadlineLabel, DeadlineResult, Pau
 import {
   DisplayStatus,
   VistoriaStage,
-  VistoriaData,
   computeDisplayStatus,
   computeStage,
-  displayStatusLabels,
-  displayStatusDotColor,
   getDisplayStatusLabel,
   getCurrentVistoriadorId,
 } from "@/lib/vistoriaStatus";
+import { 
+  REGIONAL_COLORS, 
+  REGIONAL_BG_COLORS, 
+  REGIONAL_DOT_COLORS,
+  STATUS_LABELS
+} from "@/lib/constants";
+import { KANBAN_MOCK_PROCESSOS } from "@/mocks/mockData";
+import { ProcessoData, VistoriaData } from "@/types/database";
 
 const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] = [
-  { key: "regional", label: "Aguardando Vistoria", dotColor: displayStatusDotColor.regional },
-  { key: "atribuido", label: "Atribuído", dotColor: displayStatusDotColor.atribuido },
-  { key: "pendencias", label: "Vistoria com Pendência", dotColor: displayStatusDotColor.pendencias },
-  { key: "certificado_termo", label: "Certificado Provisório", dotColor: displayStatusDotColor.certificado_termo },
-  { key: "certificado", label: "Certificado", dotColor: displayStatusDotColor.certificado },
-  { key: "expirado", label: "Expirados", dotColor: displayStatusDotColor.expirado },
+  { key: "regional", label: STATUS_LABELS.regional, dotColor: "bg-[hsl(var(--status-risk))]" },
+  { key: "atribuido", label: STATUS_LABELS.atribuido, dotColor: "bg-[hsl(var(--status-assigned))]" },
+  { key: "pendencias", label: STATUS_LABELS.pendencias, dotColor: "bg-[hsl(var(--status-pending))]" },
+  { key: "certificado_termo", label: STATUS_LABELS.certificado_termo, dotColor: "bg-[hsl(var(--status-certified-term))]" },
+  { key: "certificado", label: STATUS_LABELS.certificado, dotColor: "bg-[hsl(var(--status-certified))]" },
+  { key: "expirado", label: STATUS_LABELS.expirado, dotColor: "bg-[hsl(var(--status-expired))]" },
 ];
 
-// Predefined colors for regional sections
-const regionalColors = [
-  "border-l-blue-500", "border-l-emerald-500", "border-l-amber-500", "border-l-violet-500",
-  "border-l-rose-500", "border-l-cyan-500", "border-l-orange-500", "border-l-teal-500",
-  "border-l-pink-500", "border-l-indigo-500", "border-l-lime-500", "border-l-fuchsia-500",
-  "border-l-sky-500", "border-l-red-500",
-];
-const regionalBgColors = [
-  "bg-blue-500/15", "bg-emerald-500/15", "bg-amber-500/15", "bg-violet-500/15",
-  "bg-rose-500/15", "bg-cyan-500/15", "bg-orange-500/15", "bg-teal-500/15",
-  "bg-pink-500/15", "bg-indigo-500/15", "bg-lime-500/15", "bg-fuchsia-500/15",
-  "bg-sky-500/15", "bg-red-500/15",
-];
-const regionalDotColors = [
-  "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500",
-  "bg-rose-500", "bg-cyan-500", "bg-orange-500", "bg-teal-500",
-  "bg-pink-500", "bg-indigo-500", "bg-lime-500", "bg-fuchsia-500",
-  "bg-sky-500", "bg-red-500",
-];
 
 interface ProcessoWithProtocolo {
   id: string;
@@ -91,65 +77,7 @@ export default function KanbanPage() {
   useEffect(() => {
     const fetchData = async () => {
       if (isDev) {
-        const mockProcs: ProcessoWithProtocolo[] = [
-          {
-            id: "proc1",
-            protocolo_id: "p1",
-            dbStatus: "regional",
-            displayStatus: "regional",
-            stage: 1,
-            data_prevista: "2024-04-05",
-            data_solicitacao: "2024-03-20",
-            vistoriador_id: "v1",
-            regional_id: "r1",
-            protocolos: {
-              numero: "VT2024.0001.0001-01",
-              nome_fantasia: "Mercado Silva",
-              razao_social: "Comércio de Alimentos Silva Ltda",
-              cnpj: "12345678000190",
-              endereco: "Rua das Flores, 123",
-              bairro: "Centro",
-              municipio: "Rio Branco",
-              area: 150,
-              data_solicitacao: "2024-03-20",
-            },
-            regional_nome: "Regional Centro",
-            vistoriador_nome: "Administrador (Dev)",
-            dias_restantes: 10,
-            deadline: { active: true, remaining: 10, type: "expiration", stage: 1 },
-            data_1_retorno: null,
-            data_2_retorno: null,
-          },
-          {
-            id: "proc2",
-            protocolo_id: "p2",
-            dbStatus: "certificado",
-            displayStatus: "certificado",
-            stage: 1,
-            data_prevista: "2024-03-25",
-            data_solicitacao: "2024-03-21",
-            vistoriador_id: "v1",
-            regional_id: "r1",
-            protocolos: {
-              numero: "VT2024.0001.0002-02",
-              nome_fantasia: null,
-              razao_social: "Posto de Combustíveis Acreano",
-              cnpj: "98765432000110",
-              endereco: "Av. Brasil, s/n",
-              bairro: "Distrito Industrial",
-              municipio: "Senador Guiomard",
-              area: 1200,
-              data_solicitacao: "2024-03-21",
-            },
-            regional_nome: "Regional Centro",
-            vistoriador_nome: "Administrador (Dev)",
-            dias_restantes: 0,
-            deadline: { active: false, remaining: 0, type: "expiration", stage: 0 },
-            data_1_retorno: null,
-            data_2_retorno: null,
-          }
-        ];
-        setProcessos(mockProcs);
+        setProcessos(KANBAN_MOCK_PROCESSOS as any);
         setRegionaisMap({ "r1": "Regional Centro" });
         setLoading(false);
         return;
@@ -359,9 +287,9 @@ export default function KanbanPage() {
         {groupedByRegional.map(([regId, group]) => {
           const isExpanded = expandedRegionais.has(regId);
           const regIndex = groupedByRegional.findIndex(([id]) => id === regId);
-          const borderColor = regId === "__sem_regional__" ? "border-l-muted-foreground" : regionalColors[regIndex % regionalColors.length];
-          const headerBg = regId === "__sem_regional__" ? "bg-muted/30" : regionalBgColors[regIndex % regionalBgColors.length];
-          const dotColor = regId === "__sem_regional__" ? "bg-muted-foreground" : regionalDotColors[regIndex % regionalDotColors.length];
+          const borderColor = regId === "__sem_regional__" ? "border-l-muted-foreground" : REGIONAL_COLORS[regIndex % REGIONAL_COLORS.length];
+          const headerBg = regId === "__sem_regional__" ? "bg-muted/30" : REGIONAL_BG_COLORS[regIndex % REGIONAL_BG_COLORS.length];
+          const dotColor = regId === "__sem_regional__" ? "bg-muted-foreground" : REGIONAL_DOT_COLORS[regIndex % REGIONAL_DOT_COLORS.length];
           return (
             <div key={regId} className={cn("rounded-xl border border-border overflow-hidden border-l-4", borderColor)}>
               <button

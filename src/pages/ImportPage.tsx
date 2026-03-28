@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, X, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { cn, validateCNPJ } from "@/lib/utils";
 
 interface ImportRow {
   numero: string;
@@ -13,10 +13,6 @@ interface ImportRow {
   bairro: string;
   municipio: string;
   area: string;
-}
-
-function validateCNPJ(cnpj: string): boolean {
-  return cnpj.replace(/\D/g, "").length === 14;
 }
 
 export default function ImportPage() {

@@ -13,55 +13,8 @@ import { computeDisplayStatus, computeStage } from "@/lib/vistoriaStatus";
 import { Vistoriador } from "@/types/user";
 import { useAuth } from "@/hooks/useAuth";
 
-interface ProtocoloData {
-  id: string;
-  numero: string;
-  data_solicitacao: string;
-  cnpj: string;
-  razao_social: string;
-  nome_fantasia: string | null;
-  endereco: string;
-  bairro: string;
-  municipio: string;
-  area: number | null;
-  latitude: number | null;
-  longitude: number | null;
-  cep: string | null;
-}
-
-interface VistoriaData {
-  id: string;
-  processo_id: string;
-  data_1_vistoria: string | null;
-  status_1_vistoria: string | null;
-  data_1_retorno: string | null;
-  data_2_vistoria: string | null;
-  status_2_vistoria: string | null;
-  data_2_retorno: string | null;
-  data_3_vistoria: string | null;
-  status_3_vistoria: string | null;
-  vistoriador_1_id: string | null;
-  vistoriador_2_id: string | null;
-  vistoriador_3_id: string | null;
-  observacoes: string | null;
-}
-
-interface ProcessoData {
-  id: string;
-  protocolo_id: string;
-  status: string;
-  regional_id: string | null;
-  vistoriador_id: string | null;
-  data_prevista: string | null;
-}
-
-interface TermoData {
-  id: string;
-  processo_id: string;
-  numero_termo: string;
-  data_assinatura: string;
-  data_validade: string;
-}
+import { ProtocoloData, VistoriaData, ProcessoData, TermoData } from "@/types/database";
+import { DETAIL_MOCK_DATA } from "@/mocks/mockData";
 
 const formatCpfCnpj = (val: string) => {
   if (val.length === 11) return val.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
@@ -149,54 +102,13 @@ export default function ProtocoloDetailPage() {
     }
 
     if (isDev) {
-      setProtocolo({
-        id: "p1",
-        numero: "VT2024.0001.0001-01",
-        data_solicitacao: "2024-03-20",
-        cnpj: "12345678000190",
-        razao_social: "Comércio de Alimentos Silva Ltda",
-        nome_fantasia: "Mercado Silva",
-        endereco: "Rua das Flores, 123",
-        bairro: "CENTRO",
-        municipio: "RIO BRANCO",
-        area: 150,
-        latitude: -9.974,
-        longitude: -67.807,
-        cep: "69900-000",
-      });
-      setMunicipios([{ id: "m1", nome: "RIO BRANCO" }]);
-      setBairros([{ id: "b1", nome: "CENTRO", municipio: "RIO BRANCO" }]);
-      setRegionais([{ id: "r1", nome: "Regional Centro" }]);
-      setVistoriadores([
-        { user_id: "v1", patente: "Capitão", nome_guerra: "Gabriel" },
-        { user_id: "v2", patente: "Sargento", nome_guerra: "Silva" },
-        { user_id: "v3", patente: "Tenente", nome_guerra: "Souza" },
-      ]);
-      setProcesso({
-        id: "proc1",
-        protocolo_id: "p1",
-        status: "regional",
-        regional_id: "r1",
-        vistoriador_id: "v1",
-        data_prevista: "2024-04-05",
-      });
-      setVistoria({
-        id: "v1",
-        processo_id: "proc1",
-        data_1_vistoria: null,
-        status_1_vistoria: null,
-        data_1_retorno: null,
-        data_2_vistoria: null,
-        status_2_vistoria: null,
-        data_2_retorno: null,
-        data_3_vistoria: null,
-        status_3_vistoria: null,
-        vistoriador_1_id: "v1",
-        vistoriador_2_id: null,
-        vistoriador_3_id: null,
-        observacoes: null,
-        data_1_atribuicao: "2024-03-22",
-      } as any);
+      setProtocolo(DETAIL_MOCK_DATA.protocolo);
+      setMunicipios(DETAIL_MOCK_DATA.municipios);
+      setBairros(DETAIL_MOCK_DATA.bairros);
+      setRegionais(DETAIL_MOCK_DATA.regionais);
+      setVistoriadores(DETAIL_MOCK_DATA.vistoriadores);
+      setProcesso(DETAIL_MOCK_DATA.processo);
+      setVistoria(DETAIL_MOCK_DATA.vistoria as any);
       setLoading(false);
       return;
     }

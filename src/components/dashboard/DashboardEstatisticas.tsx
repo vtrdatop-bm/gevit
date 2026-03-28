@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { computeDisplayStatus, DisplayStatus, displayStatusLabels, VistoriaData, computeStage, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
+import { computeDisplayStatus, DisplayStatus, VistoriaData, computeStage, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
 import DateRangeFilter, { DateRange } from "./DateRangeFilter";
 import {
   BarChart,
@@ -22,87 +22,20 @@ import {
   Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { differenceInDays } from "date-fns";
+import { daysBetween, avg } from "@/lib/dashboardUtils";
+import { 
+  ProcessoData as RawProcesso, 
+  VistoriaData as RawVistoria, 
+  ProtocoloData 
+} from "@/types/database";
+import { Vistoriador as Profile } from "@/types/user";
+import { 
+  STAGE_LABELS, 
+  STATUS_LABELS_SHORT, 
+  BAR_COLORS 
+} from "@/lib/constants";
+import { DASHBOARD_MOCK_DATA } from "@/mocks/mockData";
 
-/* ── Local types ─────────────────────────────────── */
-
-interface RawProcesso {
-  id: string;
-  status: string;
-  vistoriador_id: string | null;
-  regional_id: string | null;
-  created_at: string;
-  protocolos: {
-    data_solicitacao: string;
-    bairro: string;
-    municipio: string;
-  } | null;
-}
-
-interface RawVistoria {
-  processo_id: string;
-  data_1_atribuicao: string | null;
-  data_2_atribuicao: string | null;
-  data_3_atribuicao: string | null;
-  data_1_vistoria: string | null;
-  data_2_vistoria: string | null;
-  data_3_vistoria: string | null;
-  status_1_vistoria: string | null;
-  status_2_vistoria: string | null;
-  status_3_vistoria: string | null;
-  data_1_retorno: string | null;
-  data_2_retorno: string | null;
-  vistoriador_1_id: string | null;
-  vistoriador_2_id: string | null;
-  vistoriador_3_id: string | null;
-}
-
-interface Profile {
-  user_id: string;
-  patente: string | null;
-  nome_guerra: string | null;
-}
-
-/* ── Helpers ─────────────────────────────────────── */
-
-function daysBetween(a: string | null | undefined, b: string | null | undefined): number | null {
-  if (!a || !b) return null;
-  const da = new Date(a + "T00:00:00");
-  const db = new Date(b + "T00:00:00");
-  const diff = differenceInDays(db, da);
-  return diff >= 0 ? diff : null;
-}
-
-function avg(nums: number[]): number {
-  if (nums.length === 0) return 0;
-  return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
-}
-
-const STAGE_LABELS = ["1ª Vistoria", "2ª Vistoria", "3ª Vistoria"];
-
-const STATUS_LABELS_SHORT: Record<string, string> = {
-  certificado: "Certificado",
-  certificado_termo: "Cert. Provisório",
-  pendencias: "Pendência",
-  expirado: "Expirados",
-};
-
-const BAR_COLORS = [
-  "hsl(217, 91%, 60%)",
-  "hsl(142, 71%, 45%)",
-  "hsl(45, 93%, 47%)",
-  "hsl(270, 60%, 55%)",
-  "hsl(0, 84%, 60%)",
-  "hsl(190, 80%, 42%)",
-  "hsl(340, 82%, 52%)",
-  "hsl(25, 95%, 53%)",
-  "hsl(160, 60%, 45%)",
-  "hsl(280, 65%, 60%)",
-  "hsl(200, 70%, 50%)",
-  "hsl(120, 50%, 40%)",
-  "hsl(60, 70%, 45%)",
-  "hsl(310, 60%, 50%)",
-];
 
 /* ── Component ───────────────────────────────────── */
 
@@ -119,16 +52,10 @@ export default function DashboardEstatisticas() {
   useEffect(() => {
     async function fetchData() {
       if (isDev) {
-        setProcessos([
-          { id: "1", status: "regional", vistoriador_id: "v1", regional_id: "r1", created_at: new Date().toISOString(), protocolos: { data_solicitacao: "2024-01-10", bairro: "Centro", municipio: "Rio Branco" } },
-          { id: "2", status: "certificado", vistoriador_id: "v1", regional_id: "r1", created_at: new Date().toISOString(), protocolos: { data_solicitacao: "2024-02-01", bairro: "Centro", municipio: "Rio Branco" } },
-        ]);
-        setVistorias([
-          { processo_id: "1", data_1_atribuicao: "2024-01-12", data_1_vistoria: "2024-01-20", status_1_vistoria: "pendencia", data_2_atribuicao: null, data_2_vistoria: null, status_2_vistoria: null, data_3_atribuicao: null, data_3_vistoria: null, status_3_vistoria: null, data_1_retorno: "2024-01-25", data_2_retorno: null, vistoriador_1_id: "v1", vistoriador_2_id: null, vistoriador_3_id: null },
-          { processo_id: "2", data_1_atribuicao: "2024-02-03", data_1_vistoria: "2024-02-10", status_1_vistoria: "aprovado", data_2_atribuicao: null, data_2_vistoria: null, status_2_vistoria: null, data_3_atribuicao: null, data_3_vistoria: null, status_3_vistoria: null, data_1_retorno: null, data_2_retorno: null, vistoriador_1_id: "v1", vistoriador_2_id: null, vistoriador_3_id: null },
-        ]);
-        setProfiles([{ user_id: "v1", patente: "CB", nome_guerra: "Admin Dev" }]);
-        setRegionaisMap({ r1: "Regional Centro" });
+        setProcessos(DASHBOARD_MOCK_DATA.processos as unknown as RawProcesso[]);
+        setVistorias(DASHBOARD_MOCK_DATA.vistorias as unknown as RawVistoria[]);
+        setProfiles(DASHBOARD_MOCK_DATA.profiles as Profile[]);
+        setRegionaisMap(DASHBOARD_MOCK_DATA.regionaisMap);
         setLoading(false);
         return;
       }
@@ -212,8 +139,8 @@ export default function DashboardEstatisticas() {
     // --- 2) Status counts ---
     const byStatus: Record<string, number> = {};
     filtered.forEach((p) => {
-      const v = vistoriaMap[p.id] as VistoriaData | undefined;
-      const ds = computeDisplayStatus(p.status, v || null, p.protocolos?.data_solicitacao);
+      const v = vistoriaMap[p.id];
+      const ds = computeDisplayStatus(p.status, (v as unknown as VistoriaData) || null, p.protocolos?.data_solicitacao);
       byStatus[ds] = (byStatus[ds] || 0) + 1;
     });
 
@@ -237,7 +164,7 @@ export default function DashboardEstatisticas() {
       const v = vistoriaMap[p.id];
       if (!v) return;
       for (let i = 1; i <= 3; i++) {
-        const s = (v as any)[`status_${i}_vistoria`] as string | null;
+        const s = (v as Record<string, any>)[`status_${i}_vistoria`] as string | null;
         if (s && stageStatusGrid[s]) {
           stageStatusGrid[s][i - 1]++;
         }
@@ -268,13 +195,12 @@ export default function DashboardEstatisticas() {
       if (r2 !== null) temposRetorno2.push(r2);
 
       // Time to certification
-      const ds = computeDisplayStatus(p.status, v as VistoriaData, sol);
+      const ds = computeDisplayStatus(p.status, v as unknown as VistoriaData, sol);
       if (ds === "certificado") {
-        // Find the date of the inspection that resulted in "reprovado" = certificado
         let certDate: string | null = null;
         for (let i = 3; i >= 1; i--) {
-          const st = (v as any)[`status_${i}_vistoria`] as string | null;
-          const dt = (v as any)[`data_${i}_vistoria`] as string | null;
+          const st = (v as Record<string, any>)[`status_${i}_vistoria`] as string | null;
+          const dt = (v as Record<string, any>)[`data_${i}_vistoria`] as string | null;
           if (st === "reprovado" && dt) { certDate = dt; break; }
         }
         if (certDate) {
@@ -285,8 +211,8 @@ export default function DashboardEstatisticas() {
       if (ds === "certificado_termo") {
         let certDate: string | null = null;
         for (let i = 3; i >= 1; i--) {
-          const st = (v as any)[`status_${i}_vistoria`] as string | null;
-          const dt = (v as any)[`data_${i}_vistoria`] as string | null;
+          const st = (v as Record<string, any>)[`status_${i}_vistoria`] as string | null;
+          const dt = (v as Record<string, any>)[`data_${i}_vistoria`] as string | null;
           if (st === "aprovado" && dt) { certDate = dt; break; }
         }
         if (certDate) {
