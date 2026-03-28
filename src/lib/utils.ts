@@ -53,8 +53,12 @@ export function applyAreaMask(value: string): string {
   const digits = baseValue.replace(/\D/g, "");
   if (!digits) return "";
   
-  // Retorna os dígitos sem separador de milhar (não é dinheiro)
-  return `${digits},00`;
+  // Formata o inteiro com separador de milhar (ponto)
+  // Ex: 13552 -> 13.552
+  const formattedInt = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  
+  // Retorna o valor formatado com o sufixo fixo ,00 solicitado
+  return `${formattedInt},00`;
 }
 
 /**

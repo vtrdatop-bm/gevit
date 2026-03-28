@@ -667,7 +667,7 @@ export default function ProtocoloDetailPage() {
               </div>
               <div className="space-y-1">
                 <label htmlFor="area" className="text-xs text-muted-foreground">Área (m²)</label>
-                <input id="area" value={editForm.area || ""} onChange={(e) => handleEditChange("area", e.target.value)} className={inputClass} placeholder="Ex: 1234,56" />
+                <input id="area" value={editForm.area || ""} onChange={(e) => handleEditChange("area", e.target.value)} className={inputClass} placeholder="Ex: 1.234,56" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
