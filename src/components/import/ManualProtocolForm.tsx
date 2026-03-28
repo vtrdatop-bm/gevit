@@ -512,7 +512,7 @@ export default function ManualProtocolForm() {
           </Field>
 
           <Field label="Área (m²)">
-            <input type="text" value={form.area || ""} onChange={(e) => handleChange("area", e.target.value)} placeholder="Ex: 1.234,56" className={inputClass} />
+            <input type="text" value={form.area || ""} onChange={(e) => handleChange("area", e.target.value)} placeholder="Ex: 1234,56" className={inputClass} />
           </Field>
 
           <Field label="Coordenadas Geográficas">
