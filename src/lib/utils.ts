@@ -45,37 +45,42 @@ export function formatArea(value: number | string | null | undefined): string {
 export function applyAreaMask(value: string): string {
   if (!value) return "";
   
-  // 1. Limpeza inicial: remove pontos de milhar para processamento
-  let workingValue = value.replace(/\./g, "");
+  // 1. Remove pontos de milhar para processar os dígitos limpos
+  const clean = value.replace(/\./g, "");
   
-  // 2. Detecta se o usuário digitou uma vírgula
-  const hasComma = workingValue.includes(",");
-  
-  // 3. Se não tem vírgula, tratamos como inteiro puro + ,00
-  if (!hasComma) {
-    const digits = workingValue.replace(/\D/g, "");
+  // 2. Se não tem vírgula, tratamos como inteiro puro + ,00
+  if (!clean.includes(",")) {
+    const digits = clean.replace(/\D/g, "");
     if (!digits) return "";
     const formattedInt = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     return `${formattedInt},00`;
   }
   
-  // 4. Se tem vírgula, respeitamos a posição dela e formatamos os dois lados
-  const parts = workingValue.split(",");
-  let intDigits = parts[0].replace(/\D/g, "");
-  let decDigits = parts[1].replace(/\D/g, "");
+  // 3. Se tem vírgula, o usuário está definindo os decimais
+  const parts = clean.split(",");
+  let intPart = parts[0].replace(/\D/g, "");
+  let decPart = parts[1].replace(/\D/g, "");
   
-  // Se tinha ,00 e o usuário digitou algo no fim (ex: 1,008 -> vira 18,00 ou 1,8)
-  // Vamos remover os zeros automáticos se detectarmos uma inserção após eles
-  if (parts[1].startsWith("00") && parts[1].length > 2) {
-    intDigits += decDigits.slice(2);
-    decDigits = "00";
-    const formattedInt = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    return `${formattedInt},00`;
+  // Lógica de substituição inteligente:
+  // Se tínhamos ",00" e o usuário digitou um número (ex: 3075,001)
+  if (decPart.startsWith("00") && decPart.length > 2) {
+    decPart = decPart.slice(2); // Remove os zeros automáticos antigos
+  } 
+  // Se digitou algo por cima (ex: 3075,106 -> removemos o 0 do meio para ficar 3075,16)
+  else if (decPart.length > 2) {
+    decPart = decPart.replace(/0/, ""); // Remove o primeiro zero encontrado
+  }
+  
+  // Trata Backspace nos decimais: se ficou vazio ou com apenas "0" quer dizer que o usuário 
+  // está apagando. Devolvemos o inteiro "limpo" para o próximo passo.
+  if (parts.length > 1 && (decPart === "" || decPart === "0") && !value.endsWith(",00")) {
+    intPart = intPart.slice(0, -1);
+    decPart = "";
   }
 
-  const formattedInt = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  // Preenche decimais: 5 -> 50, 55 -> 55, "" -> 00
-  const finalDec = decDigits.slice(0, 2).padEnd(2, "0");
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  // Garante sempre 2 casas decimais no retorno (ex: ,1 -> ,10)
+  const finalDec = decPart.slice(0, 2).padEnd(2, "0");
   
   return `${formattedInt},${finalDec}`;
 }
