@@ -274,6 +274,17 @@ export default function RoutesPage() {
     window.open(buildGoogleMapsUrl(), "_blank");
   };
 
+  const openWaze = () => {
+    const waypoints = orderedProcesses
+      .filter((p) => p.protocolo.latitude && p.protocolo.longitude)
+      .map((p) => `${p.protocolo.latitude},${p.protocolo.longitude}`);
+    if (waypoints.length > 0) {
+      window.open(`https://waze.com/ul?ll=${waypoints[0]}&navigate=yes`, "_blank");
+    } else {
+      window.open(`https://waze.com/ul?ll=${PONTO_PARTIDA}&navigate=yes`, "_blank");
+    }
+  };
+
   useEffect(() => {
     setSelectedIds(new Set());
     setRouteGenerated(false);
@@ -383,7 +394,14 @@ export default function RoutesPage() {
                 className="text-xs px-3 py-1.5 rounded-lg bg-accent text-foreground hover:bg-accent/80 flex items-center gap-1.5 transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                Abrir no Google Maps
+                Google Maps
+              </button>
+              <button
+                onClick={openWaze}
+                className="text-xs px-3 py-1.5 rounded-lg bg-accent text-foreground hover:bg-accent/80 flex items-center gap-1.5 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Waze
               </button>
             </div>
           )}
