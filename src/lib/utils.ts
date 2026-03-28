@@ -43,18 +43,27 @@ export function formatArea(value: number | string | null | undefined): string {
  * To be used in onChange events.
  */
 export function applyAreaMask(value: string): string {
-  // Remove anything that is not a digit
+  // Remove tudo que não é dígito
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
   
-  // Convert to number (last 2 digits are decimals)
-  const num = (parseInt(digits, 10) / 100).toFixed(2);
-  const [int, dec] = num.split(".");
+  // Lógica solicitada:
+  // - Se tem 1 ou 2 dígitos: são a parte inteira (ex: 5 -> 5,00 / 50 -> 50,00)
+  // - Se tem 3 ou mais: os dígitos após o 2º começam a preencher os decimais (ex: 455 -> 45,50 / 13552 -> 135,52)
   
-  // Add thousands separator (dot)
-  const formattedInt = int.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  // O ponto decimal começa após o 2º dígito ou (comprimento - 2) para números grandes
+  const decimalStart = Math.max(2, digits.length - 2);
   
-  return `${formattedInt},${dec}`;
+  const intPart = digits.slice(0, decimalStart);
+  let decPart = digits.slice(decimalStart).slice(0, 2); // máximo 2 casas
+  
+  // Preenche com zeros se necessário (ex: 455 -> 45,5 -> 45,50)
+  decPart = decPart.padEnd(2, "0");
+  
+  // Formata o inteiro com separador de milhar (ponto)
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  
+  return `${formattedInt},${decPart}`;
 }
 
 /**
