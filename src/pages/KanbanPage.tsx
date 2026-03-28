@@ -405,7 +405,12 @@ export default function KanbanPage() {
                             {procs.map((process) => (
                               <div
                                 key={process.id}
-                                className="kanban-card cursor-pointer"
+                                className={cn(
+                                  "kanban-card cursor-pointer",
+                                  process.stage === 2 && "bg-amber-50/50 border-amber-200/50",
+                                  process.stage === 3 && "bg-orange-50/50 border-orange-200/50",
+                                  selectedProcess === process.id && "ring-2 ring-primary ring-offset-1"
+                                )}
                                 onClick={() =>
                                   setSelectedProcess(selectedProcess === process.id ? null : process.id)
                                 }
