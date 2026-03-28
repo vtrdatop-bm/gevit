@@ -361,13 +361,15 @@ export default function KanbanPage() {
                                   )}
                                 </div>
 
-                                {process.deadline.active && process.deadline.type === "expiration" && process.deadline.remaining <= 10 && (
+                                {process.deadline.active && process.deadline.remaining <= 10 && (
                                   <div className="flex items-center gap-1.5 text-[11px] font-bold text-destructive mb-2">
                                     <AlertCircle className="w-3.5 h-3.5" />
                                     <span>
                                       {process.deadline.remaining <= 0 
-                                        ? "Prazo expirado!" 
-                                        : `Expira em ${process.deadline.remaining} ${process.deadline.remaining === 1 ? 'dia' : 'dias'}`}
+                                        ? (process.deadline.type === "validity" ? "Certificado vencido!" : "Prazo expirado!")
+                                        : (process.deadline.type === "validity" 
+                                            ? `Vence em ${process.deadline.remaining} ${process.deadline.remaining === 1 ? 'dia' : 'dias'}` 
+                                            : `Expira em ${process.deadline.remaining} ${process.deadline.remaining === 1 ? 'dia' : 'dias'}`)}
                                     </span>
                                   </div>
                                 )}
