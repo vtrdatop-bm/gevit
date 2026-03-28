@@ -47,31 +47,21 @@ export function applyAreaMask(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
   
-  // Lógica solicitada:
-  // - Se tem 1 ou 2 dígitos: são a parte inteira (ex: 5 -> 5,00 / 50 -> 50,00)
-  // - Se tem 3 ou mais: os dígitos após o 2º começam a preencher os decimais (ex: 455 -> 45,50 / 13552 -> 135,52)
-  
-  // O ponto decimal começa após o 2º dígito ou (comprimento - 2) para números grandes
-  const decimalStart = Math.max(2, digits.length - 2);
-  
-  const intPart = digits.slice(0, decimalStart);
-  let decPart = digits.slice(decimalStart).slice(0, 2); // máximo 2 casas
-  
-  // Preenche com zeros se necessário (ex: 455 -> 45,5 -> 45,50)
-  decPart = decPart.padEnd(2, "0");
-  
   // Formata o inteiro com separador de milhar (ponto)
-  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  // Ex: 13552 -> 13.552
+  const formattedInt = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   
-  return `${formattedInt},${decPart}`;
+  // Sempre adiciona ,00 ao final conforme solicitado
+  return `${formattedInt},00`;
 }
 
 /**
- * Returns a number from a masked string.
- * Example: "1.234,56" -> 1234.56
+ * Retorna um número a partir de uma string formatada.
+ * Exemplo: "1.234,00" -> 1234
  */
 export function parseAreaToNumber(value: string): number {
   if (!value) return 0;
+  // Remove os pontos de milhar e converte a vírgula em ponto para o JS
   const clean = value.replace(/\./g, "").replace(",", ".");
   return parseFloat(clean) || 0;
 }
