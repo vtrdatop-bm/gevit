@@ -213,7 +213,10 @@ export default function ProtocoloDetailPage() {
   }, [id, fetchData, isDev]);
 
   useEffect(() => {
-    if (protocolo) {
+    if (protocolo && !editing) {
+      const cnpjDigits = (protocolo.cnpj || "").replace(/\D/g, "");
+      lastCnpjSearched.current = cnpjDigits;
+
       setEditForm({
         numero: protocolo.numero,
         data_solicitacao: protocolo.data_solicitacao,
@@ -229,7 +232,7 @@ export default function ProtocoloDetailPage() {
         longitude: protocolo.longitude?.toString() || "",
       });
     }
-  }, [protocolo]);
+  }, [protocolo, editing]);
 
   const startEdit = () => {
     if (!protocolo) return;

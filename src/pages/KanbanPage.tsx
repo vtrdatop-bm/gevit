@@ -337,19 +337,23 @@ export default function KanbanPage() {
 
                           <div className="flex-1 overflow-y-auto space-y-0">
                             {procs.map((process) => (
-                              <div
-                                key={process.id}
-                                className={cn(
-                                  "kanban-card cursor-pointer",
-                                  process.stage === 2 && "!bg-amber-100/50 !border-amber-200",
-                                  process.stage === 3 && "!bg-rose-100/60 !border-rose-300",
-                                  selectedProcess === process.id && "ring-2 ring-primary ring-offset-1"
-                                )}
-                                onClick={() =>
-                                  setSelectedProcess(selectedProcess === process.id ? null : process.id)
-                                }
-                                onDoubleClick={() => navigate(`/protocolo/${process.protocolo_id}`)}
-                              >
+                                <div
+                                  key={process.id}
+                                  className={cn(
+                                    "kanban-card cursor-pointer",
+                                    process.stage === 2 && "!bg-amber-100/50 !border-amber-200",
+                                    process.stage === 3 && "!bg-rose-100/60 !border-rose-300",
+                                    selectedProcess === process.id && "ring-2 ring-primary ring-offset-1"
+                                  )}
+                                  onClick={() =>
+                                    setSelectedProcess(selectedProcess === process.id ? null : process.id)
+                                  }
+                                  onDoubleClick={(e) => {
+                                    e.preventDefault();
+                                    navigate(`/protocolo/${process.protocolo_id}`);
+                                  }}
+                                  title="Clique duplo para abrir detalhes do protocolo"
+                                >
                                 <div className="flex items-start justify-between gap-2 mb-2">
                                   <span className="text-xs font-mono text-muted-foreground shrink-0">
                                     {process.protocolos.numero}
