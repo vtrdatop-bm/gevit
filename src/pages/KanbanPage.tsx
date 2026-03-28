@@ -420,9 +420,22 @@ export default function KanbanPage() {
                                   </span>
                                 </div>
 
-                                <h4 className="text-sm font-semibold text-foreground mb-1">
+                                <h4 className="text-[13px] font-semibold text-foreground mb-1">
                                   {process.protocolos.nome_fantasia || process.protocolos.razao_social}
                                 </h4>
+
+                                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2">
+                                  <Calendar className="w-3 h-3 shrink-0" />
+                                  <span>
+                                    {process.data_2_retorno ? (
+                                      `2º Retorno: ${new Date(process.data_2_retorno + "T00:00:00").toLocaleDateString("pt-BR")}`
+                                    ) : process.data_1_retorno ? (
+                                      `1º Retorno: ${new Date(process.data_1_retorno + "T00:00:00").toLocaleDateString("pt-BR")}`
+                                    ) : (
+                                      `Solicitação: ${new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}`
+                                    )}
+                                  </span>
+                                </div>
 
                                 {selectedProcess === process.id && (
                                   <div className="mt-3 pt-3 border-t border-border space-y-3 animate-fade-in">
@@ -442,6 +455,20 @@ export default function KanbanPage() {
                                         <Calendar className="w-3.5 h-3.5 shrink-0" />
                                         <span>Solicitação: {new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}</span>
                                       </div>
+
+                                      {process.data_1_retorno && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                          <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                          <span>1º Retorno: {new Date(process.data_1_retorno + "T00:00:00").toLocaleDateString("pt-BR")}</span>
+                                        </div>
+                                      )}
+
+                                      {process.data_2_retorno && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                          <Calendar className="w-3.5 h-3.5 shrink-0" />
+                                          <span>2º Retorno: {new Date(process.data_2_retorno + "T00:00:00").toLocaleDateString("pt-BR")}</span>
+                                        </div>
+                                      )}
 
                                       {process.data_prevista && (
                                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
