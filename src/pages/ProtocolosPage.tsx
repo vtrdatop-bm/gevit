@@ -232,7 +232,7 @@ export default function ProtocolosPage() {
       const cmp = va.localeCompare(vb);
       return sortAsc ? cmp : -cmp;
     });
-  }, [protocolos, search, statusFilter, sortKey, sortAsc, processoByProtocolo, vistoriaMap]);
+  }, [protocolos, search, statusFilter, municipioFilter, sortKey, sortAsc, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
