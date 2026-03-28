@@ -266,165 +266,56 @@ export default function ManualProtocolForm() {
 
   const geocodeAddress = async () => {
     setGeocoding(true);
+    const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+    if (!googleApiKey) {
+      toast.error("Chave do Google Maps não configurada");
+      setGeocoding(false);
+      return;
+    }
+
     try {
-      const cepClean = (form.cep || "").replace(/\D/g, "");
       const endereco = form.endereco || "";
       const municipioStr = form.municipio || "";
       const bairroStr = form.bairro || "";
+      const cep = form.cep || "";
 
-      // 1. Extract number and clean street name
-      const numMatch = endereco.match(/(?:,|nº|num|número)\s*(\d+)/i) || endereco.match(/\b(\d+)\b/);
-      const numero = numMatch ? numMatch[1] : "";
+      // Construir endereço completo para o Google
+      const fullAddress = [
+        endereco,
+        bairroStr,
+        municipioStr,
+        "Acre",
+        cep,
+        "Brasil"
+      ].filter(Boolean).join(", ");
+
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${googleApiKey}&language=pt-BR`
+      );
       
-      const cleanStreet = (addr: string) => {
-        return addr
-          .split(/,|nº|num|número|-/i)[0]
-          .replace(/\b(S\/N|S\.N\.|SEM N[ÚU]MERO)\b/gi, "")
-          .replace(/\b(LOTEAMENTO|CONDOM[ÍI]NIO|RESIDENCIAL|QUADRA|LOTE|Q\.|L\.)\b/gi, "")
-          .replace(/\s+/g, " ")
-          .trim();
-      };
+      const data = await response.json();
 
-      const logradouro = cleanStreet(endereco);
-      
-      let bestLat: string | null = null;
-      let bestLon: string | null = null;
+      if (data.status === "OK" && data.results.length > 0) {
+        const result = data.results[0];
+        const { lat, lng } = result.geometry.location;
 
-      const acreBounds = {
-        viewbox: "-74.02,-11.14,-66.62,-7.11",
-        bounded: "1"
-      };
-
-      const scoreResult = (res: any) => {
-        let score = 0;
-        const displayName = (res.display_name || "").toUpperCase();
-        if (municipioStr && displayName.includes(municipioStr.toUpperCase())) score += 10;
-        if (bairroStr && displayName.includes(bairroStr.toUpperCase())) score += 20;
-        if (["house", "building", "service", "residential"].includes(res.type)) score += 5;
-        if (res.class === "highway") score += 3;
-        return score;
-      };
-
-      const callNominatim = async (params: Record<string, string>) => {
-        const queryParams = new URLSearchParams({
-          format: "json",
-          limit: "5",
-          countrycodes: "br",
-          addressdetails: "1",
-          ...acreBounds,
-          ...params,
-        });
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?${queryParams.toString()}`,
-          { headers: { "User-Agent": "GEVIT-App/1.1" } }
-        );
-        const data = await res.json();
-        if (!data || data.length === 0) return null;
-        
-        // Sort by score and return the best
-        return data.sort((a: any, b: any) => scoreResult(b) - scoreResult(a))[0];
-      };
-
-      // Execution Chain
-      
-      // Strategy A: ViaCEP + Number
-      if (cepClean.length === 8) {
-        try {
-          const viaCepRes = await fetch(`https://viacep.com.br/ws/${cepClean}/json/`);
-          const viaCep = await viaCepRes.json();
-          if (viaCep && !viaCep.erro) {
-            const result = await callNominatim({
-              street: numero ? `${viaCep.logradouro}, ${numero}` : viaCep.logradouro,
-              city: viaCep.localidade || municipioStr,
-              postalcode: viaCep.cep,
-              state: viaCep.uf || "Acre"
-            });
-            if (result) {
-              bestLat = result.lat;
-              bestLon = result.lon;
-              setForm(prev => ({
-                ...prev,
-                bairro: prev.bairro || (viaCep.bairro?.toUpperCase() || ""),
-                municipio: prev.municipio || (viaCep.localidade?.toUpperCase() || ""),
-              }));
-            }
-          }
-        } catch { /* fallback */ }
-      }
-
-      // Strategy B: Structured search
-      if (!bestLat && logradouro && municipioStr) {
-        const result = await callNominatim({
-          street: numero ? `${logradouro}, ${numero}` : logradouro,
-          city: municipioStr,
-          state: "Acre"
-        });
-        if (result) {
-          bestLat = result.lat;
-          bestLon = result.lon;
-        }
-      }
-
-      // Strategy C: Multiple Fuzzy combinations
-      if (!bestLat) {
-        const fuzzyStrategies = [
-          `${logradouro}${numero ? `, ${numero}` : ""}, ${bairroStr}, ${municipioStr}, Acre`,
-          `${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre`,
-          `${endereco}, ${municipioStr}, Acre`,
-          `${bairroStr}, ${municipioStr}, Acre`
-        ].filter(Boolean);
-
-        for (const q of fuzzyStrategies) {
-          const result = await callNominatim({ q });
-          if (result) {
-            bestLat = result.lat;
-            bestLon = result.lon;
-            break;
-          }
-        }
-      }
-
-      // Strategy D: Photon fallback with location bias
-      if (!bestLat) {
-        try {
-          const photonRes = await fetch(
-            `https://photon.komoot.io/api/?q=${encodeURIComponent(`${logradouro}${numero ? `, ${numero}` : ""}, ${municipioStr}, Acre`)}&lat=-9.974&lon=-67.807&limit=5`
-          );
-          const photonData = await photonRes.json();
-          if (photonData?.features?.length > 0) {
-            const bestPhoton = photonData.features
-              .map((f: any) => ({
-                lat: f.geometry.coordinates[1].toString(),
-                lon: f.geometry.coordinates[0].toString(),
-                display_name: Object.values(f.properties).join(", "),
-                type: f.properties.type,
-                class: f.properties.osm_key
-              }))
-              .sort((a: any, b: any) => scoreResult(b) - scoreResult(a))[0];
-
-            if (bestPhoton) {
-              bestLat = bestPhoton.lat;
-              bestLon = bestPhoton.lon;
-            }
-          }
-        } catch { /* ignore photon error */ }
-      }
-
-      if (bestLat && bestLon) {
         setForm((prev) => ({
           ...prev,
-          latitude: parseFloat(bestLat!).toFixed(6),
-          longitude: parseFloat(bestLon!).toFixed(6),
+          latitude: lat.toFixed(6),
+          longitude: lng.toFixed(6),
         }));
-        toast.success("Coordenadas encontradas!");
+        toast.success("Localizado com precisão via Google Maps!");
       } else {
-        toast.error("Endereço não encontrado no mapa");
+        console.error("Google Geocoding Error:", data.status, data.error_message);
+        toast.error("Endereço não encontrado no Google Maps");
       }
     } catch (error) {
       console.error("Geocoding error:", error);
-      toast.error("Erro ao buscar coordenadas");
+      toast.error("Erro ao conectar com o Google Maps");
+    } finally {
+      setGeocoding(false);
     }
-    setGeocoding(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
