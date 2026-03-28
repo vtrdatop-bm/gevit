@@ -230,6 +230,12 @@ export default function ProtocolosPage() {
         vb = (b[sortKey] || "") as string;
       }
       const cmp = va.localeCompare(vb);
+      
+      // Se as datas de solicitação forem iguais, desempatar pela data de criação (primeiros inseridos em cima)
+      if (cmp === 0 && sortKey === "data_solicitacao") {
+        return a.created_at.localeCompare(b.created_at);
+      }
+
       return sortAsc ? cmp : -cmp;
     });
   }, [protocolos, search, statusFilter, municipioFilter, sortKey, sortAsc, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
