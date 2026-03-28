@@ -43,15 +43,21 @@ export function formatArea(value: number | string | null | undefined): string {
  * To be used in onChange events.
  */
 export function applyAreaMask(value: string): string {
-  // Remove tudo que não é dígito
-  const digits = value.replace(/\D/g, "");
+  if (!value) return "";
+  
+  // Pegamos apenas a parte antes da vírgula para evitar processar 
+  // os zeros que nós mesmos adicionamos na rodada anterior.
+  const baseValue = value.split(",")[0];
+  
+  // Remove tudo que não é dígito da parte inteira
+  const digits = baseValue.replace(/\D/g, "");
   if (!digits) return "";
   
   // Formata o inteiro com separador de milhar (ponto)
   // Ex: 13552 -> 13.552
   const formattedInt = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   
-  // Sempre adiciona ,00 ao final conforme solicitado
+  // Retorna o valor formatado com o sufixo fixo ,00 solicitado
   return `${formattedInt},00`;
 }
 
