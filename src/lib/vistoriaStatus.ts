@@ -135,7 +135,7 @@ export function getCurrentVistoriadorId(
 }
 
 export const displayStatusLabels: Record<DisplayStatus, string> = {
-  regional: "Aguardando Vistoria",
+  regional: "Aguardando vistoria",
   atribuido: "Atribuído",
   pendencias: "Vistoria com Pendência",
   certificado_termo: "Certificado Provisório",

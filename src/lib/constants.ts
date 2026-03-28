@@ -29,7 +29,7 @@ export const REGIONAL_DOT_COLORS = [
 ];
 
 export const STATUS_LABELS = {
-  regional: "Aguardando",
+  regional: "Aguardando vistoria",
   vistoria: "Em Vistoria",
   relatorio: "Relatório",
   certificado: "Certificado",
