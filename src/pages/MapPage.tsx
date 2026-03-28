@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
+import { Filter, Layers, Navigation, MousePointerClick, MapPin, Search, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import "leaflet/dist/leaflet.css";
+
 import { STATUS_MARKER_COLORS } from "@/lib/constants";
 import { MAP_MOCK_PROCESSOS } from "@/mocks/mockData";
 import { ProtocoloData, VistoriaData, ProcessStatus } from "@/types/database";
