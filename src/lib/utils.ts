@@ -45,46 +45,56 @@ export function formatArea(value: number | string | null | undefined): string {
 export function applyAreaMask(value: string): string {
   if (!value) return "";
   
-  // 1. Limpeza de pontos de milhar
-  const clean = value.replace(/\./g, "");
+  // 1. Normalização: Se o usuário digitou ponto no final ou em algum lugar que pareça decimal, 
+  // tratamos como vírgula para respeitar a intenção de "casa decimal".
+  let normalized = value;
+  // Se o usuário digitou um ponto ou vírgula no final bruto da string
+  if (value.endsWith(".") || value.endsWith(",")) {
+    normalized = value.slice(0, -1) + ",";
+  }
+
+  // Se houver um ponto que NÃO parece milhar (não tem 3 dígitos depois dele), convertemos para vírgula
+  // Ex: 3075.1 -> 3075,1
+  const points = normalized.match(/\./g) || [];
+  if (points.length === 1 && !normalized.includes(",")) {
+    const parts = normalized.split(".");
+    if (parts[1].length < 3) {
+      normalized = parts[0] + "," + parts[1];
+    }
+  }
+
+  // 2. Limpeza de pontos de milhar remanescentes
+  const clean = normalized.replace(/\./g, "");
   const parts = clean.split(",");
   let intPart = parts[0].replace(/\D/g, "");
   let decPart = parts.length > 1 ? parts[1].replace(/\D/g, "") : null;
 
-  // 2. Detecção de Backspace Crítico:
-  // Se o usuário apagou a vírgula ou o centavo automático (ex: "185,00" -> "185,0")
-  // e o valor não termina mais com o padrão correto, vamos diminuir o inteiro.
-  if (clean.includes(",") && (decPart === "" || decPart === "0") && !value.endsWith(",00")) {
+  // 3. Backspace em decimais
+  if (clean.includes(",") && (decPart === "" || decPart === "0") && !normalized.endsWith(",00")) {
     intPart = intPart.slice(0, -1);
     const fmtInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     return intPart ? `${fmtInt},00` : "";
   }
 
-  // 3. Formatação do Inteiro
   const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
-  // 4. Se não tem vírgula, comportamento padrão é ,00
   if (decPart === null) {
     return `${formattedInt},00`;
   }
 
-  // 5. Se tem vírgula e o usuário está digitando (ex: 18,00 + 5 -> 18,005)
+  // 4. Inserção após ,00 automático
   if (decPart.startsWith("00") && decPart.length > 2) {
     decPart = decPart.slice(2);
-    // Recalcula o inteiro caso o decimal tenha empurrado novos números
     const combined = intPart + decPart;
     const finalInt = combined.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     return `${finalInt},00`;
   }
 
-  // 6. PERMITIR BACKSPACE NOS DECIMAIS MANTENDO O VALOR TEMPORÁRIO
-  // Se o usuário acabou de apagar a 2ª casa decimal (ex: 18,52 -> 18,5)
-  // Devolvemos apenas 1 casa para ele poder apagar a 1ª também.
-  if (decPart.length === 1 && !value.endsWith("0")) {
+  // 5. Backspace suave nos decimais
+  if (decPart.length === 1 && !normalized.endsWith("0")) {
     return `${formattedInt},${decPart}`;
   }
 
-  // 7. Preenchimento automático final
   const finalDec = decPart.slice(0, 2).padEnd(2, "0");
   return `${formattedInt},${finalDec}`;
 }
