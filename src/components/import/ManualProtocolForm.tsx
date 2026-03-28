@@ -280,25 +280,39 @@ export default function ManualProtocolForm() {
       const bairroStr = form.bairro || "";
       const cep = form.cep || "";
 
-      // Construir endereço completo para o Google
-      const fullAddress = [
-        endereco,
-        bairroStr,
-        municipioStr,
-        "Acre",
-        cep,
-        "Brasil"
-      ].filter(Boolean).join(", ");
+      // Estratégias de busca (do mais específico para o mais genérico)
+      const strategies = [
+        [endereco, bairroStr, municipioStr, "Acre", cep, "Brasil"].filter(Boolean).join(", "),
+        [endereco, municipioStr, "Acre"].filter(Boolean).join(", "),
+        [cep, "Brasil"].filter(Boolean).join(", ")
+      ].filter((v, i, a) => a.indexOf(v) === i); // remover duplicatas
 
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${googleApiKey}&language=pt-BR`
-      );
-      
-      const data = await response.json();
+      let foundResult = null;
 
-      if (data.status === "OK" && data.results.length > 0) {
-        const result = data.results[0];
-        const { lat, lng } = result.geometry.location;
+      for (const query of strategies) {
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${googleApiKey}&language=pt-BR`
+        );
+        const data = await response.json();
+
+        if (data.status === "OK" && data.results.length > 0) {
+          foundResult = data.results[0];
+          break;
+        } else if (data.status !== "ZERO_RESULTS") {
+          // Erro de API (Permissão, Billing, etc)
+          console.error("Google Geocoding API Error:", data.status, data.error_message);
+          let userMsg = "Erro na busca do Google";
+          if (data.status === "REQUEST_DENIED") {
+            userMsg = "Acesso Negado: Ative a 'Geocoding API' no Google Cloud Console.";
+          }
+          toast.error(userMsg);
+          setGeocoding(false);
+          return;
+        }
+      }
+
+      if (foundResult) {
+        const { lat, lng } = foundResult.geometry.location;
 
         setForm((prev) => ({
           ...prev,
@@ -307,8 +321,7 @@ export default function ManualProtocolForm() {
         }));
         toast.success("Localizado com precisão via Google Maps!");
       } else {
-        console.error("Google Geocoding Error:", data.status, data.error_message);
-        toast.error("Endereço não encontrado no Google Maps");
+        toast.error("Endereço não encontrado mesmo com busca inteligente");
       }
     } catch (error) {
       console.error("Geocoding error:", error);
