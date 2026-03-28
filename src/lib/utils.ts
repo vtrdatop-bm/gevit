@@ -65,7 +65,13 @@ export function applyAreaMask(value: string): string {
     const isDecimal = isManualTrigger || value[lastPuncIdx] === "," || distFromRight !== 3;
 
     if (isDecimal) {
-      intDigits = value.slice(0, lastPuncIdx).replace(/\D/g, "");
+      // A parte inteira é o que vem antes da PRIMEIRA pontuação decimal real
+      const firstDecimalIdx = value.indexOf(",");
+      if (firstDecimalIdx !== -1 && firstDecimalIdx < lastPuncIdx) {
+        intDigits = value.slice(0, firstDecimalIdx).replace(/\D/g, "");
+      } else {
+        intDigits = value.slice(0, lastPuncIdx).replace(/\D/g, "");
+      }
       decDigits = value.slice(lastPuncIdx + 1).replace(/\D/g, "");
     } else {
       // Provável ponto de milhar gerado pela máscara (ex: 3.075)
