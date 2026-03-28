@@ -45,26 +45,39 @@ export function formatArea(value: number | string | null | undefined): string {
 export function applyAreaMask(value: string): string {
   if (!value) return "";
   
-  const parts = value.split(",");
+  // 1. Limpeza inicial: remove pontos de milhar para processamento
+  let workingValue = value.replace(/\./g, "");
+  
+  // 2. Detecta se o usuário digitou uma vírgula
+  const hasComma = workingValue.includes(",");
+  
+  // 3. Se não tem vírgula, tratamos como inteiro puro + ,00
+  if (!hasComma) {
+    const digits = workingValue.replace(/\D/g, "");
+    if (!digits) return "";
+    const formattedInt = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return `${formattedInt},00`;
+  }
+  
+  // 4. Se tem vírgula, respeitamos a posição dela e formatamos os dois lados
+  const parts = workingValue.split(",");
   let intDigits = parts[0].replace(/\D/g, "");
-  const decPart = parts.length > 1 ? parts[1].replace(/\D/g, "") : "";
-
-  // Caso 1: Usuário digitou algo após os zeros (ex: 1,008)
-  if (decPart.length > 0 && decPart !== "0" && decPart !== "00") {
-    const newlyTyped = decPart.replace(/^00/, "");
-    intDigits += newlyTyped;
-  } 
-  // Caso 2: Usuário está apagando (backspace resultou em 123,0 ou 123,)
-  else if (parts.length > 1 && (decPart === "" || decPart === "0")) {
-    intDigits = intDigits.slice(0, -1);
+  let decDigits = parts[1].replace(/\D/g, "");
+  
+  // Se tinha ,00 e o usuário digitou algo no fim (ex: 1,008 -> vira 18,00 ou 1,8)
+  // Vamos remover os zeros automáticos se detectarmos uma inserção após eles
+  if (parts[1].startsWith("00") && parts[1].length > 2) {
+    intDigits += decDigits.slice(2);
+    decDigits = "00";
+    const formattedInt = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return `${formattedInt},00`;
   }
 
-  if (!intDigits) return "";
-  
-  // Formata com separador de milhar (ponto)
   const formattedInt = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  // Preenche decimais: 5 -> 50, 55 -> 55, "" -> 00
+  const finalDec = decDigits.slice(0, 2).padEnd(2, "0");
   
-  return `${formattedInt},00`;
+  return `${formattedInt},${finalDec}`;
 }
 
 /**
