@@ -39,52 +39,10 @@ export function formatArea(value: number | string | null | undefined): string {
 }
 
 /**
- * Formats an input string with thousands separator and comma.
- * To be used in onChange events.
+ * @deprecated Mask removed by user request. Area field now accepts free text input.
  */
 export function applyAreaMask(value: string): string {
-  if (!value) return "";
-  
-  // 1. Identifica a posição da vírgula real (decimal)
-  // O sistema adiciona pontos de milhar, então a vírgula é o separador decimal oficial.
-  // Se o usuário digitar um ponto no final, vira vírgula.
-  let workingValue = value;
-  if (value.endsWith(".") || value.endsWith(",")) {
-    workingValue = value.slice(0, -1) + ",";
-  }
-
-  // Se houver pontos que parecem decimais (ex: 123.4), vamos convertê-los antes de limpar os milhares
-  if (workingValue.includes(".") && !workingValue.includes(",")) {
-    const parts = workingValue.split(".");
-    if (parts[parts.length - 1].length < 3) {
-      workingValue = workingValue.replace(/\./g, ",");
-    }
-  }
-
-  // 2. Limpeza: remove todos os pontos (milhares) e deixa apenas a vírgula
-  const clean = workingValue.replace(/\./g, "");
-  const parts = clean.split(",");
-  
-  let intPart = parts[0].replace(/\D/g, "");
-  let decPart = parts.length > 1 ? parts.slice(1).join("").replace(/\D/g, "") : null;
-
-  // 3. Formatação do Inteiro com pontos (ILIMITADO)
-  const fmtInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  const displayInt = intPart.length > 0 ? fmtInt : "0";
-
-  // 4. Se não tem vírgula, assume ,00
-  if (decPart === null) {
-    return `${displayInt},00`;
-  }
-
-  // 5. Se tem vírgula, preenche até 2 casas 
-  // (ou deixa o usuário digitar a 1ª sem completar o zero para permitir backspace)
-  if (decPart.length === 1 && !value.endsWith("0")) {
-    return `${displayInt},${decPart}`;
-  }
-
-  const finalDec = decPart.slice(0, 2).padEnd(2, "0");
-  return `${displayInt},${finalDec}`;
+  return value;
 }
 
 /**
