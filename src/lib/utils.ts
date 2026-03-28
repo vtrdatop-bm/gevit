@@ -45,24 +45,24 @@ export function formatArea(value: number | string | null | undefined): string {
 export function applyAreaMask(value: string): string {
   if (!value) return "";
   
-  let digits = value.replace(/\D/g, "");
-  
-  // Se o usuário digitou algo após os zeros automáticos (ex: 123,00 + 4 -> 123004)
-  // removemos os dois zeros do meio para permitir a progressão.
-  if (value.includes(",00") && digits.length > 2) {
-    digits = digits.replace(/00(\d+)$/, "$1");
-  }
-  
-  // Trata o Backspace: se o usuário apagou parte do ",00"
-  // removemos o último dígito real também para que o campo mude.
-  if (value.includes(",") && !value.endsWith(",00")) {
-    digits = digits.slice(0, -2);
+  const parts = value.split(",");
+  let intDigits = parts[0].replace(/\D/g, "");
+  const decPart = parts.length > 1 ? parts[1].replace(/\D/g, "") : "";
+
+  // Caso 1: Usuário digitou algo após os zeros (ex: 1,008)
+  if (decPart.length > 0 && decPart !== "0" && decPart !== "00") {
+    const newlyTyped = decPart.replace(/^00/, "");
+    intDigits += newlyTyped;
+  } 
+  // Caso 2: Usuário está apagando (backspace resultou em 123,0 ou 123,)
+  else if (parts.length > 1 && (decPart === "" || decPart === "0")) {
+    intDigits = intDigits.slice(0, -1);
   }
 
-  if (!digits) return "";
+  if (!intDigits) return "";
   
-  // Formata o inteiro com separador de milhar (ponto)
-  const formattedInt = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  // Formata com separador de milhar (ponto)
+  const formattedInt = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   
   return `${formattedInt},00`;
 }
