@@ -1,12 +1,10 @@
 export const STATUS_MARKER_COLORS = {
-  regional: "#3b82f6", // Blue-500
-  vistoria: "#f59e0b", // Amber-500
-  relatorio: "#ef4444", // Red-500
-  certificado: "#10b981", // Emerald-500
-  certificado_termo: "#8b5cf6", // Violet-500
-  expirado: "#000000", // Black
-  pendencias: "#f97316", // Orange-500
-  atribuido: "#6366f1", // Indigo-500
+  regional: "#f59e0b", // Amarelo escuro
+  pendencias: "#ef4444", // Vermelho
+  atribuido: "#8b5cf6", // Roxo
+  certificado: "#10b981", // Verde
+  certificado_termo: "#3b82f6", // Azul
+  expirado: "#4b5563", // Cinza escuro
 } as const;
 
 export const REGIONAL_COLORS = [
