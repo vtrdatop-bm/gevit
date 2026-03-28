@@ -284,7 +284,7 @@ export default function VistoriaTab({
                 id={`numero-termo-${numero}`}
                 value={numeroTermo}
                 onChange={(e) => setNumeroTermo(e.target.value)}
-                placeholder="Ex: TC-001/2026"
+                placeholder="Ex.: 001/2026"
               />
             </div>
             <div className="space-y-2">
