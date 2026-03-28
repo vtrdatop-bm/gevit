@@ -322,8 +322,8 @@ export default function ProtocolosPage() {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto [transform:rotateX(180deg)]">
+            <table className="w-full text-sm [transform:rotateX(180deg)]">
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <SortHeader label="Nº Protocolo" field="numero" />
