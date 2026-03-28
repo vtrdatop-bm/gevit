@@ -399,16 +399,42 @@ export default function ProtocoloDetailPage() {
       let foundResult = null;
 
       for (const query of strategies) {
+        // Adicionar filtros de componente para travar o país e estado
+        // E tentar travar a localidade (município) se disponível
+        const components: string[] = ["country:BR", "administrative_area:AC"];
+        if (municipioStr) {
+          components.push(`locality:${municipioStr}`);
+        }
+
+        const componentStr = encodeURIComponent(components.join("|"));
         const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${googleApiKey}&language=pt-BR`
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&components=${componentStr}&key=${googleApiKey}&language=pt-BR`
         );
         const data = await response.json();
 
         if (data.status === "OK" && data.results.length > 0) {
-          foundResult = data.results[0];
+          const result = data.results[0];
+          
+          // Validação extra: Verificamos se o resultado não fugiu demais da cidade solicitada
+          const resultLocality = result.address_components.find((c: any) => 
+            c.types.includes("locality") || c.types.includes("administrative_area_level_2")
+          )?.long_name || "";
+
+          // Se pedimos Acrelândia e veio Rio Branco, por exemplo, ignoramos se for muito discrepante
+          if (municipioStr && resultLocality) {
+            const mRequested = municipioStr.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const mFound = resultLocality.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            // Se as cidades não batem, desconsideramos este resultado técnico e tentamos a próxima estratégia
+            if (!mFound.includes(mRequested) && !mRequested.includes(mFound)) {
+              console.warn(`Localidade divergente: Pedido ${mRequested}, Recebido ${mFound}`);
+              continue;
+            }
+          }
+
+          foundResult = result;
           break;
-        } else if (data.status !== "ZERO_RESULTS") {
-          // Erro de API (Permissão, Billing, etc)
+        } else if (data.status !== "ZERO_RESULTS" && data.status !== "OK") {
           console.error("Google Geocoding API Error:", data.status, data.error_message);
           let userMsg = "Erro na busca do Google";
           if (data.status === "REQUEST_DENIED") {
@@ -444,11 +470,11 @@ export default function ProtocoloDetailPage() {
             console.error("Erro ao salvar no banco:", protError);
             toast.error("Localizado, mas erro ao salvar no banco");
           } else {
-            toast.success("Localizado com precisão via Google Maps!");
+            toast.success("Localizado com precisão na cidade correta!");
           }
         }
       } else {
-        toast.error("Endereço não encontrado mesmo com busca inteligente");
+        toast.error("Local não encontrado na cidade solicitada");
       }
     } catch (error) {
       console.error("Geocoding error:", error);
