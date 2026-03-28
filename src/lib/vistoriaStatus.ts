@@ -10,7 +10,6 @@ export type DisplayStatus =
   | "pendencias"
   | "certificado_termo"
   | "certificado"
-  | "certificado"
   | "expirado";
 
 export type VistoriaStage = 1 | 2 | 3 | null;
