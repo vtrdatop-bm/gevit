@@ -51,6 +51,7 @@ export default function ProtocolosPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<DisplayStatus | "termo_vencido" | "">("");
+  const [municipioFilter, setMunicipioFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("data_solicitacao");
   const [sortAsc, setSortAsc] = useState(true);
   const navigate = useNavigate();
@@ -187,6 +188,11 @@ export default function ProtocolosPage() {
     return computeDeadline(vistoria, pausasByProcesso[proc.id] || [], info?.status, termosMap[proc.id] || null);
   };
 
+  const uniqueMunicipios = useMemo(() => {
+    const set = new Set(protocolos.map(p => p.municipio).filter(Boolean));
+    return Array.from(set).sort();
+  }, [protocolos]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     let list = protocolos;
@@ -210,6 +216,9 @@ export default function ProtocolosPage() {
         }
         return info?.status === statusFilter;
       });
+    }
+    if (municipioFilter) {
+      list = list.filter((p) => p.municipio === municipioFilter);
     }
     return [...list].sort((a, b) => {
       let va: string, vb: string;
@@ -267,7 +276,10 @@ export default function ProtocolosPage() {
             <h2 className="text-2xl font-bold text-foreground">Protocolos</h2>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {protocolos.length} protocolo{protocolos.length !== 1 ? "s" : ""} cadastrado{protocolos.length !== 1 ? "s" : ""}
+            {search || statusFilter || municipioFilter 
+              ? `${filtered.length} protocolos de ${protocolos.length} protocolos`
+              : `${protocolos.length} protocolos cadastrados`
+            }
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -283,6 +295,7 @@ export default function ProtocolosPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as DisplayStatus | "termo_vencido" | "")}
+            title="Filtrar por status"
             className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap"
           >
             <option value="">Todos os status</option>
@@ -290,6 +303,17 @@ export default function ProtocolosPage() {
               <option key={key} value={key}>{label}</option>
             ))}
             <option value="termo_vencido">Cert. Provisório Vencido</option>
+          </select>
+          <select
+            value={municipioFilter}
+            onChange={(e) => setMunicipioFilter(e.target.value)}
+            title="Filtrar por município"
+            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap"
+          >
+            <option value="">Todos os municípios</option>
+            {uniqueMunicipios.map((m) => (
+              <option key={m} value={m}>{m.toUpperCase()}</option>
+            ))}
           </select>
           <button
             onClick={() => navigate("/cadastro-protocolo")}
