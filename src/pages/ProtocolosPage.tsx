@@ -159,9 +159,21 @@ export default function ProtocolosPage() {
     if (!proc) return null;
     const vistoria = vistoriaMap[proc.id] || null;
     const proto = protocoloById[protocoloId];
+    
+    const baseStatus = computeDisplayStatus(proc.status, vistoria, proto?.data_solicitacao);
+    const stage = computeStage(vistoria);
+    
+    // Check if it should be "expirado" based on deadline
+    const deadline = computeDeadline(vistoria, pausasByProcesso[proc.id] || [], baseStatus, termosMap[proc.id] || null);
+    
+    let finalStatus = baseStatus;
+    if (deadline.active && deadline.remaining <= 0 && deadline.type === "expiration") {
+      finalStatus = "expirado";
+    }
+
     return {
-      status: computeDisplayStatus(proc.status, vistoria, proto?.data_solicitacao),
-      stage: computeStage(vistoria),
+      status: finalStatus,
+      stage,
     };
   };
 
@@ -170,6 +182,8 @@ export default function ProtocolosPage() {
     if (!proc) return null;
     const vistoria = vistoriaMap[proc.id] || null;
     const info = getDisplayInfo(protocoloId);
+    // Note: getDisplayInfo already returns the final (override) status,
+    // which is fine for computeDeadline as it primarily needs to know if it's "certificado_termo" or not.
     return computeDeadline(vistoria, pausasByProcesso[proc.id] || [], info?.status, termosMap[proc.id] || null);
   };
 

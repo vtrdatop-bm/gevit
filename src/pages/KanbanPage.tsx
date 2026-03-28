@@ -203,11 +203,17 @@ export default function KanbanPage() {
         const dStatus = computeDisplayStatus(p.status, vistoria, p.protocolos?.data_solicitacao);
         const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vistoria);
         const deadlineResult = computeDeadline(vistoria, pausasByProcesso[p.id] || [], dStatus, termosMap[p.id] || null);
+        
+        let finalStatus = dStatus;
+        if (deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration") {
+          finalStatus = "expirado";
+        }
+
         return {
           id: p.id,
           protocolo_id: p.protocolo_id,
           dbStatus: p.status,
-          displayStatus: dStatus,
+          displayStatus: finalStatus as DisplayStatus,
           stage: computeStage(vistoria),
           data_prevista: p.data_prevista,
           data_solicitacao: p.protocolos?.data_solicitacao || "",
