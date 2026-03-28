@@ -45,67 +45,48 @@ export function formatArea(value: number | string | null | undefined): string {
 export function applyAreaMask(value: string): string {
   if (!value) return "";
   
-  // 1. Identifica a ÚLTIMA pontuação (. ou ,) para decidir o que é decimal
-  const lastComma = value.lastIndexOf(",");
-  const lastDot = value.lastIndexOf(".");
-  const lastPuncIdx = Math.max(lastComma, lastDot);
+  // 1. Limpeza de pontos de milhar prévios para não confundir a lógica
+  // Remove pontos que estão entre números (ex: 1.000 -> 1000)
+  let clean = value.replace(/(\d)\.(\d{3})/g, "$1$2");
+  clean = clean.replace(/(\d)\.(\d{3})/g, "$1$2"); // Segunda passada para milhões
   
-  let intDigits = "";
-  let decDigits = "";
-
-  if (lastPuncIdx === -1) {
-    // Sem pontuação: trate tudo como inteiro
-    intDigits = value.replace(/\D/g, "");
-    decDigits = "00";
-  } else {
-    // Heurística: se a pontuação for vírgula, OU for um ponto seguido de 1, 2 ou >3 dígitos, é decimal.
-    // Se for ponto seguido de EXATAMENTE 3 dígitos, é milhar (gerado pela máscara).
-    const distFromRight = value.length - 1 - lastPuncIdx;
-    const isManualTrigger = value.endsWith(".") || value.endsWith(",");
-    const isDecimal = isManualTrigger || value[lastPuncIdx] === "," || distFromRight !== 3;
-
-    if (isDecimal) {
-      // A parte inteira é o que vem antes da PRIMEIRA pontuação decimal real
-      const firstDecimalIdx = value.indexOf(",");
-      if (firstDecimalIdx !== -1 && firstDecimalIdx < lastPuncIdx) {
-        intDigits = value.slice(0, firstDecimalIdx).replace(/\D/g, "");
-      } else {
-        intDigits = value.slice(0, lastPuncIdx).replace(/\D/g, "");
-      }
-      decDigits = value.slice(lastPuncIdx + 1).replace(/\D/g, "");
-    } else {
-      // Provável ponto de milhar gerado pela máscara (ex: 3.075)
-      intDigits = value.replace(/\D/g, "");
-      decDigits = "00";
-    }
-  }
-
-  // 2. Limpeza de sufixo automático (ex: 18,00 + 5 -> decDigits "005" -> Queremos "5")
-  if (decDigits.startsWith("00") && decDigits.length > 2) {
-    decDigits = decDigits.slice(2);
-  }
+  // 2. Normalização: Ponto vira vírgula para processamento
+  clean = clean.replace(/\./g, ",");
   
-  // 3. Lógica de Backspace nos decimais (para não travar)
-  // Se o usuário apagou um dos zeros ou a vírgula (ex: "185,0")
-  if (value.includes(",") && (decDigits === "" || decDigits === "0") && !value.endsWith(",00")) {
-    intDigits = intDigits.slice(0, -1);
-    decDigits = "00";
+  const parts = clean.split(",");
+  const intPart = parts[0].replace(/\D/g, "");
+  let decPart = parts.length > 1 ? parts.slice(1).join("").replace(/\D/g, "") : null;
+
+  // 3. Lógica de Backspace nos decimais
+  if (parts.length > 1 && (decPart === "" || decPart === "0") && !value.endsWith(",00")) {
+    const parentInt = intPart.slice(0, -1);
+    const fmtInt = parentInt.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return parentInt.length > 0 ? `${fmtInt},00` : "";
   }
 
-  if (!intDigits) return "";
+  // 4. Inserção após ,00 automático (ex: 123,00 + 4)
+  if (decPart && decPart.startsWith("00") && decPart.length > 2) {
+    decPart = decPart.slice(2);
+  }
 
-  // 4. Formata Inteiro com ponto
-  const formattedInt = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  // 5. Formatação do Inteiro
+  const fmtInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   
-  // 5. Formata Decimais com vírgula e 2 casas
-  // Se o usuário acabou de digitar a primeira casa decimal (ex: 18,5), não completamos o zero 
-  // imediatamente SE ele ainda estiver editando, para permitir o backspace.
-  if (decDigits.length === 1 && !value.endsWith("0")) {
-    return `${formattedInt},${decDigits}`;
+  // Se não tem vírgula, assume inteiro + ,00
+  if (decPart === null) {
+    return intPart.length > 0 ? `${fmtInt},00` : "";
   }
 
-  const finalDec = decDigits.slice(0, 2).padEnd(2, "0");
-  return `${formattedInt},${finalDec}`;
+  // 6. Formatação dos Decimais
+  // Se o usuário está digitando (ex: 18,5), não completa o zero ainda para permitir backspace
+  if (decPart.length === 1 && !value.endsWith("0")) {
+    const finalInt = intPart.length > 0 ? fmtInt : "0";
+    return `${finalInt},${decPart}`;
+  }
+
+  const finalDec = decPart.slice(0, 2).padEnd(2, "0");
+  const finalInt = intPart.length > 0 ? fmtInt : "0";
+  return `${finalInt},${finalDec}`;
 }
 
 /**
