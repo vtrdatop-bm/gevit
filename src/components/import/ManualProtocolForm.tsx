@@ -443,14 +443,14 @@ export default function ManualProtocolForm() {
           <Field label="Razão Social" required>
             <input value={form.razao_social || ""} onChange={(e) => handleChange("razao_social", e.target.value)} required placeholder="Razão social da empresa" className={inputClass} />
           </Field>
-          <Field label="Nome Fantasia">
-            <input value={form.nome_fantasia || ""} onChange={(e) => handleChange("nome_fantasia", e.target.value)} placeholder="Nome fantasia" className={inputClass} />
+          <Field label="Nome Fantasia" required>
+            <input value={form.nome_fantasia || ""} onChange={(e) => handleChange("nome_fantasia", e.target.value)} required placeholder="Nome fantasia" className={inputClass} />
           </Field>
           <Field label="Endereço" required>
             <input value={form.endereco || ""} onChange={(e) => handleChange("endereco", e.target.value)} required placeholder="Rua, número" className={inputClass} />
           </Field>
-          <Field label="CEP">
-            <input value={form.cep || ""} onChange={(e) => handleChange("cep", formatCep(e.target.value))} placeholder="69.999-999" className={inputClass} />
+          <Field label="CEP" required>
+            <input value={form.cep || ""} onChange={(e) => handleChange("cep", formatCep(e.target.value))} required placeholder="69.999-999" className={inputClass} />
           </Field>
 
           <Field label="Município" required>
@@ -511,12 +511,13 @@ export default function ManualProtocolForm() {
             </div>
           </Field>
 
-          <Field label="Área (m²)">
+          <Field label="Área (m²)" required>
             <input
               type="text"
               value={form.area || ""}
               onChange={(e) => handleChange("area", e.target.value)}
               onBlur={(e) => { if (e.target.value) handleChange("area", formatAreaOnBlur(e.target.value)); }}
+              required
               placeholder="Ex: 1.234,56"
               className={inputClass}
             />

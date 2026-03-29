@@ -246,6 +246,23 @@ export default function ProtocoloDetailPage() {
   const saveEdit = async () => {
     if (!protocolo) return;
     setSaving(true);
+
+    if (!editForm.nome_fantasia || !editForm.nome_fantasia.trim()) {
+      toast.error("O campo Nome Fantasia é obrigatório");
+      setSaving(false);
+      return;
+    }
+    if (!editForm.cep || !editForm.cep.trim()) {
+      toast.error("O campo CEP é obrigatório");
+      setSaving(false);
+      return;
+    }
+    if (!editForm.area || !editForm.area.trim()) {
+      toast.error("O campo Área é obrigatório");
+      setSaving(false);
+      return;
+    }
+
     const cnpjClean = (editForm.cnpj || "").replace(/\D/g, "");
     if (cnpjClean.length !== 11 && cnpjClean.length !== 14) {
       toast.error("CPF/CNPJ inválido — deve conter 11 ou 14 dígitos");
