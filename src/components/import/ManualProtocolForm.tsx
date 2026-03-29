@@ -96,10 +96,10 @@ export default function ManualProtocolForm() {
 
   // CNPJ lookup
   const [cnpjLoading, setCnpjLoading] = useState(false);
-  const lastCnpjSearched = useRef<string>("");
+  const lastCnpjSearched = useRef<string>(form.cnpj ? form.cnpj.replace(/\D/g, "") : "");
 
   const lookupCnpj = useCallback(async (cnpjDigits: string, quiet = false) => {
-    if (cnpjDigits.length !== 14 || cnpjDigits === lastCnpjSearched.current) return;
+    if (cnpjDigits.length !== 14 || (quiet && cnpjDigits === lastCnpjSearched.current)) return;
     
     lastCnpjSearched.current = cnpjDigits;
     setCnpjLoading(true);
