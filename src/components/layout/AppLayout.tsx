@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import NotificationDaemon from "@/components/layout/NotificationDaemon";
 
 const allNavItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "distribuidor"] },
@@ -233,6 +234,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {children}
         </div>
       </main>
+      <NotificationDaemon />
     </div>
   );
 }
