@@ -48,7 +48,7 @@ export default function RoutesPage() {
   const { user } = useAuth();
   const [dataLimite, setDataLimite] = useState("");
   const [selectedVistoriador, setSelectedVistoriador] = useState("");
-  const [routePriority, setRoutePriority] = useState<"coord" | "date">("date");
+  const [routePriority, setRoutePriority] = useState<"coord" | "date">("coord");
   const [routeGenerated, setRouteGenerated] = useState(false);
   const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
   const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);

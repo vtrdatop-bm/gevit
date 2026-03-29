@@ -84,6 +84,11 @@ export default function MapPage() {
         (r) => r.role === "admin" || r.role === "distribuidor"
       );
       setCanChangeVistoriador(!!isAdminOrDist);
+
+      const isVistoriador = userRoles?.some((r) => r.role === "vistoriador");
+      if (isVistoriador) {
+        setSelectedVistoriador(user.id);
+      }
     }
 
     if (roles?.length) {
