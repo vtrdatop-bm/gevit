@@ -48,6 +48,7 @@ export default function RoutesPage() {
   const { user } = useAuth();
   const [dataLimite, setDataLimite] = useState("");
   const [selectedVistoriador, setSelectedVistoriador] = useState("");
+  const [routePriority, setRoutePriority] = useState<"coord" | "date">("date");
   const [routeGenerated, setRouteGenerated] = useState(false);
   const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
   const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);
@@ -193,7 +194,7 @@ export default function RoutesPage() {
     }
   };
 
-  // Nearest-neighbor algorithm optimized globally ignoring assign date
+  // Nearest-neighbor algorithm based on priority
   const handleGenerateRoute = () => {
     // 1. Separate processes with and without coordinates
     const withCoords: ProcessoComProtocolo[] = [];
@@ -221,25 +222,61 @@ export default function RoutesPage() {
     let currentLat = START_COORDS[0];
     let currentLng = START_COORDS[1];
 
-    // 2. For each date group, find optimal route
-    const remaining = [...withCoords];
-    while (remaining.length > 0) {
-      let nearestIdx = 0;
-      let nearestDist = Infinity;
-      for (let i = 0; i < remaining.length; i++) {
-        const d = haversine(
-          currentLat, currentLng,
-          remaining[i].protocolo.latitude!, remaining[i].protocolo.longitude!
-        );
-        if (d < nearestDist) {
-          nearestDist = d;
-          nearestIdx = i;
+    if (routePriority === "date") {
+      // Group by earliest assignment date
+      const groupedByDate: Record<string, ProcessoComProtocolo[]> = {};
+      withCoords.forEach(p => {
+        const date = p.datasAtribuicao.length > 0 ? [...p.datasAtribuicao].sort()[0] : "Sem Data";
+        if (!groupedByDate[date]) groupedByDate[date] = [];
+        groupedByDate[date].push(p);
+      });
+
+      // Sort dates
+      const sortedDates = Object.keys(groupedByDate).sort((a, b) => a.localeCompare(b));
+
+      // Nearest-neighbor per date group
+      sortedDates.forEach(date => {
+        const remaining = [...groupedByDate[date]];
+        while (remaining.length > 0) {
+          let nearestIdx = 0;
+          let nearestDist = Infinity;
+          for (let i = 0; i < remaining.length; i++) {
+            const d = haversine(
+              currentLat, currentLng,
+              remaining[i].protocolo.latitude!, remaining[i].protocolo.longitude!
+            );
+            if (d < nearestDist) {
+              nearestDist = d;
+              nearestIdx = i;
+            }
+          }
+          const nearest = remaining.splice(nearestIdx, 1)[0];
+          ordered.push(nearest);
+          currentLat = nearest.protocolo.latitude!;
+          currentLng = nearest.protocolo.longitude!;
         }
+      });
+    } else {
+      // 2. Global optimal route (current behavior)
+      const remaining = [...withCoords];
+      while (remaining.length > 0) {
+        let nearestIdx = 0;
+        let nearestDist = Infinity;
+        for (let i = 0; i < remaining.length; i++) {
+          const d = haversine(
+            currentLat, currentLng,
+            remaining[i].protocolo.latitude!, remaining[i].protocolo.longitude!
+          );
+          if (d < nearestDist) {
+            nearestDist = d;
+            nearestIdx = i;
+          }
+        }
+        const nearest = remaining.splice(nearestIdx, 1)[0];
+        ordered.push(nearest);
+        currentLat = nearest.protocolo.latitude!;
+        currentLng = nearest.protocolo.longitude!;
       }
-      const nearest = remaining.splice(nearestIdx, 1)[0];
-      ordered.push(nearest);
-      currentLat = nearest.protocolo.latitude!;
-      currentLng = nearest.protocolo.longitude!;
     }
 
     // Add any without coords at the end
@@ -278,7 +315,7 @@ export default function RoutesPage() {
     setSelectedIds(new Set());
     setRouteGenerated(false);
     setOptimizedOrder([]);
-  }, [dataLimite, selectedVistoriador]);
+  }, [dataLimite, selectedVistoriador, routePriority]);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -300,7 +337,7 @@ export default function RoutesPage() {
 
       {/* Filters */}
       <div className="kpi-card">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">
               Atribuídas até <span className="text-destructive">*</span>
@@ -331,11 +368,22 @@ export default function RoutesPage() {
               ))}
             </select>
           </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Prioridade da Rota</label>
+            <select
+              value={routePriority}
+              onChange={(e) => setRoutePriority(e.target.value as "coord" | "date")}
+              className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
+            >
+              <option value="date">Por Data de Atribuição</option>
+              <option value="coord">Otimizada (Sem Data)</option>
+            </select>
+          </div>
           <button
             onClick={handleGenerateRoute}
             disabled={selectedProcesses.length < 1}
             className={cn(
-              "px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 justify-center transition-colors",
+              "px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 justify-center transition-colors shadow-sm",
               selectedProcesses.length < 1
                 ? "bg-muted text-muted-foreground cursor-not-allowed"
                 : "bg-primary text-primary-foreground hover:bg-primary/90"
