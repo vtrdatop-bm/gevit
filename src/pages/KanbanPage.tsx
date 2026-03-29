@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { Calendar, User, MapPin, Clock, Building2, Maximize2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatArea } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 import { computeDeadline, deadlineColorClass, deadlineLabel, DeadlineResult, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
 import {
@@ -450,7 +450,7 @@ export default function KanbanPage() {
                                       {process.protocolos.area && (
                                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                           <Maximize2 className="w-3.5 h-3.5 shrink-0" />
-                                          <span>Área: {process.protocolos.area}m²</span>
+                                          <span>Área: {formatArea(process.protocolos.area)}m²</span>
                                         </div>
                                       )}
                                     </div>

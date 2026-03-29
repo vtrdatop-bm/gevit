@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Search, Calendar, MapPin, Building2, CheckCircle2, ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatArea } from "@/lib/utils";
 import {
   DisplayStatus,
   VistoriaData,
@@ -229,7 +229,7 @@ export default function InspectionsPage() {
                     {proto.area && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Building2 className="w-3.5 h-3.5" />
-                        {proto.area}m²
+                        {formatArea(proto.area)}m²
                       </div>
                     )}
                   </div>

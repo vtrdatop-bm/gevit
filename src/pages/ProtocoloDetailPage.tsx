@@ -702,7 +702,7 @@ export default function ProtocoloDetailPage() {
               {protocolo.cep && <p className="text-muted-foreground text-xs">CEP: {protocolo.cep}</p>}
               <p>{protocolo.endereco}</p>
               <p className="text-muted-foreground">{protocolo.bairro} — {protocolo.municipio}</p>
-              {protocolo.area && <p className="text-muted-foreground">Área: {protocolo.area} m²</p>}
+              {protocolo.area && <p className="text-muted-foreground">Área: {formatArea(protocolo.area)} m²</p>}
               {protocolo.latitude && protocolo.longitude && (
                 <>
                   <p className="text-muted-foreground text-xs font-mono">📍 {Number(protocolo.latitude).toFixed(6)}, {Number(protocolo.longitude).toFixed(6)}</p>

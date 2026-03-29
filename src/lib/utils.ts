@@ -40,22 +40,35 @@ export function formatArea(value: number | string | null | undefined): string {
 
 /**
  * Sanitizes area input during typing.
- * Allows digits + one comma/dot (decimal separator). Replaces dot with comma.
- * Limits to 2 decimal digits.
+ * - If the value already contains a comma (decimal separator), dots are treated as
+ *   thousand separators and are stripped out.
+ * - If there is no comma, a dot is treated as a decimal separator and converted to comma.
+ * Always limits to 2 decimal digits.
  */
 export function applyAreaMask(value: string): string {
-  // Keep only digits, commas and dots
-  let clean = value.replace(/[^0-9.,]/g, "");
-  // Treat dot as decimal separator → replace with comma
-  clean = clean.replace(/\./g, ",");
-  // Keep only the first comma
-  const firstComma = clean.indexOf(",");
-  if (firstComma !== -1) {
-    const intPart = clean.slice(0, firstComma);
-    const decPart = clean.slice(firstComma + 1).replace(/,/g, ""); // remove extra commas
-    clean = intPart + "," + decPart.slice(0, 2);
+  const hasComma = value.includes(",");
+
+  if (hasComma) {
+    // Dots are thousand separators → strip them; keep comma as decimal
+    let clean = value.replace(/\./g, "").replace(/[^0-9,]/g, "");
+    const firstComma = clean.indexOf(",");
+    if (firstComma !== -1) {
+      const intPart = clean.slice(0, firstComma);
+      const decPart = clean.slice(firstComma + 1).replace(/,/g, "").slice(0, 2);
+      clean = intPart + "," + decPart;
+    }
+    return clean;
+  } else {
+    // No comma: dot (if any) is the decimal separator → convert to comma
+    let clean = value.replace(/[^0-9.]/g, "");
+    const firstDot = clean.indexOf(".");
+    if (firstDot !== -1) {
+      const intPart = clean.slice(0, firstDot);
+      const decPart = clean.slice(firstDot + 1).replace(/\./g, "").slice(0, 2);
+      return intPart + "," + decPart;
+    }
+    return clean;
   }
-  return clean;
 }
 
 /**
