@@ -20,8 +20,9 @@ import {
   MapPin,
   BarChart3,
   Percent,
+  Maximize2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatArea } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 
 /* ── Local types ────────────────────────────────────────────────────────────────── */
@@ -36,6 +37,7 @@ interface RawProcesso {
     data_solicitacao: string;
     bairro: string;
     municipio: string;
+    area: number | null;
   } | null;
 }
 
@@ -120,8 +122,8 @@ export default function DashboardEstatisticas() {
     async function fetchData() {
       if (isDev) {
         setProcessos([
-          { id: "1", status: "regional", vistoriador_id: "v1", regional_id: "r1", created_at: new Date().toISOString(), protocolos: { data_solicitacao: "2024-01-10", bairro: "Centro", municipio: "Rio Branco" } },
-          { id: "2", status: "certificado", vistoriador_id: "v1", regional_id: "r1", created_at: new Date().toISOString(), protocolos: { data_solicitacao: "2024-02-01", bairro: "Centro", municipio: "Rio Branco" } },
+          { id: "1", status: "regional", vistoriador_id: "v1", regional_id: "r1", created_at: new Date().toISOString(), protocolos: { data_solicitacao: "2024-01-10", bairro: "Centro", municipio: "Rio Branco", area: 150 } },
+          { id: "2", status: "certificado", vistoriador_id: "v1", regional_id: "r1", created_at: new Date().toISOString(), protocolos: { data_solicitacao: "2024-02-01", bairro: "Centro", municipio: "Rio Branco", area: 1200 } },
         ]);
         setVistorias([
           { processo_id: "1", data_1_atribuicao: "2024-01-12", data_1_vistoria: "2024-01-20", status_1_vistoria: "pendencia", data_2_atribuicao: null, data_2_vistoria: null, status_2_vistoria: null, data_3_atribuicao: null, data_3_vistoria: null, status_3_vistoria: null, data_1_retorno: "2024-01-25", data_2_retorno: null, vistoriador_1_id: "v1", vistoriador_2_id: null, vistoriador_3_id: null },
@@ -134,7 +136,7 @@ export default function DashboardEstatisticas() {
       }
 
       const [{ data: procs }, { data: vists }, { data: profs }, { data: regionais }, { data: bairros }] = await Promise.all([
-        supabase.from("processos").select("id, status, vistoriador_id, regional_id, created_at, protocolos(data_solicitacao, bairro, municipio)"),
+        supabase.from("processos").select("id, status, vistoriador_id, regional_id, created_at, protocolos(data_solicitacao, bairro, municipio, area)"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("regionais").select("id, nome").order("nome"),
@@ -303,16 +305,29 @@ export default function DashboardEstatisticas() {
       certificacao: avg(temposCert),
     };
 
-    // --- 5) By vistoriador ---
-    const byVistoriador: Record<string, number> = {};
+    // --- 5) By vistoriador (count + area sum from 1st inspection) ---
+    const byVistoriador: Record<string, { count: number; area: number }> = {};
     filtered.forEach((p) => {
       const v = vistoriaMap[p.id];
-      const vid = getCurrentVistoriadorId(p.vistoriador_id, v as VistoriaData | undefined || null);
-      if (vid) byVistoriador[vid] = (byVistoriador[vid] || 0) + 1;
+      // Use vistoriador_1_id from vistoria (atribuído na 1ª etapa)
+      const vid = v?.vistoriador_1_id || getCurrentVistoriadorId(p.vistoriador_id, v as VistoriaData | undefined || null);
+      if (!vid) return;
+      if (!byVistoriador[vid]) byVistoriador[vid] = { count: 0, area: 0 };
+      byVistoriador[vid].count++;
+      if (p.protocolos?.area) byVistoriador[vid].area += p.protocolos.area;
     });
     const vistoriadorData = Object.entries(byVistoriador)
-      .map(([id, count]) => ({ name: profileMap[id] || "Desconhecido", value: count }))
-      .sort((a, b) => b.value - a.value);
+      .map(([id, { count, area }]) => ({ name: profileMap[id] || "Desconhecido", count, area }))
+      .sort((a, b) => b.count - a.count);
+
+    // --- 6) Total area vistoriada (once per protocolo, only if 1st vistoria assigned) ---
+    let totalAreaVistoriada = 0;
+    filtered.forEach((p) => {
+      const v = vistoriaMap[p.id];
+      if ((v?.vistoriador_1_id || v?.data_1_atribuicao) && p.protocolos?.area) {
+        totalAreaVistoriada += p.protocolos.area;
+      }
+    });
 
     // --- 6) By regional ---
     const byRegional: Record<string, number> = {};
@@ -338,6 +353,7 @@ export default function DashboardEstatisticas() {
       vistoriadorData,
       regionalData,
       byStatus,
+      totalAreaVistoriada,
     };
   }, [filtered, vistoriaMap, profileMap, regionaisMap, bairroRegionalMap]);
 
@@ -472,6 +488,23 @@ export default function DashboardEstatisticas() {
         </div>
       </div>
 
+      {/* ── Área total vistoriada ── */}
+      <div className="kpi-card">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Maximize2 className="w-4 h-4 text-primary" />
+            <h4 className="text-sm font-semibold text-foreground">Área Total Vistoriada</h4>
+          </div>
+          <p className="text-2xl font-bold text-foreground">
+            {stats.totalAreaVistoriada > 0
+              ? <>{formatArea(stats.totalAreaVistoriada)} <span className="text-sm font-normal text-muted-foreground">m²</span></>
+              : <span className="text-muted-foreground">—</span>
+            }
+          </p>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1 ml-6">Soma da área dos protocolos com 1ª vistoria atribuída — contabilizado uma vez por protocolo</p>
+      </div>
+
       {/* ── Row 4: By vistoriador + By regional ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* By vistoriador */}
@@ -481,19 +514,36 @@ export default function DashboardEstatisticas() {
             <h4 className="text-sm font-semibold text-foreground">Vistorias por Vistoriador</h4>
           </div>
           {stats.vistoriadorData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={Math.max(160, stats.vistoriadorData.length * 36)}>
-              <BarChart data={stats.vistoriadorData} layout="vertical" barSize={20} margin={{ left: 10, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={120} />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                <Bar dataKey="value" name="Processos" radius={[0, 6, 6, 0]}>
-                  {stats.vistoriadorData.map((_, i) => (
-                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-3 text-muted-foreground font-medium">Vistoriador</th>
+                    <th className="text-center py-2 px-3 text-muted-foreground font-medium">Vistorias</th>
+                    <th className="text-right py-2 px-3 text-muted-foreground font-medium">Área Total (m²)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.vistoriadorData.map((row, i) => (
+                    <tr key={row.name} className="border-b border-border/50 last:border-0 hover:bg-accent/30 transition-colors">
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ background: BAR_COLORS[i % BAR_COLORS.length] }}
+                          />
+                          <span className="font-medium text-foreground">{row.name}</span>
+                        </div>
+                      </td>
+                      <td className="text-center py-2.5 px-3 font-bold text-foreground">{row.count}</td>
+                      <td className="text-right py-2.5 px-3 text-muted-foreground">
+                        {row.area > 0 ? formatArea(row.area) : <span className="text-muted-foreground/50">—</span>}
+                      </td>
+                    </tr>
                   ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado disponível</p>
           )}
