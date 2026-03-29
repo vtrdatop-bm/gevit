@@ -362,8 +362,9 @@ export default function MapPage() {
         {/* Status Pills */}
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <Filter className="w-4 h-4 text-muted-foreground mr-1" />
-          {(["all", "minhas", "regional", "atribuido", "pendencias", "expirado", "certificado_termo", "certificado"] as const).map(
-            (status) => (
+          {(["all", "minhas", "regional", "atribuido", "pendencias", "expirado", "certificado_termo", "certificado"] as const)
+            .filter((status) => status !== "minhas" || canChangeVistoriador)
+            .map((status) => (
               <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
