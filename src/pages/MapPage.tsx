@@ -199,6 +199,17 @@ export default function MapPage() {
 
 
 
+      const markersData: { marker: L.CircleMarker, isMultiple: boolean }[] = [];
+
+      const getRadius = (isMult: boolean, zoom: number) => {
+        const maxRadius = isMult ? 12 : 10;
+        const minRadius = isMult ? 6 : 4;
+        if (zoom >= 15) return maxRadius;
+        if (zoom <= 6) return minRadius;
+        const fraction = (zoom - 6) / 9;
+        return minRadius + (maxRadius - minRadius) * fraction;
+      };
+
       groups.forEach((groupProcesses, coordsKey) => {
         const [lat, lng] = coordsKey.split(",").map(Number);
         bounds.push([lat, lng]);
@@ -210,13 +221,15 @@ export default function MapPage() {
         const isMultiple = groupProcesses.length > 1;
 
         const marker = L.circleMarker([lat, lng], {
-          radius: isMultiple ? 12 : 10,
+          radius: getRadius(isMultiple, map.getZoom()),
           fillColor: color,
           color: isMultiple ? "#ffffff" : color,
           weight: isMultiple ? 3 : 2,
           opacity: 1,
           fillOpacity: 0.7,
         }).addTo(map);
+
+        markersData.push({ marker, isMultiple });
 
         const popupContent = `
           <div style="font-family: system-ui, sans-serif; min-width: 250px; max-height: 400px; overflow-y: auto; padding: 4px;">
@@ -284,6 +297,22 @@ export default function MapPage() {
       } else if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
       }
+
+      const updateRadii = () => {
+        const zoom = map.getZoom();
+        markersData.forEach(({ marker, isMultiple }) => {
+          marker.setRadius(getRadius(isMultiple, zoom));
+        });
+      };
+
+      map.on('zoomend', updateRadii);
+
+      // Cleanup
+      const oldCleanup = (map as any)._customZoomCleanup;
+      if (oldCleanup) {
+        map.off('zoomend', oldCleanup);
+      }
+      (map as any)._customZoomCleanup = updateRadii;
     });
   }, [filteredProcesses, mapReady, focusProcessoId, focusCoords]);
 
