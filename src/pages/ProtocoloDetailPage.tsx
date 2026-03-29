@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import VistoriaTab from "@/components/protocolo/VistoriaTab";
 import ExpirationWarning from "@/components/protocolo/ExpirationWarning";
-import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber } from "@/lib/utils";
+import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber, formatAreaOnBlur } from "@/lib/utils";
 import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { computeDisplayStatus, computeStage } from "@/lib/vistoriaStatus";
@@ -667,7 +667,14 @@ export default function ProtocoloDetailPage() {
               </div>
               <div className="space-y-1">
                 <label htmlFor="area" className="text-xs text-muted-foreground">Área (m²)</label>
-                <input id="area" value={editForm.area || ""} onChange={(e) => handleEditChange("area", e.target.value)} className={inputClass} placeholder="Ex: 1.234,56" />
+                <input
+                  id="area"
+                  value={editForm.area || ""}
+                  onChange={(e) => handleEditChange("area", e.target.value)}
+                  onBlur={(e) => { if (e.target.value) handleEditChange("area", formatAreaOnBlur(e.target.value)); }}
+                  className={inputClass}
+                  placeholder="Ex: 1.234,56"
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">

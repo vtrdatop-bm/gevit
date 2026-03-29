@@ -39,10 +39,35 @@ export function formatArea(value: number | string | null | undefined): string {
 }
 
 /**
- * @deprecated Mask removed by user request. Area field now accepts free text input.
+ * Sanitizes area input during typing.
+ * Allows digits + one comma/dot (decimal separator). Replaces dot with comma.
+ * Limits to 2 decimal digits.
  */
 export function applyAreaMask(value: string): string {
-  return value;
+  // Keep only digits, commas and dots
+  let clean = value.replace(/[^0-9.,]/g, "");
+  // Treat dot as decimal separator → replace with comma
+  clean = clean.replace(/\./g, ",");
+  // Keep only the first comma
+  const firstComma = clean.indexOf(",");
+  if (firstComma !== -1) {
+    const intPart = clean.slice(0, firstComma);
+    const decPart = clean.slice(firstComma + 1).replace(/,/g, ""); // remove extra commas
+    clean = intPart + "," + decPart.slice(0, 2);
+  }
+  return clean;
+}
+
+/**
+ * Formats the area string on blur: parses and re-formats with thousand separator
+ * and always 2 decimal places.
+ * Example: "1050,6" → "1.050,60", "1" → "1,00"
+ */
+export function formatAreaOnBlur(value: string): string {
+  if (!value.trim()) return "";
+  const num = parseAreaToNumber(value);
+  if (isNaN(num)) return value;
+  return formatArea(num);
 }
 
 /**

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2, Search, MapPin } from "lucide-react";
-import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber } from "@/lib/utils";
+import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber, formatAreaOnBlur } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -512,7 +512,14 @@ export default function ManualProtocolForm() {
           </Field>
 
           <Field label="Área (m²)">
-            <input type="text" value={form.area || ""} onChange={(e) => handleChange("area", e.target.value)} placeholder="Ex: 1.234,56" className={inputClass} />
+            <input
+              type="text"
+              value={form.area || ""}
+              onChange={(e) => handleChange("area", e.target.value)}
+              onBlur={(e) => { if (e.target.value) handleChange("area", formatAreaOnBlur(e.target.value)); }}
+              placeholder="Ex: 1.234,56"
+              className={inputClass}
+            />
           </Field>
 
           <Field label="Coordenadas Geográficas">
