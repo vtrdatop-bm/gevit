@@ -354,7 +354,10 @@ export default function MapPage() {
     return () => window.removeEventListener('open-protocolo', handleOpenProtocolo);
   }, [navigate]);
 
-  const processesWithCoords = processos.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
+  const totalGeolocalized = processos.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
+  const filteredGeolocalized = filteredProcesses.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
+  
+  const isFiltered = filterStatus !== "all" || selectedVistoriador !== "" || selectedRegional !== "";
 
   return (
     <div className="p-4 md:p-6 space-y-4 h-full flex flex-col">
@@ -371,9 +374,11 @@ export default function MapPage() {
             <h2 className="text-2xl font-bold text-foreground">Mapa Interativo</h2>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {processesWithCoords > 0
-              ? `${processesWithCoords} vistorias geolocalizadas`
-              : "Nenhuma vistoria com coordenadas cadastradas"}
+            {totalGeolocalized === 0
+              ? "Nenhuma vistoria com coordenadas cadastradas"
+              : isFiltered
+                ? `${filteredGeolocalized} de ${totalGeolocalized} vistorias`
+                : `${totalGeolocalized} vistorias geolocalizadas`}
           </p>
         </div>
       </div>
