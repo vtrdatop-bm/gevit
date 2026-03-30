@@ -187,19 +187,20 @@ export default function VistoriaTab({
               type="date"
               value={retorno}
               onChange={(e) => setRetorno(e.target.value)}
+              className="h-10 w-full text-sm px-3 py-0 bg-background border-input [appearance:none] [-webkit-appearance:none] min-w-0"
             />
           </div>
         )}
 
         {/* Attribution Date */}
-        <div className="space-y-2">
+        <div className="space-y-2 max-w-full">
           <Label htmlFor={`atribuicao-${numero}`} className="text-sm font-medium">Data da {numero}ª Atribuição</Label>
           <Input
             id={`atribuicao-${numero}`}
             type="date"
             value={atribuicao}
             onChange={(e) => setAtribuicao(e.target.value)}
-            className="h-10 w-full text-sm px-2 bg-background border-input"
+            className="h-10 w-full text-sm px-3 py-0 bg-background border-input [appearance:none] [-webkit-appearance:none] min-w-0"
           />
         </div>
 
@@ -236,7 +237,7 @@ export default function VistoriaTab({
         </div>
 
         {/* Inspection Date */}
-        <div className="space-y-2">
+        <div className="space-y-2 max-w-full">
           <Label htmlFor={`data-vistoria-${numero}`} className="text-sm font-medium">Data da {numero}ª Vistoria</Label>
           <Input
             id={`data-vistoria-${numero}`}
@@ -246,7 +247,7 @@ export default function VistoriaTab({
               setData(e.target.value);
               if (!e.target.value) setStatus("");
             }}
-            className="h-10 w-full text-sm px-2 bg-background border-input"
+            className="h-10 w-full text-sm px-3 py-0 bg-background border-input [appearance:none] [-webkit-appearance:none] min-w-0"
           />
         </div>
 
