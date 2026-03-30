@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell, AlertTriangle, Clock, CheckCircle2, MessageSquare, ArrowLeft } from "lucide-react";
+import { Bell, AlertTriangle, Clock, CheckCircle2, MessageSquare, ArrowLeft, Check, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const iconMap: Record<string, { icon: typeof Bell; color: string }> = {
   warning: { icon: AlertTriangle, color: "text-status-risk bg-status-risk/10" },
@@ -60,6 +61,11 @@ export default function NotificationsPage() {
     );
   };
 
+  const deleteNotification = async (id: string) => {
+    await supabase.from("notificacoes").delete().eq("id", id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
   const markAllRead = async () => {
     if (!user) return;
     const unreadIds = notifications.filter((n) => !n.lida).map((n) => n.id);
@@ -77,6 +83,59 @@ export default function NotificationsPage() {
   }
 
   const unreadCount = notifications.filter((n) => !n.lida).length;
+  const unreadNotifications = notifications.filter((n) => !n.lida);
+  const readNotifications = notifications.filter((n) => n.lida);
+
+  const NotificationItem = ({ n }: { n: Notificacao }) => {
+    const { icon: Icon, color } = iconMap[n.tipo] || iconMap.info;
+    return (
+      <div
+        key={n.id}
+        onClick={() => !n.lida && markAsRead(n.id)}
+        className={`kpi-card flex items-start gap-4 cursor-pointer transition-colors group ${!n.lida ? "border-l-2 border-l-primary" : ""}`}
+      >
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground">{n.titulo}</p>
+          {n.descricao && (
+            <p className="text-xs text-muted-foreground mt-0.5">{n.descricao}</p>
+          )}
+          <p className="text-xs text-muted-foreground/60 mt-1">{timeAgo(n.created_at)}</p>
+        </div>
+        
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity self-center">
+          {!n.lida && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                markAsRead(n.id);
+              }}
+              className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+              title="Marcar como lida"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteNotification(n.id);
+            }}
+            className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-colors"
+            title="Excluir"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+
+        {!n.lida && (
+          <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2 group-hover:hidden" />
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-3xl">
@@ -106,40 +165,51 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {notifications.length === 0 ? (
-        <div className="kpi-card">
-          <p className="text-sm text-muted-foreground py-8 text-center">
-            Nenhuma notificação por enquanto.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {notifications.map((n) => {
-            const { icon: Icon, color } = iconMap[n.tipo] || iconMap.info;
-            return (
-              <div
-                key={n.id}
-                onClick={() => !n.lida && markAsRead(n.id)}
-                className={`kpi-card flex items-start gap-4 cursor-pointer transition-colors ${!n.lida ? "border-l-2 border-l-primary" : ""}`}
-              >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{n.titulo}</p>
-                  {n.descricao && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{n.descricao}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground/60 mt-1">{timeAgo(n.created_at)}</p>
-                </div>
-                {!n.lida && (
-                  <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <Tabs defaultValue="unread" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+          <TabsTrigger value="unread" className="relative">
+            Não lidas
+            {unreadCount > 0 && (
+              <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full">
+                {unreadCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="read">Lidas</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="unread" className="mt-4 space-y-4">
+          {unreadNotifications.length === 0 ? (
+            <div className="kpi-card">
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Você não tem novas notificações.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {unreadNotifications.map((n) => (
+                <NotificationItem key={n.id} n={n} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="read" className="mt-4 space-y-4">
+          {readNotifications.length === 0 ? (
+            <div className="kpi-card">
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Histórico de notificações vazio.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {readNotifications.map((n) => (
+                <NotificationItem key={n.id} n={n} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
