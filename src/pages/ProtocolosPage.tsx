@@ -288,7 +288,7 @@ export default function ProtocolosPage() {
             }
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
@@ -302,7 +302,7 @@ export default function ProtocolosPage() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as DisplayStatus | "termo_vencido" | "")}
             title="Filtrar por status"
-            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap"
+            className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">Todos os status</option>
             {(Object.entries(displayStatusLabels) as [DisplayStatus, string][]).map(([key, label]) => (
@@ -314,7 +314,7 @@ export default function ProtocolosPage() {
             value={municipioFilter}
             onChange={(e) => setMunicipioFilter(e.target.value)}
             title="Filtrar por município"
-            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap"
+            className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">Todos os municípios</option>
             {uniqueMunicipios.map((m) => (
@@ -323,7 +323,7 @@ export default function ProtocolosPage() {
           </select>
           <button
             onClick={() => navigate("/cadastro-protocolo")}
-            className="inline-flex items-center gap-2 px-4 h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-2 px-4 h-10 w-full sm:w-auto rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             Novo Protocolo
