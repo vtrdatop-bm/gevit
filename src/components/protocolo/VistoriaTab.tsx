@@ -169,7 +169,7 @@ export default function VistoriaTab({
 
   return (
     <div className="space-y-6 pt-4">
-      <div className="grid grid-cols-2 md:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Stage specific top date */}
         {numero === 1 ? (
           <div className="space-y-2">
@@ -192,23 +192,23 @@ export default function VistoriaTab({
         )}
 
         {/* Attribution Date */}
-        <div className="space-y-1.5">
-          <Label htmlFor={`atribuicao-${numero}`} className="text-[11px] sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">Atribuição ({numero}ª)</Label>
+        <div className="space-y-2">
+          <Label htmlFor={`atribuicao-${numero}`} className="text-sm font-medium">Data da {numero}ª Atribuição</Label>
           <Input
             id={`atribuicao-${numero}`}
             type="date"
             value={atribuicao}
             onChange={(e) => setAtribuicao(e.target.value)}
-            className="h-9 text-xs sm:text-sm"
+            className="h-10 text-sm"
           />
         </div>
 
         {/* Inspector Selector */}
-        <div className="space-y-1.5 col-span-2 md:col-span-1">
+        <div className="space-y-2">
           <Label htmlFor={`vistoriador-${numero}`} className="text-sm font-medium">Vistoriador</Label>
           <div className="relative">
             <Select value={vistoriador} onValueChange={setVistoriador}>
-              <SelectTrigger id={`vistoriador-${numero}`} className="w-full pr-10 h-9 sm:h-10">
+              <SelectTrigger id={`vistoriador-${numero}`} className="w-full pr-10">
                 <SelectValue placeholder="Selecione o vistoriador" />
               </SelectTrigger>
               <SelectContent>
@@ -236,8 +236,8 @@ export default function VistoriaTab({
         </div>
 
         {/* Inspection Date */}
-        <div className="space-y-1.5">
-          <Label htmlFor={`data-vistoria-${numero}`} className="text-[11px] sm:text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">Vistoria ({numero}ª)</Label>
+        <div className="space-y-2">
+          <Label htmlFor={`data-vistoria-${numero}`} className="text-sm font-medium">Data da {numero}ª Vistoria</Label>
           <Input
             id={`data-vistoria-${numero}`}
             type="date"
@@ -246,19 +246,19 @@ export default function VistoriaTab({
               setData(e.target.value);
               if (!e.target.value) setStatus("");
             }}
-            className="h-9 text-xs sm:text-sm"
+            className="h-10 text-sm"
           />
         </div>
 
         {/* Status Selector */}
-        <div className="space-y-1.5 col-span-2 md:col-span-1">
+        <div className="space-y-2">
           <Label htmlFor={`status-${numero}`} className="text-sm font-medium">
             Status da {numero}ª Vistoria
-            {!data && <span className="text-[10px] text-muted-foreground ml-1">(data)</span>}
+            {!data && <span className="text-[10px] text-muted-foreground ml-1">(preencha a data)</span>}
           </Label>
           <div className="relative">
             <Select value={status} onValueChange={setStatus} disabled={!data}>
-              <SelectTrigger id={`status-${numero}`} className="w-full pr-10 h-9 sm:h-10">
+              <SelectTrigger id={`status-${numero}`} className="w-full pr-10">
                 <SelectValue placeholder="Selecione o status" />
               </SelectTrigger>
               <SelectContent>
