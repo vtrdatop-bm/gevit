@@ -122,7 +122,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border flex-shrink-0">
           <div className="w-9 h-9 flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <img src="/logo.png" alt="GEVIT" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="GEVIT" className="w-full h-full object-contain rounded-[22%] shadow-sm" />
           </div>
           {!collapsed && (
             <div className="min-w-0">

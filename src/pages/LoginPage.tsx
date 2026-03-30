@@ -47,7 +47,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-8">
         <div className="flex flex-col items-center gap-3">
           <div className="w-24 h-24 flex items-center justify-center overflow-hidden">
-            <img src="/logo.png" alt="GEVIT Logo" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="GEVIT Logo" className="w-full h-full object-contain rounded-[22%] shadow-md border border-border/50" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">GEVIT</h1>
           <p className="text-sm text-muted-foreground">Gestão de Vistorias Técnicas</p>
