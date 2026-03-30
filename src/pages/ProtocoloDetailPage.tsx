@@ -562,8 +562,8 @@ export default function ProtocoloDetailPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-5xl">
-      <div className="flex items-center gap-3">
+    <div className="p-4 md:p-6 space-y-6 max-w-5xl overflow-hidden">
+      <div className="flex flex-wrap items-center gap-3">
         <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-muted transition-colors" title="Voltar">
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -579,20 +579,20 @@ export default function ProtocoloDetailPage() {
           </p>
         </div>
         {!editing ? (
-          <div className="flex gap-2">
-            <button onClick={() => setDeleteDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors">
+          <div className="flex gap-2 ml-auto sm:ml-0">
+            <button onClick={() => setDeleteDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors whitespace-nowrap">
               <Trash2 className="w-3.5 h-3.5" /> Excluir
             </button>
-            <button onClick={startEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">
+            <button onClick={startEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors whitespace-nowrap">
               <Pencil className="w-3.5 h-3.5" /> Editar
             </button>
           </div>
         ) : (
-          <div className="flex gap-2">
-            <button onClick={cancelEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">
+          <div className="flex gap-2 ml-auto sm:ml-0">
+            <button onClick={cancelEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors whitespace-nowrap">
               <X className="w-3.5 h-3.5" /> Cancelar
             </button>
-            <button onClick={saveEdit} disabled={saving} className="flex items-center gap-1.5 px-3 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
+            <button onClick={saveEdit} disabled={saving} className="flex items-center gap-1.5 px-3 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap">
               <Save className="w-3.5 h-3.5" /> {saving ? "Salvando..." : "Salvar"}
             </button>
           </div>
@@ -617,8 +617,8 @@ export default function ProtocoloDetailPage() {
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="cnpj" className="text-sm font-medium">CPF/CNPJ</label>
-                <div className="flex gap-2">
-                  <input id="cnpj" value={editForm.cnpj || ""} onChange={(e) => handleEditChange("cnpj", formatCpfCnpjInput(e.target.value))} className={inputClass} />
+                <div className="flex gap-2 overflow-hidden">
+                  <input id="cnpj" value={editForm.cnpj || ""} onChange={(e) => handleEditChange("cnpj", formatCpfCnpjInput(e.target.value))} className={cn(inputClass, "min-w-0")} />
                   <button type="button" onClick={() => lookupCnpj((editForm.cnpj || "").replace(/\D/g, ""))} disabled={cnpjLoading || (editForm.cnpj || "").replace(/\D/g, "").length !== 14} className="flex items-center justify-center px-3 h-9 rounded-md border border-input hover:bg-accent transition-colors disabled:opacity-50 shrink-0">
                     {cnpjLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   </button>
@@ -761,9 +761,9 @@ export default function ProtocoloDetailPage() {
                 else if (stVist === "reprovado") dotColor = "bg-[hsl(var(--status-certified))]";
                 else if ((vistoria as any)?.[`data_${n}_atribuicao`]) dotColor = "bg-[hsl(var(--status-assigned))]";
                 return (
-                  <TabsTrigger key={n} value={`vistoria${n}`} className="flex items-center gap-1.5 data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary border-2 border-transparent py-2 shadow-none transition-all">
+                  <TabsTrigger key={n} value={`vistoria${n}`} className="flex items-center gap-1.5 data-[state=active]:border-2 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary border-2 border-transparent py-2 shadow-none transition-all text-[10px] xs:text-xs sm:text-sm">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-                    {n}ª Vistoria
+                    <span className="truncate">{n}ª Vistoria</span>
                   </TabsTrigger>
                 );
               })}
