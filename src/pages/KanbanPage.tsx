@@ -245,7 +245,7 @@ export default function KanbanPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 h-full flex flex-col">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
             <button
@@ -261,8 +261,8 @@ export default function KanbanPage() {
             Fluxo automático de processos — agrupados por regional
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative w-full sm:w-80">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               value={search}
@@ -271,7 +271,7 @@ export default function KanbanPage() {
               className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
-          <span className="text-xs text-muted-foreground bg-accent px-3 py-1.5 rounded-full whitespace-nowrap">
+          <span className="text-xs text-muted-foreground bg-accent px-3 py-2 rounded-md whitespace-nowrap text-center">
             {filteredProcessos.length} {filteredProcessos.length === 1 ? "processo" : "processos"}
           </span>
         </div>
