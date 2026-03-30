@@ -9,7 +9,7 @@ import ExpirationWarning from "@/components/protocolo/ExpirationWarning";
 import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber, formatAreaOnBlur } from "@/lib/utils";
 import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { computeDisplayStatus, computeStage } from "@/lib/vistoriaStatus";
+import { computeDisplayStatus, computeStage, sortVistoriadores } from "@/lib/vistoriaStatus";
 import { Vistoriador } from "@/types/user";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -143,7 +143,7 @@ export default function ProtocoloDetailPage() {
       if (profErr) {
         console.error("Erro ao carregar perfis de vistoriadores:", profErr.message);
       }
-      setVistoriadores(profiles || []);
+      setVistoriadores(sortVistoriadores(profiles || []));
     } else if (rolesErr) {
       console.error("Erro ao carregar papéis de vistoriadores:", rolesErr.message);
     }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
+import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId, sortVistoriadores } from "@/lib/vistoriaStatus";
 import { Filter, Layers, Navigation, MousePointerClick, MapPin, Search, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import L from "leaflet";
@@ -111,7 +111,7 @@ export default function MapPage() {
         .from("profiles")
         .select("user_id, patente, nome_guerra")
         .in("user_id", ids);
-      if (profiles) setVistoriadores(profiles);
+      if (profiles) setVistoriadores(sortVistoriadores(profiles));
     }
 
     const profMap: Record<string, string> = {};

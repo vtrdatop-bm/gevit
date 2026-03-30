@@ -174,3 +174,26 @@ export function computeProcessStatus(vistoria: VistoriaData): string | null {
   }
   return null;
 }
+
+export const RANK_ORDER = [
+  "CEL BM", "TC BM", "MAJ BM", "CAP BM", "1º TEN BM", "2º TEN BM", "CAD BM", "ASP BM",
+  "AL OF BM", "ST BM", "1º SGT BM", "2º SGT BM", "3º SGT BM", "AL SGT BM", "CB BM",
+  "AL CB BM", "SD BM"
+];
+
+export function sortVistoriadores<T extends { patente?: string | null; nome_guerra: string | null }>(
+  list: T[]
+): T[] {
+  return [...list].sort((a, b) => {
+    const rankA = RANK_ORDER.indexOf(a.patente || "");
+    const rankB = RANK_ORDER.indexOf(b.patente || "");
+
+    if (rankA !== rankB) {
+      if (rankA === -1) return 1;
+      if (rankB === -1) return -1;
+      return rankA - rankB;
+    }
+
+    return (a.nome_guerra || "").localeCompare(b.nome_guerra || "");
+  });
+}

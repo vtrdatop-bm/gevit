@@ -6,6 +6,7 @@ import { Navigation, ExternalLink, Copy, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import RouteMap from "@/components/routes/RouteMap";
+import { sortVistoriadores } from "@/lib/vistoriaStatus";
 
 interface VistoriaRow {
   processo_id: string;
@@ -95,7 +96,7 @@ export default function RoutesPage() {
           .from("profiles")
           .select("user_id, patente, nome_guerra")
           .in("user_id", ids);
-        if (profiles) setVistoriadores(profiles);
+        if (profiles) setVistoriadores(sortVistoriadores(profiles));
       }
 
       if (procsData) {
