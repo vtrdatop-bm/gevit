@@ -124,7 +124,7 @@ export default function MapPage() {
       const vist = vistoriaMap[p.id] || null;
       const dStatus = computeDisplayStatus(p.status, vist, p.protocolos?.data_solicitacao);
       const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vist);
-      
+
       let resolvedRegionalId = p.regional_id;
       if (!resolvedRegionalId && p.protocolos) {
         resolvedRegionalId = bairroRegionalMap[`${p.protocolos.bairro}|${p.protocolos.municipio}`] || null;
@@ -165,7 +165,7 @@ export default function MapPage() {
   const filteredProcesses = processos.filter((p) => {
     if (selectedVistoriador && p.vistoriador_id !== selectedVistoriador) return false;
     if (selectedRegional && p.regional_id !== selectedRegional) return false;
-    
+
     if (filterStatus === "all") return true;
     if (filterStatus === "minhas") return p.vistoriador_id === user?.id;
     return p.displayStatus === filterStatus;
@@ -264,9 +264,9 @@ export default function MapPage() {
             </div>` : ""}
             
             ${groupProcesses.map((process, idx) => {
-              const stage = getVistoriaStage(process.vistoria);
-              const result = getVistoriaResult(process.vistoria);
-              return `
+          const stage = getVistoriaStage(process.vistoria);
+          const result = getVistoriaResult(process.vistoria);
+          return `
                 <div style="${idx > 0 ? "margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;" : ""}">
                   <div style="font-weight: 700; font-size: 14px; margin-bottom: 2px; color: #1a1a1a;">
                     ${process.protocolo.numero}
@@ -299,7 +299,7 @@ export default function MapPage() {
                   </button>
                 </div>
               `;
-            }).join("")}
+        }).join("")}
           </div>
         `;
 
@@ -356,7 +356,7 @@ export default function MapPage() {
 
   const totalGeolocalized = processos.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
   const filteredGeolocalized = filteredProcesses.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
-  
+
   const isFiltered = filterStatus !== "all" || selectedVistoriador !== "" || selectedRegional !== "";
 
   return (
@@ -378,7 +378,7 @@ export default function MapPage() {
               ? "Nenhuma vistoria com coordenadas cadastradas"
               : isFiltered
                 ? `${filteredGeolocalized} de ${totalGeolocalized} vistorias`
-                : `${totalGeolocalized} vistorias geolocalizadas`}
+                : `${totalGeolocalized} vistorias`}
           </p>
         </div>
       </div>
@@ -394,16 +394,15 @@ export default function MapPage() {
               <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                  filterStatus === status
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${filterStatus === status
                     ? "bg-primary text-primary-foreground border-primary shadow-sm"
                     : "bg-background text-muted-foreground border-border hover:border-primary/30"
-                }`}
+                  }`}
               >
                 {status === "all" ? "Todos os Status" : status === "minhas" ? "Minhas Vistorias" : getDisplayStatusLabel(status)}
               </button>
             )
-          )}
+            )}
         </div>
 
         {/* Vistoriador Selection */}
@@ -465,7 +464,7 @@ export default function MapPage() {
               ))}
             </select>
           </div>
-          
+
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Filtrar por Regional</label>
             <select
