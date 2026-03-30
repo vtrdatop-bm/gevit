@@ -199,7 +199,7 @@ export default function VistoriaTab({
             type="date"
             value={atribuicao}
             onChange={(e) => setAtribuicao(e.target.value)}
-            className="h-10 text-sm"
+            className="h-10 w-full text-sm px-2 bg-background border-input"
           />
         </div>
 
@@ -246,7 +246,7 @@ export default function VistoriaTab({
               setData(e.target.value);
               if (!e.target.value) setStatus("");
             }}
-            className="h-10 text-sm"
+            className="h-10 w-full text-sm px-2 bg-background border-input"
           />
         </div>
 
