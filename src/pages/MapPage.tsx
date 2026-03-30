@@ -21,6 +21,7 @@ interface MapProcess {
   vistoriador_nome: string | null;
   vistoria: VistoriaData | null;
   protocolo: ProtocoloData;
+  regional_id: string | null;
 }
 
 const getVistoriaStage = (v: VistoriaData | null): string | null => {
@@ -55,6 +56,8 @@ export default function MapPage() {
   const [filterStatus, setFilterStatus] = useState<DisplayStatus | "all" | "minhas">("all");
   const [selectedVistoriador, setSelectedVistoriador] = useState("");
   const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);
+  const [selectedRegional, setSelectedRegional] = useState("");
+  const [regionais, setRegionais] = useState<{ id: string; nome: string }[]>([]);
   const [canChangeVistoriador, setCanChangeVistoriador] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -64,15 +67,18 @@ export default function MapPage() {
       return;
     }
 
-    const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }] = await Promise.all([
+    const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }, { data: regionaisData }] = await Promise.all([
       supabase
         .from("processos")
-        .select("id, status, data_prevista, vistoriador_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)")
+        .select("id, status, data_prevista, vistoriador_id, regional_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)")
         .neq("status", "expirado"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
+      supabase.from("regionais").select("id, nome").order("nome"),
     ]);
+
+    if (regionaisData) setRegionais(regionaisData);
 
     // Check if current user is admin or distribuidor
     if (user) {
@@ -120,6 +126,7 @@ export default function MapPage() {
         vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
         vistoria: vist,
         protocolo: p.protocolos,
+        regional_id: p.regional_id,
       };
     });
 
@@ -144,6 +151,7 @@ export default function MapPage() {
 
   const filteredProcesses = processos.filter((p) => {
     if (selectedVistoriador && p.vistoriador_id !== selectedVistoriador) return false;
+    if (selectedRegional && p.regional_id !== selectedRegional) return false;
     
     if (filterStatus === "all") return true;
     if (filterStatus === "minhas") return p.vistoriador_id === user?.id;
@@ -382,15 +390,56 @@ export default function MapPage() {
 
         {/* Vistoriador Selection */}
         {canChangeVistoriador && (
-          <div className="flex items-center gap-3 pl-4 border-l border-border sr-only sm:not-sr-only">
-            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Vistoriador:</span>
+          <div className="flex flex-wrap items-center gap-4 pl-4 border-l border-border sr-only sm:not-sr-only">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Vistoriador:</span>
+              <select
+                title="Filtrar por Vistoriador"
+                value={selectedVistoriador}
+                onChange={(e) => setSelectedVistoriador(e.target.value)}
+                className="text-xs rounded-lg border border-input bg-background px-3 py-1.5 min-w-[150px] focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="">Todos</option>
+                {vistoriadores.map((v) => (
+                  <option key={v.user_id} value={v.user_id}>
+                    {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 border-l border-border pl-4">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Regional:</span>
+              <select
+                title="Filtrar por Regional"
+                value={selectedRegional}
+                onChange={(e) => setSelectedRegional(e.target.value)}
+                className="text-xs rounded-lg border border-input bg-background px-3 py-1.5 min-w-[150px] focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="">Todas</option>
+                {regionais.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Vistoriador & Regional for Mobile */}
+      {canChangeVistoriador && (
+        <div className="sm:hidden flex flex-col gap-3 px-1">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Filtrar por Vistoriador</label>
             <select
-              title="Filtrar por Vistoriador"
+              title="Filtrar por Vistoriador (Mobile)"
               value={selectedVistoriador}
               onChange={(e) => setSelectedVistoriador(e.target.value)}
-              className="text-xs rounded-lg border border-input bg-background px-3 py-1.5 min-w-[180px] focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
             >
-              <option value="">Todos</option>
+              <option value="">Todos os Vistoriadores</option>
               {vistoriadores.map((v) => (
                 <option key={v.user_id} value={v.user_id}>
                   {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
@@ -398,26 +447,23 @@ export default function MapPage() {
               ))}
             </select>
           </div>
-        )}
-      </div>
-
-      {/* Vistoriador for Mobile (below pills if drawer is narrow) */}
-      {canChangeVistoriador && (
-        <div className="sm:hidden flex flex-col gap-1.5 px-1">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Filtrar por Vistoriador</label>
-          <select
-            title="Filtrar por Vistoriador (Mobile)"
-            value={selectedVistoriador}
-            onChange={(e) => setSelectedVistoriador(e.target.value)}
-            className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
-          >
-            <option value="">Todos os Vistoriadores</option>
-            {vistoriadores.map((v) => (
-              <option key={v.user_id} value={v.user_id}>
-                {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
-              </option>
-            ))}
-          </select>
+          
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Filtrar por Regional</label>
+            <select
+              title="Filtrar por Regional (Mobile)"
+              value={selectedRegional}
+              onChange={(e) => setSelectedRegional(e.target.value)}
+              className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
+            >
+              <option value="">Todas as Regionais</option>
+              {regionais.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.nome}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 
