@@ -67,7 +67,7 @@ export default function MapPage() {
       return;
     }
 
-    const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }, { data: regionaisData }] = await Promise.all([
+    const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }, { data: regionaisData }, { data: bairrosData }] = await Promise.all([
       supabase
         .from("processos")
         .select("id, status, data_prevista, vistoriador_id, regional_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)")
@@ -76,9 +76,17 @@ export default function MapPage() {
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
       supabase.from("regionais").select("id, nome").order("nome"),
+      supabase.from("bairros").select("nome, municipio, regional_id"),
     ]);
 
     if (regionaisData) setRegionais(regionaisData);
+
+    const bairroRegionalMap: Record<string, string> = {};
+    (bairrosData || []).forEach((b) => {
+      if (b.regional_id) {
+        bairroRegionalMap[`${b.nome}|${b.municipio}`] = b.regional_id;
+      }
+    });
 
     // Check if current user is admin or distribuidor
     if (user) {
@@ -116,6 +124,11 @@ export default function MapPage() {
       const vist = vistoriaMap[p.id] || null;
       const dStatus = computeDisplayStatus(p.status, vist, p.protocolos?.data_solicitacao);
       const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vist);
+      
+      let resolvedRegionalId = p.regional_id;
+      if (!resolvedRegionalId && p.protocolos) {
+        resolvedRegionalId = bairroRegionalMap[`${p.protocolos.bairro}|${p.protocolos.municipio}`] || null;
+      }
 
       return {
         id: p.id,
@@ -126,7 +139,7 @@ export default function MapPage() {
         vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
         vistoria: vist,
         protocolo: p.protocolos,
-        regional_id: p.regional_id,
+        regional_id: resolvedRegionalId,
       };
     });
 
