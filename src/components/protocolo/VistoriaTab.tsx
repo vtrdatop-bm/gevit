@@ -182,12 +182,12 @@ export default function VistoriaTab({
         ) : (
           <div className="space-y-2">
             <Label htmlFor={`retorno-${numero}`} className="text-sm font-medium">Data do {numero - 1}º Retorno</Label>
-            <Input
+            <input
               id={`retorno-${numero}`}
               type="date"
               value={retorno}
               onChange={(e) => setRetorno(e.target.value)}
-              className="h-10 w-full text-sm px-3 py-0 bg-background border-input [appearance:none] [-webkit-appearance:none] min-w-0"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
         )}
@@ -195,12 +195,12 @@ export default function VistoriaTab({
         {/* Attribution Date */}
         <div className="space-y-2 max-w-full">
           <Label htmlFor={`atribuicao-${numero}`} className="text-sm font-medium">Data da {numero}ª Atribuição</Label>
-          <Input
+          <input
             id={`atribuicao-${numero}`}
             type="date"
             value={atribuicao}
             onChange={(e) => setAtribuicao(e.target.value)}
-            className="h-10 w-full text-sm px-3 py-0 bg-background border-input [appearance:none] [-webkit-appearance:none] min-w-0"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
@@ -239,7 +239,7 @@ export default function VistoriaTab({
         {/* Inspection Date */}
         <div className="space-y-2 max-w-full">
           <Label htmlFor={`data-vistoria-${numero}`} className="text-sm font-medium">Data da {numero}ª Vistoria</Label>
-          <Input
+          <input
             id={`data-vistoria-${numero}`}
             type="date"
             value={data}
@@ -247,7 +247,7 @@ export default function VistoriaTab({
               setData(e.target.value);
               if (!e.target.value) setStatus("");
             }}
-            className="h-10 w-full text-sm px-3 py-0 bg-background border-input [appearance:none] [-webkit-appearance:none] min-w-0"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-0 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
