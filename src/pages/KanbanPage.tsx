@@ -358,7 +358,7 @@ export default function KanbanPage() {
                                   <span className="text-xs font-mono text-muted-foreground shrink-0">
                                     {process.protocolos.numero}
                                   </span>
-                                  {process.stage > 1 && (
+                                  {process.stage >= 1 && (
                                     <span className="ml-auto font-medium text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
                                       {process.stage}ª Vist.
                                     </span>
