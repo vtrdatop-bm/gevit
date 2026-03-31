@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2, Search, MapPin } from "lucide-react";
-import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber, formatAreaOnBlur, formatCpfCnpj, getCpfCnpjLabel } from "@/lib/utils";
+import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber, formatAreaOnBlur, formatCpfCnpj, getCpfCnpjLabel, formatCep, truncateCoordinate } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -35,12 +35,7 @@ const inputClass = "flex h-10 w-full rounded-md border border-input bg-backgroun
 
 
 
-function formatCep(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 8);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 5) return digits.replace(/(\d{2})(\d)/, "$1.$2");
-  return digits.replace(/(\d{2})(\d{3})(\d)/, "$1.$2-$3");
-}
+
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
@@ -516,7 +511,18 @@ export default function ManualProtocolForm() {
                 type="text"
                 inputMode="decimal"
                 value={form.latitude || ""}
-                onChange={(e) => handleChange("latitude", e.target.value.replace(",", "."))}
+                onChange={(e) => handleChange("latitude", truncateCoordinate(e.target.value.replace(",", ".")))}
+                onPaste={(e) => {
+                  const text = e.clipboardData.getData("text");
+                  if (text.includes(",")) {
+                    e.preventDefault();
+                    const [lat, lng] = text.split(",").map(s => s.trim());
+                    if (lat && lng) {
+                      handleChange("latitude", truncateCoordinate(lat));
+                      handleChange("longitude", truncateCoordinate(lng));
+                    }
+                  }
+                }}
                 placeholder="-9.975403"
                 className={inputClass}
               />
@@ -524,7 +530,7 @@ export default function ManualProtocolForm() {
                 type="text"
                 inputMode="decimal"
                 value={form.longitude || ""}
-                onChange={(e) => handleChange("longitude", e.target.value.replace(",", "."))}
+                onChange={(e) => handleChange("longitude", truncateCoordinate(e.target.value.replace(",", ".")))}
                 placeholder="-67.842870"
                 className={inputClass}
               />

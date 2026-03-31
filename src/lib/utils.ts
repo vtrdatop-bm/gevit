@@ -121,4 +121,25 @@ export function getCpfCnpjLabel(val: string): string {
   const digits = val.replace(/\D/g, "");
   return digits.length === 11 ? "CPF" : "CNPJ";
 }
+/**
+ * Formats a CEP string: 00.000-000
+ */
+export function formatCep(val: string | null | undefined): string {
+  if (!val) return "";
+  const digits = val.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return digits.replace(/(\d{2})(\d)/, "$1.$2");
+  return digits.replace(/(\d{2})(\d{3})(\d)/, "$1.$2-$3");
+}
 
+/**
+ * Truncates a coordinate to 6 decimal places (no rounding).
+ * Example: -9.96613389 -> -9.966133
+ */
+export function truncateCoordinate(val: string): string {
+  if (!val) return "";
+  const parts = val.replace(",", ".").split(".");
+  if (parts.length <= 1) return val;
+  const [int, dec] = parts;
+  return `${int}.${dec.slice(0, 6)}`;
+}

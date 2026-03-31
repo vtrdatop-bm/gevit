@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import VistoriaTab from "@/components/protocolo/VistoriaTab";
 import ExpirationWarning from "@/components/protocolo/ExpirationWarning";
-import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber, formatAreaOnBlur, formatCpfCnpj, getCpfCnpjLabel } from "@/lib/utils";
+import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber, formatAreaOnBlur, formatCpfCnpj, getCpfCnpjLabel, formatCep, truncateCoordinate } from "@/lib/utils";
 import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { computeDisplayStatus, computeStage, sortVistoriadores } from "@/lib/vistoriaStatus";
@@ -16,18 +16,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { ProtocoloData, VistoriaData, ProcessoData, TermoData } from "@/types/database";
 import { DETAIL_MOCK_DATA } from "@/mocks/mockData";
 
-const formatCpfCnpj = (val: string) => {
-  if (val.length === 11) return val.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-  if (val.length === 14) return val.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-  return val;
-};
-
-const formatCep = (value: string): string => {
-  const digits = value.replace(/\D/g, "").slice(0, 8);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 5) return digits.replace(/(\d{2})(\d)/, "$1.$2");
-  return digits.replace(/(\d{2})(\d{3})(\d)/, "$1.$2-$3");
-};
 
 export default function ProtocoloDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -227,9 +215,9 @@ export default function ProtocoloDetailPage() {
         bairro: (protocolo.bairro || "").toUpperCase(),
         municipio: (protocolo.municipio || "").toUpperCase(),
         area: protocolo.area ? formatArea(protocolo.area) : "",
-        cep: protocolo.cep || "",
-        latitude: protocolo.latitude?.toString() || "",
-        longitude: protocolo.longitude?.toString() || "",
+        cep: formatCep(protocolo.cep) || "",
+        latitude: truncateCoordinate(protocolo.latitude?.toString() || ""),
+        longitude: truncateCoordinate(protocolo.longitude?.toString() || ""),
       });
     }
   }, [protocolo, editing]);
@@ -698,11 +686,34 @@ export default function ProtocoloDetailPage() {
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <label htmlFor="latitude" className="text-xs text-muted-foreground">Latitude</label>
-                  <input id="latitude" value={editForm.latitude || ""} onChange={(e) => handleEditChange("latitude", e.target.value.replace(",", "."))} className={inputClass} />
+                  <input
+                    id="latitude"
+                    value={editForm.latitude || ""}
+                    onChange={(e) => handleEditChange("latitude", truncateCoordinate(e.target.value.replace(",", ".")))}
+                    onPaste={(e) => {
+                      const text = e.clipboardData.getData("text");
+                      if (text.includes(",")) {
+                        e.preventDefault();
+                        const [lat, lng] = text.split(",").map(s => s.trim());
+                        if (lat && lng) {
+                          handleEditChange("latitude", truncateCoordinate(lat));
+                          handleEditChange("longitude", truncateCoordinate(lng));
+                        }
+                      }
+                    }}
+                    placeholder="-9.975403"
+                    className={inputClass}
+                  />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="longitude" className="text-xs text-muted-foreground">Longitude</label>
-                  <input id="longitude" value={editForm.longitude || ""} onChange={(e) => handleEditChange("longitude", e.target.value.replace(",", "."))} className={inputClass} />
+                  <input
+                    id="longitude"
+                    value={editForm.longitude || ""}
+                    onChange={(e) => handleEditChange("longitude", truncateCoordinate(e.target.value.replace(",", ".")))}
+                    placeholder="-67.842870"
+                    className={inputClass}
+                  />
                 </div>
               </div>
               <button type="button" onClick={geocodeAddress} disabled={geocoding || (!editForm.cep && (!editForm.endereco || !editForm.municipio))} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50 w-full justify-center">
@@ -718,7 +729,7 @@ export default function ProtocoloDetailPage() {
             </div>
           ) : (
             <div className="space-y-1 text-sm">
-              {protocolo.cep && <p className="text-muted-foreground text-xs">CEP: {protocolo.cep}</p>}
+              {protocolo.cep && <p className="text-muted-foreground text-xs">CEP: {formatCep(protocolo.cep)}</p>}
               <p>{protocolo.endereco}</p>
               <p className="text-muted-foreground">{protocolo.bairro} — {protocolo.municipio}</p>
               {protocolo.area && <p className="text-muted-foreground">Área: {formatArea(protocolo.area)} m²</p>}
