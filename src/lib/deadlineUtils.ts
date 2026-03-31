@@ -77,7 +77,8 @@ export function computeDeadline(
   if (vistoria.data_2_vistoria && !vistoria.data_2_retorno) {
     const from = new Date(vistoria.data_2_vistoria + "T00:00:00");
     const now = new Date();
-    const elapsed = Math.ceil((now.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+    now.setHours(0, 0, 0, 0);
+    const elapsed = Math.floor((now.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
     const pauseDays = countPauseDays(pausas, "2", from, now);
     return { active: true, stage: 2, remaining: LIMIT - (elapsed - pauseDays), type: "expiration" };
   }
@@ -86,7 +87,8 @@ export function computeDeadline(
   if (vistoria.data_1_vistoria && !vistoria.data_1_retorno) {
     const from = new Date(vistoria.data_1_vistoria + "T00:00:00");
     const now = new Date();
-    const elapsed = Math.ceil((now.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+    now.setHours(0, 0, 0, 0);
+    const elapsed = Math.floor((now.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
     const pauseDays = countPauseDays(pausas, "1", from, now);
     return { active: true, stage: 1, remaining: LIMIT - (elapsed - pauseDays), type: "expiration" };
   }

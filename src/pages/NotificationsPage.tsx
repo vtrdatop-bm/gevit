@@ -20,6 +20,9 @@ interface Notificacao {
   lida: boolean;
   created_at: string;
   processo_id: string | null;
+  processo?: {
+    protocolo_id: string;
+  } | null;
 }
 
 function timeAgo(dateStr: string) {
@@ -43,12 +46,17 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!user) return;
     async function fetch() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("notificacoes")
-        .select("*")
+        .select("*, processo:processos(protocolo_id)")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
-      setNotifications(data || []);
+      
+      if (error) {
+        console.error("Error fetching notifications:", error);
+      } else {
+        setNotifications((data as unknown) as Notificacao[]);
+      }
       setLoading(false);
     }
     fetch();
@@ -91,7 +99,12 @@ export default function NotificationsPage() {
     return (
       <div
         key={n.id}
-        onClick={() => !n.lida && markAsRead(n.id)}
+        onClick={() => {
+          if (!n.lida) markAsRead(n.id);
+          if (n.processo?.protocolo_id) {
+            navigate(`/protocolo/${n.processo.protocolo_id}`);
+          }
+        }}
         className={`kpi-card flex items-start gap-4 cursor-pointer transition-colors group ${!n.lida ? "border-l-2 border-l-primary" : ""}`}
       >
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>

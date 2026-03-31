@@ -75,7 +75,7 @@ function ProtectedRoutes() {
         <Route path="/mapa" element={<MapPage />} />
         {!isVistoriador && <Route path="/protocolos" element={<ProtocolosPage />} />}
         {!isVistoriador && <Route path="/cadastro-protocolo" element={<CadastroProtocoloPage />} />}
-        {!isVistoriador && <Route path="/protocolo/:id" element={<ProtocoloDetailPage />} />}
+        <Route path="/protocolo/:id" element={<ProtocoloDetailPage />} />
 
         <Route path="/rotas" element={<RoutesPage />} />
         <Route path="/vistorias" element={<InspectionsPage />} />
