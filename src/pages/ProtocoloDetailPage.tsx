@@ -560,6 +560,11 @@ export default function ProtocoloDetailPage() {
             <h2 className="text-2xl font-bold text-foreground">{protocolo.numero}</h2>
             <div className="flex items-center gap-2">
               <StatusBadge status={dStatus} />
+              {stage >= 1 && (
+                <span className="font-medium text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                  {stage}ª Vist.
+                </span>
+              )}
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
