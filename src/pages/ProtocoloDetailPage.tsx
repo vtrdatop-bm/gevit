@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import VistoriaTab from "@/components/protocolo/VistoriaTab";
 import ExpirationWarning from "@/components/protocolo/ExpirationWarning";
-import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber, formatAreaOnBlur } from "@/lib/utils";
+import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber, formatAreaOnBlur, formatCpfCnpj, getCpfCnpjLabel } from "@/lib/utils";
 import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { computeDisplayStatus, computeStage, sortVistoriadores } from "@/lib/vistoriaStatus";
@@ -637,7 +637,9 @@ export default function ProtocoloDetailPage() {
             <div className="space-y-1 text-sm">
               <p className="font-medium">{protocolo.nome_fantasia || protocolo.razao_social}</p>
               {protocolo.nome_fantasia && <p className="text-muted-foreground text-xs">{protocolo.razao_social}</p>}
-              <p className="text-muted-foreground font-mono text-xs">{formatCpfCnpj(protocolo.cnpj)}</p>
+              <p className="text-muted-foreground font-mono text-xs">
+                {getCpfCnpjLabel(protocolo.cnpj)}: {formatCpfCnpj(protocolo.cnpj)}
+              </p>
             </div>
           )}
         </div>

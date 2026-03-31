@@ -114,3 +114,11 @@ export function formatCpfCnpj(val: string): string {
   return val;
 }
 
+/**
+ * Returns "CPF" if it has 11 digits, "CNPJ" if it has 14, otherwise just "CNPJ".
+ */
+export function getCpfCnpjLabel(val: string): string {
+  const digits = val.replace(/\D/g, "");
+  return digits.length === 11 ? "CPF" : "CNPJ";
+}
+

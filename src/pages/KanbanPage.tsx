@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { Calendar, User, MapPin, Clock, Building2, Maximize2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft } from "lucide-react";
-import { cn, formatArea } from "@/lib/utils";
+import { cn, formatArea, formatCpfCnpj, getCpfCnpjLabel } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 import { computeDeadline, deadlineColorClass, deadlineLabel, DeadlineResult, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
 import {
@@ -444,7 +444,7 @@ export default function KanbanPage() {
 
                                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
                                         <Building2 className="w-3.5 h-3.5 shrink-0" />
-                                        <span>CNPJ: {process.protocolos.cnpj}</span>
+                                        <span>{getCpfCnpjLabel(process.protocolos.cnpj)}: {formatCpfCnpj(process.protocolos.cnpj)}</span>
                                       </div>
                                       
                                       {process.protocolos.area && (

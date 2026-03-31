@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, AlertCircle, Save, Plus, LocateFixed, Loader2, Search, MapPin } from "lucide-react";
-import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber, formatAreaOnBlur } from "@/lib/utils";
+import { cn, formatProtocoloNumero, applyAreaMask, parseAreaToNumber, formatAreaOnBlur, formatCpfCnpj, getCpfCnpjLabel } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -32,20 +32,7 @@ type FormData = Record<string, string>;
 
 const inputClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-function formatCpfCnpj(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 14);
-  if (digits.length <= 11) {
-    return digits
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-  }
-  return digits
-    .replace(/(\d{2})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1/$2")
-    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
-}
+
 
 
 function formatCep(value: string): string {
@@ -417,7 +404,7 @@ export default function ManualProtocolForm() {
           <Field label="Data Solicitação" required>
             <input type="date" value={form.data_solicitacao || ""} onChange={(e) => handleChange("data_solicitacao", e.target.value)} required className={inputClass} />
           </Field>
-          <Field label="CPF/CNPJ" required>
+          <Field label={form.cnpj ? getCpfCnpjLabel(form.cnpj) : "CPF/CNPJ"} required>
             <div className="flex gap-2">
               <input
                 value={form.cnpj || ""}
