@@ -209,9 +209,9 @@ export default function ProtocoloDetailPage() {
         numero: protocolo.numero,
         data_solicitacao: protocolo.data_solicitacao,
         cnpj: formatCpfCnpj(protocolo.cnpj),
-        razao_social: protocolo.razao_social,
-        nome_fantasia: protocolo.nome_fantasia || "",
-        endereco: protocolo.endereco,
+        razao_social: (protocolo.razao_social || "").toUpperCase(),
+        nome_fantasia: (protocolo.nome_fantasia || "").toUpperCase(),
+        endereco: (protocolo.endereco || "").toUpperCase(),
         bairro: (protocolo.bairro || "").toUpperCase(),
         municipio: (protocolo.municipio || "").toUpperCase(),
         area: protocolo.area ? formatArea(protocolo.area) : "",
@@ -286,7 +286,7 @@ export default function ProtocoloDetailPage() {
 
   const handleEditChange = (key: string, value: string) => {
     let finalValue = value;
-    if (key === "municipio" || key === "bairro") finalValue = value.toUpperCase();
+    if (key === "municipio" || key === "bairro" || key === "nome_fantasia" || key === "razao_social" || key === "endereco") finalValue = value.toUpperCase();
     if (key === "area") finalValue = applyAreaMask(value);
 
     setEditForm((prev) => {
@@ -325,9 +325,9 @@ export default function ProtocoloDetailPage() {
 
       setEditForm((prev) => ({
         ...prev,
-        razao_social: data.razao_social || prev.razao_social || "",
-        nome_fantasia: data.nome_fantasia || prev.nome_fantasia || "",
-        endereco: enderecoCompleto || prev.endereco || "",
+        razao_social: (data.razao_social || prev.razao_social || "").toUpperCase(),
+        nome_fantasia: (data.nome_fantasia || prev.nome_fantasia || "").toUpperCase(),
+        endereco: (enderecoCompleto || prev.endereco || "").toUpperCase(),
         bairro: (data.bairro || prev.bairro || "").toUpperCase(),
         municipio: (data.municipio || prev.municipio || "").toUpperCase(),
         cep: data.cep ? formatCep(data.cep.toString().replace(/\D/g, "")) : prev.cep || "",

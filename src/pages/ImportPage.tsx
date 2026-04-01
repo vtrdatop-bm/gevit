@@ -46,13 +46,23 @@ export default function ImportPage() {
   const processRows = (data: ImportRow[]) => {
     const errs: string[] = [];
     const seen = new Set<string>();
-    data.forEach((row, i) => {
+    const processedData = data.map((row, i) => {
       if (!row.numero) errs.push(`Linha ${i + 2}: protocolo vazio`);
       if (seen.has(row.numero)) errs.push(`Linha ${i + 2}: protocolo duplicado (${row.numero})`);
       seen.add(row.numero);
       if (row.cnpj && !validateCNPJ(row.cnpj)) errs.push(`Linha ${i + 2}: CNPJ inválido (${row.cnpj})`);
+      
+      return {
+        ...row,
+        razao_social: (row.razao_social || "").toUpperCase(),
+        nome_fantasia: (row.nome_fantasia || "").toUpperCase(),
+        endereco: (row.endereco || "").toUpperCase(),
+        bairro: (row.bairro || "").toUpperCase(),
+        municipio: (row.municipio || "").toUpperCase(),
+      };
     });
-    setRows(data); setErrors(errs);
+    setRows(processedData);
+    setErrors(errs);
   };
 
   const handleImport = () => {

@@ -108,9 +108,9 @@ export default function ManualProtocolForm() {
 
       setForm((prev) => ({
         ...prev,
-        razao_social: data.razao_social || prev.razao_social || "",
-        nome_fantasia: data.nome_fantasia || prev.nome_fantasia || "",
-        endereco: enderecoCompleto || prev.endereco || "",
+        razao_social: (data.razao_social || prev.razao_social || "").toUpperCase(),
+        nome_fantasia: (data.nome_fantasia || prev.nome_fantasia || "").toUpperCase(),
+        endereco: (enderecoCompleto || prev.endereco || "").toUpperCase(),
         bairro: (data.bairro || prev.bairro || "").toUpperCase(),
         municipio: (data.municipio || prev.municipio || "").toUpperCase(),
         cep: data.cep ? formatCep(data.cep.toString().replace(/\D/g, "")) : prev.cep || "",
@@ -191,7 +191,7 @@ export default function ManualProtocolForm() {
 
   const handleChange = (key: string, value: string) => {
     let finalValue = value;
-    if (key === "municipio" || key === "bairro") {
+    if (key === "municipio" || key === "bairro" || key === "nome_fantasia" || key === "razao_social" || key === "endereco") {
       finalValue = value.toUpperCase();
     }
     if (key === "area") {
