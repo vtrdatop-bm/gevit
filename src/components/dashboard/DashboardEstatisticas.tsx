@@ -231,17 +231,21 @@ export default function DashboardEstatisticas() {
     // --- 3) Status by stage ---
     // rows: result types, columns: 1ª/2ª/3ª
     const stageStatusGrid: Record<string, number[]> = {
-      aprovado: [0, 0, 0],
-      pendencia: [0, 0, 0],
-      reprovado: [0, 0, 0],
+      pendencias: [0, 0, 0],
+      certificado: [0, 0, 0],
+      certificado_termo: [0, 0, 0],
     };
     filtered.forEach((p) => {
       const v = vistoriaMap[p.id];
       if (!v) return;
       for (let i = 1; i <= 3; i++) {
         const s = (v as any)[`status_${i}_vistoria`] as string | null;
-        if (s && stageStatusGrid[s]) {
-          stageStatusGrid[s][i - 1]++;
+        if (s === "pendencia") {
+          stageStatusGrid.pendencias[i - 1]++;
+        } else if (s === "reprovado") {
+          stageStatusGrid.certificado[i - 1]++;
+        } else if (s === "aprovado") {
+          stageStatusGrid.certificado_termo[i - 1]++;
         }
       }
     });
@@ -445,9 +449,9 @@ export default function DashboardEstatisticas() {
             </thead>
             <tbody>
               {[
-                { key: "aprovado", label: "Aprovado", color: "text-status-certified" },
-                { key: "pendencia", label: "Pendência", color: "text-status-pending" },
-                { key: "reprovado", label: "Reprovado", color: "text-status-risk" },
+                { key: "pendencias", label: "Pendência", color: "text-status-pending" },
+                { key: "certificado", label: "Certificado", color: "text-status-certified" },
+                { key: "certificado_termo", label: "Certificado Provisório", color: "text-primary" },
               ].map((row) => {
                 const vals = stats.stageStatusGrid[row.key];
                 const total = vals[0] + vals[1] + vals[2];
