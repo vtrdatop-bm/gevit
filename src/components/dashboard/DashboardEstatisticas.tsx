@@ -236,17 +236,18 @@ export default function DashboardEstatisticas() {
       certificado_termo: [0, 0, 0],
     };
     filtered.forEach((p) => {
-      const v = vistoriaMap[p.id];
-      if (!v) return;
-      for (let i = 1; i <= 3; i++) {
-        const s = (v as any)[`status_${i}_vistoria`] as string | null;
-        if (s === "pendencia") {
-          stageStatusGrid.pendencias[i - 1]++;
-        } else if (s === "reprovado") {
-          stageStatusGrid.certificado[i - 1]++;
-        } else if (s === "aprovado") {
-          stageStatusGrid.certificado_termo[i - 1]++;
-        }
+      const v = vistoriaMap[p.id] as VistoriaData | undefined;
+      const stage = computeStage(v || null);
+      const ds = computeDisplayStatus(p.status, v || null, p.protocolos?.data_solicitacao);
+
+      if (!stage) return;
+
+      if (ds === "pendencias") {
+        stageStatusGrid.pendencias[stage - 1]++;
+      } else if (ds === "certificado") {
+        stageStatusGrid.certificado[stage - 1]++;
+      } else if (ds === "certificado_termo") {
+        stageStatusGrid.certificado_termo[stage - 1]++;
       }
     });
 
