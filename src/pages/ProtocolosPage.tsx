@@ -39,6 +39,12 @@ interface Processo {
   vistoriador_id: string | null;
 }
 
+interface TimelineSnapshot {
+  status: DisplayStatus;
+  stage: VistoriaStage;
+  date: Date;
+}
+
 type SortKey = "numero" | "data_solicitacao" | "razao_social" | "municipio" | "bairro" | "status";
 type StatusFilterValue = DisplayStatus | "termo_vencido";
 
@@ -234,6 +240,94 @@ export default function ProtocolosPage() {
     ];
   }, []);
 
+  const hasPeriodFilter = Boolean(startDateFilter || endDateFilter);
+
+  const mapInspectionStatusToDisplay = (status: string | null | undefined, stage: 1 | 2 | 3): DisplayStatus | null => {
+    if (!status) return null;
+    if (status === "pendencia") return stage === 3 ? "expirado" : "pendencias";
+    if (status === "aprovado") return "certificado_termo";
+    if (status === "reprovado") return "certificado";
+    return null;
+  };
+
+  const periodSnapshotByProtocolo = useMemo(() => {
+    if (!hasPeriodFilter) return {} as Record<string, TimelineSnapshot>;
+
+    const start = startDateFilter ? new Date(`${startDateFilter}T00:00:00`) : null;
+    const effectiveEndDate = endDateFilter || startDateFilter;
+    const end = effectiveEndDate ? new Date(`${effectiveEndDate}T23:59:59.999`) : null;
+
+    const snapshots: Record<string, TimelineSnapshot> = {};
+
+    protocolos.forEach((protocolo) => {
+      const proc = processoByProtocolo[protocolo.id];
+      const vistoria = proc ? vistoriaMap[proc.id] : null;
+
+      const timeline: TimelineSnapshot[] = [];
+
+      if (protocolo.data_solicitacao) {
+        timeline.push({
+          date: new Date(`${protocolo.data_solicitacao}T00:00:00`),
+          status: "regional",
+          stage: 1,
+        });
+      }
+
+      if (vistoria?.data_1_atribuicao) {
+        timeline.push({ date: new Date(`${vistoria.data_1_atribuicao}T00:00:00`), status: "atribuido", stage: 1 });
+      }
+      if (vistoria?.data_1_vistoria) {
+        const status = mapInspectionStatusToDisplay(vistoria.status_1_vistoria, 1);
+        if (status) timeline.push({ date: new Date(`${vistoria.data_1_vistoria}T00:00:00`), status, stage: 1 });
+      }
+      if (vistoria?.data_1_retorno) {
+        timeline.push({ date: new Date(`${vistoria.data_1_retorno}T00:00:00`), status: "regional", stage: 2 });
+      }
+
+      if (vistoria?.data_2_atribuicao) {
+        timeline.push({ date: new Date(`${vistoria.data_2_atribuicao}T00:00:00`), status: "atribuido", stage: 2 });
+      }
+      if (vistoria?.data_2_vistoria) {
+        const status = mapInspectionStatusToDisplay(vistoria.status_2_vistoria, 2);
+        if (status) timeline.push({ date: new Date(`${vistoria.data_2_vistoria}T00:00:00`), status, stage: 2 });
+      }
+      if (vistoria?.data_2_retorno) {
+        timeline.push({ date: new Date(`${vistoria.data_2_retorno}T00:00:00`), status: "regional", stage: 3 });
+      }
+
+      if (vistoria?.data_3_atribuicao) {
+        timeline.push({ date: new Date(`${vistoria.data_3_atribuicao}T00:00:00`), status: "atribuido", stage: 3 });
+      }
+      if (vistoria?.data_3_vistoria) {
+        const status = mapInspectionStatusToDisplay(vistoria.status_3_vistoria, 3);
+        if (status) timeline.push({ date: new Date(`${vistoria.data_3_vistoria}T00:00:00`), status, stage: 3 });
+      }
+
+      const inRange = timeline.filter((item) => {
+        if (start && item.date < start) return false;
+        if (end && item.date > end) return false;
+        return true;
+      });
+
+      if (inRange.length === 0) return;
+
+      inRange.sort((a, b) => a.date.getTime() - b.date.getTime());
+      snapshots[protocolo.id] = inRange[inRange.length - 1];
+    });
+
+    return snapshots;
+  }, [hasPeriodFilter, startDateFilter, endDateFilter, protocolos, processoByProtocolo, vistoriaMap]);
+
+  const getEffectiveDisplayInfo = (protocoloId: string): { status: DisplayStatus; stage: VistoriaStage } | null => {
+    if (hasPeriodFilter) {
+      const snapshot = periodSnapshotByProtocolo[protocoloId];
+      if (!snapshot) return null;
+      return { status: snapshot.status, stage: snapshot.stage };
+    }
+
+    return getDisplayInfo(protocoloId);
+  };
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     let list = protocolos;
@@ -249,7 +343,7 @@ export default function ProtocolosPage() {
     }
     if (statusFilter.length > 0) {
       list = list.filter((p) => {
-        const info = getDisplayInfo(p.id);
+        const info = getEffectiveDisplayInfo(p.id);
         return statusFilter.some((selectedStatus) => {
           if (selectedStatus === "termo_vencido") {
             if (info?.status !== "certificado_termo") return false;
@@ -272,24 +366,15 @@ export default function ProtocolosPage() {
       });
     }
 
-    if (startDateFilter || endDateFilter) {
-      const start = startDateFilter ? new Date(`${startDateFilter}T00:00:00`) : null;
-      const effectiveEndDate = endDateFilter || startDateFilter;
-      const end = effectiveEndDate ? new Date(`${effectiveEndDate}T23:59:59.999`) : null;
-
-      list = list.filter((p) => {
-        const protocolDate = new Date(`${p.data_solicitacao}T00:00:00`);
-        if (start && protocolDate < start) return false;
-        if (end && protocolDate > end) return false;
-        return true;
-      });
+    if (hasPeriodFilter) {
+      list = list.filter((p) => Boolean(periodSnapshotByProtocolo[p.id]));
     }
 
     return [...list].sort((a, b) => {
       let va: string, vb: string;
       if (sortKey === "status") {
-        va = getDisplayInfo(a.id)?.status || "zzz";
-        vb = getDisplayInfo(b.id)?.status || "zzz";
+        va = getEffectiveDisplayInfo(a.id)?.status || "zzz";
+        vb = getEffectiveDisplayInfo(b.id)?.status || "zzz";
       } else {
         va = (a[sortKey] || "") as string;
         vb = (b[sortKey] || "") as string;
@@ -303,7 +388,7 @@ export default function ProtocolosPage() {
 
       return sortAsc ? cmp : -cmp;
     });
-  }, [protocolos, search, statusFilter, municipioFilter, vistoriadorFilter, startDateFilter, endDateFilter, sortKey, sortAsc, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
+  }, [protocolos, search, statusFilter, municipioFilter, vistoriadorFilter, hasPeriodFilter, periodSnapshotByProtocolo, sortKey, sortAsc, processoByProtocolo, pausasByProcesso, termosMap]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -488,7 +573,7 @@ export default function ProtocolosPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((p) => {
-                  const info = getDisplayInfo(p.id);
+                  const info = getEffectiveDisplayInfo(p.id);
                   const dl = getDeadline(p.id);
                   const dlActive = dl && dl.active;
                   return (
