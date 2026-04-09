@@ -428,7 +428,7 @@ export default function MapPage() {
         {/* Status Filter */}
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <Filter className="w-4 h-4 text-muted-foreground mr-1" />
-          <div ref={statusDropdownRef} className="relative w-full sm:w-64">
+          <div ref={statusDropdownRef} className="w-full sm:w-64">
             <button
               type="button"
               onClick={() => setStatusDropdownOpen((open) => !open)}
@@ -442,7 +442,7 @@ export default function MapPage() {
             </button>
 
             {statusDropdownOpen && (
-              <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover p-2 shadow-md">
+              <div className="mt-1 w-full rounded-md border border-border bg-popover p-2 shadow-md">
                 <div className="max-h-64 overflow-auto space-y-1">
                   {statusOptions.map((option) => (
                     <label key={option.value} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/50 cursor-pointer text-xs">
