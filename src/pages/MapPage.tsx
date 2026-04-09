@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId, sortVistoriadores } from "@/lib/vistoriaStatus";
@@ -11,6 +11,7 @@ import { STATUS_MARKER_COLORS } from "@/lib/constants";
 import { MAP_MOCK_PROCESSOS } from "@/mocks/mockData";
 import { ProtocoloData, VistoriaData, ProcessStatus } from "@/types/database";
 import { Vistoriador } from "@/types/user";
+import { cn } from "@/lib/utils";
 
 interface MapProcess {
   id: string;
@@ -53,7 +54,9 @@ export default function MapPage() {
   const [mapReady, setMapReady] = useState(false);
   const [processos, setProcessos] = useState<MapProcess[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<DisplayStatus | "all" | "minhas">("all");
+  const [filterStatus, setFilterStatus] = useState<(DisplayStatus | "minhas")[]>([]);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement | null>(null);
   const [selectedVistoriador, setSelectedVistoriador] = useState("");
   const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);
   const [selectedRegional, setSelectedRegional] = useState("");
@@ -162,13 +165,50 @@ export default function MapPage() {
     };
   }, [fetchData]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!statusDropdownRef.current) return;
+      if (!statusDropdownRef.current.contains(event.target as Node)) {
+        setStatusDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const statusOptions = useMemo(() => {
+    const base: Array<{ value: DisplayStatus | "minhas"; label: string }> = [
+      { value: "regional", label: getDisplayStatusLabel("regional") },
+      { value: "atribuido", label: getDisplayStatusLabel("atribuido") },
+      { value: "pendencias", label: getDisplayStatusLabel("pendencias") },
+      { value: "expirado", label: getDisplayStatusLabel("expirado") },
+      { value: "certificado_termo", label: getDisplayStatusLabel("certificado_termo") },
+      { value: "certificado", label: getDisplayStatusLabel("certificado") },
+    ];
+
+    if (canChangeVistoriador) {
+      base.unshift({ value: "minhas", label: "Minhas Vistorias" });
+    }
+
+    return base;
+  }, [canChangeVistoriador]);
+
+  const toggleStatusFilter = (value: DisplayStatus | "minhas") => {
+    setFilterStatus((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    );
+  };
+
   const filteredProcesses = processos.filter((p) => {
     if (selectedVistoriador && p.vistoriador_id !== selectedVistoriador) return false;
     if (selectedRegional && p.regional_id !== selectedRegional) return false;
 
-    if (filterStatus === "all") return true;
-    if (filterStatus === "minhas") return p.vistoriador_id === user?.id;
-    return p.displayStatus === filterStatus;
+    if (filterStatus.includes("minhas") && p.vistoriador_id !== user?.id) return false;
+
+    const selectedStatuses = filterStatus.filter((s): s is DisplayStatus => s !== "minhas");
+    if (selectedStatuses.length === 0) return true;
+    return selectedStatuses.includes(p.displayStatus);
   });
 
   // Init map centered on Rio Branco, AC
@@ -357,7 +397,7 @@ export default function MapPage() {
   const totalGeolocalized = processos.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
   const filteredGeolocalized = filteredProcesses.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
 
-  const isFiltered = filterStatus !== "all" || selectedVistoriador !== "" || selectedRegional !== "";
+  const isFiltered = filterStatus.length > 0 || selectedVistoriador !== "" || selectedRegional !== "";
 
   return (
     <div className="p-4 md:p-6 space-y-4 h-full flex flex-col">
@@ -385,24 +425,40 @@ export default function MapPage() {
 
       {/* Filter Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-muted/40 p-3 rounded-xl border border-border">
-        {/* Status Pills */}
+        {/* Status Filter */}
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <Filter className="w-4 h-4 text-muted-foreground mr-1" />
-          {(["all", "minhas", "regional", "atribuido", "pendencias", "expirado", "certificado_termo", "certificado"] as const)
-            .filter((status) => status !== "minhas" || canChangeVistoriador)
-            .map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${filterStatus === status
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-background text-muted-foreground border-border hover:border-primary/30"
-                  }`}
-              >
-                {status === "all" ? "Todos os Status" : status === "minhas" ? "Minhas Vistorias" : getDisplayStatusLabel(status)}
-              </button>
-            )
+          <div ref={statusDropdownRef} className="relative w-full sm:w-64">
+            <button
+              type="button"
+              onClick={() => setStatusDropdownOpen((open) => !open)}
+              title="Filtrar por status"
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="truncate text-left">
+                {filterStatus.length > 0 ? `${filterStatus.length} status selecionado(s)` : "Todos os status"}
+              </span>
+              <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", statusDropdownOpen && "rotate-180")} />
+            </button>
+
+            {statusDropdownOpen && (
+              <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover p-2 shadow-md">
+                <div className="max-h-64 overflow-auto space-y-1">
+                  {statusOptions.map((option) => (
+                    <label key={option.value} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/50 cursor-pointer text-xs">
+                      <input
+                        type="checkbox"
+                        checked={filterStatus.includes(option.value)}
+                        onChange={() => toggleStatusFilter(option.value)}
+                        className="h-4 w-4"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             )}
+          </div>
         </div>
 
         {/* Vistoriador Selection */}
