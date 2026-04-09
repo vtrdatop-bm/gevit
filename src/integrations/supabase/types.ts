@@ -415,6 +415,9 @@ export type Database = {
           data_3_vistoria: string | null
           id: string
           observacoes: string | null
+          observacoes_1: string | null
+          observacoes_2: string | null
+          observacoes_3: string | null
           processo_id: string
           status_1_vistoria:
             | Database["public"]["Enums"]["inspection_result"]
@@ -442,6 +445,9 @@ export type Database = {
           data_3_vistoria?: string | null
           id?: string
           observacoes?: string | null
+          observacoes_1?: string | null
+          observacoes_2?: string | null
+          observacoes_3?: string | null
           processo_id: string
           status_1_vistoria?:
             | Database["public"]["Enums"]["inspection_result"]
@@ -469,6 +475,9 @@ export type Database = {
           data_3_vistoria?: string | null
           id?: string
           observacoes?: string | null
+          observacoes_1?: string | null
+          observacoes_2?: string | null
+          observacoes_3?: string | null
           processo_id?: string
           status_1_vistoria?:
             | Database["public"]["Enums"]["inspection_result"]

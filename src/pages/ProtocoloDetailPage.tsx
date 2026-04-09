@@ -793,6 +793,7 @@ export default function ProtocoloDetailPage() {
                   dataSolicitacao={protocolo.data_solicitacao}
                   dataVistoria={(vistoria as any)?.[`data_${n}_vistoria`]}
                   statusVistoria={(vistoria as any)?.[`status_${n}_vistoria`]}
+                  observacoes={(vistoria as any)?.[`observacoes_${n}`]}
                   dataRetorno={(vistoria as any)?.[`data_${n === 1 ? 1 : n - 1}_retorno`]}
                   vistoriadorId={(vistoria as any)?.[`vistoriador_${n}_id`]}
                   vistoriadores={vistoriadores}

@@ -29,6 +29,9 @@ export interface VistoriaData {
   vistoriador_1_id?: string | null;
   vistoriador_2_id?: string | null;
   vistoriador_3_id?: string | null;
+  observacoes_1?: string | null;
+  observacoes_2?: string | null;
+  observacoes_3?: string | null;
   observacoes?: string | null;
 }
 

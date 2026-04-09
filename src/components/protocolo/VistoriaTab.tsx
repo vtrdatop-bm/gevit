@@ -32,6 +32,7 @@ interface VistoriaTabProps {
   dataSolicitacao: string;
   dataVistoria: string | null;
   statusVistoria: string | null;
+  observacoes: string | null;
   dataRetorno: string | null;
   vistoriadorId: string | null;
   vistoriadores: Vistoriador[];
@@ -53,6 +54,7 @@ export default function VistoriaTab({
   dataSolicitacao,
   dataVistoria,
   statusVistoria,
+  observacoes,
   dataRetorno,
   vistoriadorId,
   vistoriadores,
@@ -64,6 +66,7 @@ export default function VistoriaTab({
 }: VistoriaTabProps) {
   const [data, setData] = useState(dataVistoria || "");
   const [status, setStatus] = useState(statusVistoria || "");
+  const [obs, setObs] = useState(observacoes || "");
   const [retorno, setRetorno] = useState(dataRetorno || "");
   const [vistoriador, setVistoriador] = useState(vistoriadorId || "");
   const [atribuicao, setAtribuicao] = useState(dataAtribuicao || "");
@@ -79,6 +82,10 @@ export default function VistoriaTab({
     }
   }, [termo]);
 
+  useEffect(() => {
+    setObs(observacoes || "");
+  }, [observacoes]);
+
   const handleSave = async () => {
     if (!vistoriaId) {
       toast.error("Erro: Registro de vistoria não encontrado.");
@@ -93,18 +100,21 @@ export default function VistoriaTab({
         vistoriaUpdate.vistoriador_1_id = vistoriador || null;
         vistoriaUpdate.data_1_vistoria = data || null;
         vistoriaUpdate.status_1_vistoria = status || null;
+        vistoriaUpdate.observacoes_1 = obs.trim() || null;
       } else if (numero === 2) {
         vistoriaUpdate.data_2_atribuicao = atribuicao || null;
         vistoriaUpdate.vistoriador_2_id = vistoriador || null;
         vistoriaUpdate.data_2_vistoria = data || null;
         vistoriaUpdate.status_2_vistoria = status || null;
         vistoriaUpdate.data_1_retorno = retorno || null;
+        vistoriaUpdate.observacoes_2 = obs.trim() || null;
       } else {
         vistoriaUpdate.data_3_atribuicao = atribuicao || null;
         vistoriaUpdate.vistoriador_3_id = vistoriador || null;
         vistoriaUpdate.data_3_vistoria = data || null;
         vistoriaUpdate.status_3_vistoria = status || null;
         vistoriaUpdate.data_2_retorno = retorno || null;
+        vistoriaUpdate.observacoes_3 = obs.trim() || null;
       }
 
       // Update the vistoria record
@@ -285,6 +295,19 @@ export default function VistoriaTab({
               </button>
             )}
           </div>
+        </div>
+
+        {/* Observacoes por etapa */}
+        <div className="space-y-2">
+          <Label htmlFor={`observacoes-${numero}`} className="text-sm font-medium">Observações</Label>
+          <textarea
+            id={`observacoes-${numero}`}
+            value={obs}
+            onChange={(e) => setObs(e.target.value)}
+            placeholder="Digite observações desta vistoria"
+            rows={3}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+          />
         </div>
       </div>
 
