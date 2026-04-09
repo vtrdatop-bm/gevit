@@ -57,6 +57,12 @@ export default function MapPage() {
   const [filterStatus, setFilterStatus] = useState<(DisplayStatus | "minhas")[]>([]);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement | null>(null);
+  const statusDropdownButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [statusDropdownPosition, setStatusDropdownPosition] = useState<{ top: number; left: number; width: number }>({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
   const [selectedVistoriador, setSelectedVistoriador] = useState("");
   const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);
   const [selectedRegional, setSelectedRegional] = useState("");
@@ -176,6 +182,29 @@ export default function MapPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!statusDropdownOpen) return;
+
+    const updatePosition = () => {
+      if (!statusDropdownButtonRef.current) return;
+      const rect = statusDropdownButtonRef.current.getBoundingClientRect();
+      setStatusDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [statusDropdownOpen]);
 
   const statusOptions = useMemo(() => {
     const base: Array<{ value: DisplayStatus | "minhas"; label: string }> = [
@@ -430,6 +459,7 @@ export default function MapPage() {
           <Filter className="w-4 h-4 text-muted-foreground mr-1" />
           <div ref={statusDropdownRef} className="w-full sm:w-64">
             <button
+              ref={statusDropdownButtonRef}
               type="button"
               onClick={() => setStatusDropdownOpen((open) => !open)}
               title="Filtrar por status"
@@ -442,7 +472,14 @@ export default function MapPage() {
             </button>
 
             {statusDropdownOpen && (
-              <div className="mt-1 w-full rounded-md border border-border bg-popover p-2 shadow-md">
+              <div
+                className="fixed z-[2000] rounded-md border border-border bg-popover p-2 shadow-md"
+                style={{
+                  top: statusDropdownPosition.top,
+                  left: statusDropdownPosition.left,
+                  width: statusDropdownPosition.width,
+                }}
+              >
                 <div className="max-h-64 overflow-auto space-y-1">
                   {statusOptions.map((option) => (
                     <label key={option.value} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/50 cursor-pointer text-xs">
