@@ -340,35 +340,61 @@ export default function ProtocolosPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-              title="Voltar"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h2 className="text-2xl font-bold text-foreground">Protocolos</h2>
+      <div className="space-y-3">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Voltar"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h2 className="text-2xl font-bold text-foreground">Protocolos</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {search || statusFilter.length > 0 || municipioFilter || vistoriadorFilter || startDateFilter || endDateFilter
+                ? `${filtered.length} protocolos de ${protocolos.length} protocolos`
+                : `${protocolos.length} protocolos cadastrados`
+              }
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {search || statusFilter.length > 0 || municipioFilter || vistoriadorFilter || startDateFilter || endDateFilter
-              ? `${filtered.length} protocolos de ${protocolos.length} protocolos`
-              : `${protocolos.length} protocolos cadastrados`
-            }
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nº, razão social, CNPJ, município..."
+                className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
             <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nº, razão social, CNPJ, município..."
-              className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => setStartDateFilter(e.target.value)}
+              title="Data inicial"
+              className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
+            <input
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => setEndDateFilter(e.target.value)}
+              title="Data final"
+              className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <button
+              onClick={() => navigate("/cadastro-protocolo")}
+              className="inline-flex items-center justify-center gap-2 px-4 h-10 w-full sm:w-auto rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              Novo Protocolo
+            </button>
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
           <div ref={statusDropdownRef} className="relative w-full sm:w-56">
             <button
               type="button"
@@ -421,27 +447,6 @@ export default function ProtocolosPage() {
               <option key={v.id} value={v.id}>{v.label}</option>
             ))}
           </select>
-          <input
-            type="date"
-            value={startDateFilter}
-            onChange={(e) => setStartDateFilter(e.target.value)}
-            title="Data inicial"
-            className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <input
-            type="date"
-            value={endDateFilter}
-            onChange={(e) => setEndDateFilter(e.target.value)}
-            title="Data final"
-            className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <button
-            onClick={() => navigate("/cadastro-protocolo")}
-            className="inline-flex items-center justify-center gap-2 px-4 h-10 w-full sm:w-auto rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            Novo Protocolo
-          </button>
         </div>
       </div>
 
