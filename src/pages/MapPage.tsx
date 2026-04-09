@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId, sortVistoriadores } from "@/lib/vistoriaStatus";
 import { Filter, Layers, Navigation, MousePointerClick, MapPin, Search, Maximize2, Minimize2, ArrowLeft, ChevronDown } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -57,6 +58,7 @@ export default function MapPage() {
   const [filterStatus, setFilterStatus] = useState<(DisplayStatus | "minhas")[]>([]);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement | null>(null);
+  const statusDropdownPanelRef = useRef<HTMLDivElement | null>(null);
   const statusDropdownButtonRef = useRef<HTMLButtonElement | null>(null);
   const [statusDropdownPosition, setStatusDropdownPosition] = useState<{ top: number; left: number; width: number }>({
     top: 0,
@@ -173,8 +175,11 @@ export default function MapPage() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (!statusDropdownRef.current) return;
-      if (!statusDropdownRef.current.contains(event.target as Node)) {
+      const clickedTrigger = statusDropdownRef.current.contains(target);
+      const clickedPanel = statusDropdownPanelRef.current?.contains(target);
+      if (!clickedTrigger && !clickedPanel) {
         setStatusDropdownOpen(false);
       }
     };
@@ -471,8 +476,9 @@ export default function MapPage() {
               <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", statusDropdownOpen && "rotate-180")} />
             </button>
 
-            {statusDropdownOpen && (
+            {statusDropdownOpen && createPortal(
               <div
+                ref={statusDropdownPanelRef}
                 className="fixed z-[2000] rounded-md border border-border bg-popover p-2 shadow-md"
                 style={{
                   top: statusDropdownPosition.top,
@@ -493,7 +499,8 @@ export default function MapPage() {
                     </label>
                   ))}
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         </div>
