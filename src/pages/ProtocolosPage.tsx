@@ -40,6 +40,7 @@ interface Processo {
 }
 
 type SortKey = "numero" | "data_solicitacao" | "razao_social" | "municipio" | "bairro" | "status";
+type StatusFilterValue = DisplayStatus | "termo_vencido";
 
 export default function ProtocolosPage() {
   const [protocolos, setProtocolos] = useState<Protocolo[]>([]);
@@ -50,8 +51,11 @@ export default function ProtocolosPage() {
   const [termosMap, setTermosMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<DisplayStatus | "termo_vencido" | "">("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue[]>([]);
   const [municipioFilter, setMunicipioFilter] = useState("");
+  const [vistoriadorFilter, setVistoriadorFilter] = useState("");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("data_solicitacao");
   const [sortAsc, setSortAsc] = useState(true);
   const navigate = useNavigate();
@@ -193,6 +197,22 @@ export default function ProtocolosPage() {
     return Array.from(set).sort();
   }, [protocolos]);
 
+  const uniqueVistoriadores = useMemo(() => {
+    const set = new Set<string>();
+    processos.forEach((proc) => {
+      if (proc.vistoriador_id) {
+        set.add(proc.vistoriador_id);
+      }
+    });
+
+    return Array.from(set)
+      .map((id) => ({
+        id,
+        label: profileMap[id] || "Vistoriador sem nome",
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [processos, profileMap]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     let list = protocolos;
@@ -206,20 +226,44 @@ export default function ProtocolosPage() {
         p.bairro.toLowerCase().includes(q)
       );
     }
-    if (statusFilter) {
+    if (statusFilter.length > 0) {
       list = list.filter((p) => {
         const info = getDisplayInfo(p.id);
-        if (statusFilter === "termo_vencido") {
-          if (info?.status !== "certificado_termo") return false;
-          const dl = getDeadline(p.id);
-          return dl && dl.active && dl.remaining <= 0;
-        }
-        return info?.status === statusFilter;
+        return statusFilter.some((selectedStatus) => {
+          if (selectedStatus === "termo_vencido") {
+            if (info?.status !== "certificado_termo") return false;
+            const dl = getDeadline(p.id);
+            return Boolean(dl && dl.active && dl.remaining <= 0);
+          }
+
+          return info?.status === selectedStatus;
+        });
       });
     }
     if (municipioFilter) {
       list = list.filter((p) => p.municipio === municipioFilter);
     }
+
+    if (vistoriadorFilter) {
+      list = list.filter((p) => {
+        const proc = processoByProtocolo[p.id];
+        return proc?.vistoriador_id === vistoriadorFilter;
+      });
+    }
+
+    if (startDateFilter || endDateFilter) {
+      const start = startDateFilter ? new Date(`${startDateFilter}T00:00:00`) : null;
+      const effectiveEndDate = endDateFilter || startDateFilter;
+      const end = effectiveEndDate ? new Date(`${effectiveEndDate}T23:59:59.999`) : null;
+
+      list = list.filter((p) => {
+        const protocolDate = new Date(`${p.data_solicitacao}T00:00:00`);
+        if (start && protocolDate < start) return false;
+        if (end && protocolDate > end) return false;
+        return true;
+      });
+    }
+
     return [...list].sort((a, b) => {
       let va: string, vb: string;
       if (sortKey === "status") {
@@ -238,7 +282,7 @@ export default function ProtocolosPage() {
 
       return sortAsc ? cmp : -cmp;
     });
-  }, [protocolos, search, statusFilter, municipioFilter, sortKey, sortAsc, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
+  }, [protocolos, search, statusFilter, municipioFilter, vistoriadorFilter, startDateFilter, endDateFilter, sortKey, sortAsc, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -282,7 +326,7 @@ export default function ProtocolosPage() {
             <h2 className="text-2xl font-bold text-foreground">Protocolos</h2>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {search || statusFilter || municipioFilter 
+            {search || statusFilter.length > 0 || municipioFilter || vistoriadorFilter || startDateFilter || endDateFilter
               ? `${filtered.length} protocolos de ${protocolos.length} protocolos`
               : `${protocolos.length} protocolos cadastrados`
             }
@@ -299,12 +343,15 @@ export default function ProtocolosPage() {
             />
           </div>
           <select
+            multiple
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as DisplayStatus | "termo_vencido" | "")}
-            title="Filtrar por status"
-            className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions).map((opt) => opt.value as StatusFilterValue);
+              setStatusFilter(selected);
+            }}
+            title="Filtrar por status (múltipla seleção)"
+            className="flex h-24 w-full sm:w-56 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <option value="">Todos os status</option>
             {(Object.entries(displayStatusLabels) as [DisplayStatus, string][]).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
             ))}
@@ -321,6 +368,31 @@ export default function ProtocolosPage() {
               <option key={m} value={m}>{m.toUpperCase()}</option>
             ))}
           </select>
+          <select
+            value={vistoriadorFilter}
+            onChange={(e) => setVistoriadorFilter(e.target.value)}
+            title="Filtrar por vistoriador"
+            className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="">Todos os vistoriadores</option>
+            {uniqueVistoriadores.map((v) => (
+              <option key={v.id} value={v.id}>{v.label}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={startDateFilter}
+            onChange={(e) => setStartDateFilter(e.target.value)}
+            title="Data inicial"
+            className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <input
+            type="date"
+            value={endDateFilter}
+            onChange={(e) => setEndDateFilter(e.target.value)}
+            title="Data final"
+            className="flex h-10 w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
           <button
             onClick={() => navigate("/cadastro-protocolo")}
             className="inline-flex items-center justify-center gap-2 px-4 h-10 w-full sm:w-auto rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
