@@ -49,6 +49,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 export default function ManualProtocolForm() {
+  const DUPLICATE_PROTOCOL_MESSAGE = "Este protocolo já existe.";
   const navigate = useNavigate();
   const [form, setForm] = useState<FormData>(() => {
     const saved = sessionStorage.getItem("manual_protocol_form");
@@ -79,6 +80,8 @@ export default function ManualProtocolForm() {
   // CNPJ lookup
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const lastCnpjSearched = useRef<string>(form.cnpj ? form.cnpj.replace(/\D/g, "") : "");
+  const lastNumeroChecked = useRef<string>("");
+  const lastDuplicateWarned = useRef<string>("");
 
   const lookupCnpj = useCallback(async (cnpjDigits: string, quiet = false) => {
     if (cnpjDigits.length !== 14 || (quiet && cnpjDigits === lastCnpjSearched.current)) return;
@@ -125,6 +128,43 @@ export default function ManualProtocolForm() {
     }
   }, []);
 
+  const checkDuplicateProtocol = useCallback(async (numeroProtocolo: string, showPopup = true) => {
+    const numero = (numeroProtocolo || "").trim();
+    const numeroDigits = numero.replace(/\D/g, "");
+    if (numeroDigits.length !== 14) return false;
+
+    const { data: protocoloExistente, error: checkError } = await supabase
+      .from("protocolos")
+      .select("id")
+      .eq("numero", numero)
+      .maybeSingle();
+
+    if (checkError) {
+      setResult({ type: "error", message: checkError.message });
+      return false;
+    }
+
+    if (protocoloExistente) {
+      setResult({ type: "error", message: DUPLICATE_PROTOCOL_MESSAGE });
+      if (showPopup && lastDuplicateWarned.current !== numero) {
+        toast.error(DUPLICATE_PROTOCOL_MESSAGE);
+        lastDuplicateWarned.current = numero;
+      }
+      return true;
+    }
+
+    if (lastDuplicateWarned.current === numero) {
+      lastDuplicateWarned.current = "";
+    }
+    setResult((prev) => {
+      if (prev?.type === "error" && prev.message === DUPLICATE_PROTOCOL_MESSAGE) {
+        return null;
+      }
+      return prev;
+    });
+    return false;
+  }, [DUPLICATE_PROTOCOL_MESSAGE]);
+
   // Debounced CNPJ lookup for automatic search
   useEffect(() => {
     const digits = (form.cnpj || "").replace(/\D/g, "");
@@ -135,6 +175,25 @@ export default function ManualProtocolForm() {
       return () => clearTimeout(timer);
     }
   }, [form.cnpj, lookupCnpj]);
+
+  useEffect(() => {
+    const numero = (form.numero || "").trim();
+    const numeroDigits = numero.replace(/\D/g, "");
+
+    if (numeroDigits.length !== 14) {
+      lastNumeroChecked.current = "";
+      return;
+    }
+
+    if (numero === lastNumeroChecked.current) return;
+
+    const timer = setTimeout(async () => {
+      lastNumeroChecked.current = numero;
+      await checkDuplicateProtocol(numero, true);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [form.numero, checkDuplicateProtocol]);
 
   useEffect(() => {
     sessionStorage.setItem("manual_protocol_form", JSON.stringify(form));
@@ -351,8 +410,21 @@ export default function ManualProtocolForm() {
       return;
     }
 
+    const numeroProtocolo = (form.numero || "").trim();
+    if (!numeroProtocolo) {
+      setResult({ type: "error", message: "Informe o número do protocolo" });
+      setSaving(false);
+      return;
+    }
+
+    const isDuplicate = await checkDuplicateProtocol(numeroProtocolo, true);
+    if (isDuplicate) {
+      setSaving(false);
+      return;
+    }
+
     const { data: inserted, error } = await supabase.from("protocolos").insert({
-      numero: form.numero,
+      numero: numeroProtocolo,
       data_solicitacao: form.data_solicitacao,
       cnpj: cnpjClean,
       razao_social: form.razao_social,
@@ -367,7 +439,12 @@ export default function ManualProtocolForm() {
     }).select().single();
 
     if (error) {
-      setResult({ type: "error", message: error.message });
+      if (error.code === "23505") {
+        toast.error(DUPLICATE_PROTOCOL_MESSAGE);
+        setResult({ type: "error", message: DUPLICATE_PROTOCOL_MESSAGE });
+      } else {
+        setResult({ type: "error", message: error.message });
+      }
     } else if (inserted) {
       // Auto-create processo (status 'regional' = Aguardando Vistoria)
       const { data: proc, error: procError } = await supabase
