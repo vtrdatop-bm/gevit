@@ -424,7 +424,7 @@ export default function MapPage() {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-muted/40 p-3 rounded-xl border border-border">
+      <div className="relative z-30 overflow-visible flex flex-col sm:flex-row sm:items-center gap-4 bg-muted/40 p-3 rounded-xl border border-border">
         {/* Status Filter */}
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <Filter className="w-4 h-4 text-muted-foreground mr-1" />
@@ -442,7 +442,7 @@ export default function MapPage() {
             </button>
 
             {statusDropdownOpen && (
-              <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover p-2 shadow-md">
+              <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover p-2 shadow-md">
                 <div className="max-h-64 overflow-auto space-y-1">
                   {statusOptions.map((option) => (
                     <label key={option.value} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/50 cursor-pointer text-xs">
