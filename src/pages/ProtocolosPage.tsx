@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Search, FileText, ChevronDown, ChevronUp, Plus, AlertTriangle, Clock, ArrowLeft } from "lucide-react";
@@ -52,12 +52,14 @@ export default function ProtocolosPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue[]>([]);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [municipioFilter, setMunicipioFilter] = useState("");
   const [vistoriadorFilter, setVistoriadorFilter] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("data_solicitacao");
   const [sortAsc, setSortAsc] = useState(true);
+  const statusDropdownRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 
   const { isDev } = useAuth();
@@ -147,6 +149,18 @@ export default function ProtocolosPage() {
     });
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!statusDropdownRef.current) return;
+      if (!statusDropdownRef.current.contains(event.target as Node)) {
+        setStatusDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const processoByProtocolo = useMemo(() => {
     const map: Record<string, Processo> = {};
     processos.forEach((p) => { map[p.protocolo_id] = p; });
@@ -212,6 +226,13 @@ export default function ProtocolosPage() {
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [processos, profileMap]);
+
+  const statusOptions = useMemo<{ value: StatusFilterValue; label: string }[]>(() => {
+    return [
+      ...(Object.entries(displayStatusLabels) as [DisplayStatus, string][]).map(([value, label]) => ({ value, label })),
+      { value: "termo_vencido", label: "Cert. Provisorio Vencido" },
+    ];
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -293,6 +314,12 @@ export default function ProtocolosPage() {
     }
   };
 
+  const toggleStatusFilter = (value: StatusFilterValue) => {
+    setStatusFilter((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    );
+  };
+
   const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
     <th
       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider cursor-pointer hover:text-foreground transition-colors select-none"
@@ -342,21 +369,36 @@ export default function ProtocolosPage() {
               className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
-          <select
-            multiple
-            value={statusFilter}
-            onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions).map((opt) => opt.value as StatusFilterValue);
-              setStatusFilter(selected);
-            }}
-            title="Filtrar por status (múltipla seleção)"
-            className="flex h-24 w-full sm:w-56 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {(Object.entries(displayStatusLabels) as [DisplayStatus, string][]).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-            <option value="termo_vencido">Cert. Provisório Vencido</option>
-          </select>
+          <div ref={statusDropdownRef} className="relative w-full sm:w-56">
+            <button
+              type="button"
+              onClick={() => setStatusDropdownOpen((open) => !open)}
+              title="Filtrar por status"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="truncate text-left">
+                {statusFilter.length > 0 ? `${statusFilter.length} status selecionado(s)` : "Todos os status"}
+              </span>
+              <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", statusDropdownOpen && "rotate-180")} />
+            </button>
+            {statusDropdownOpen && (
+              <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-popover p-2 shadow-md">
+                <div className="max-h-64 overflow-auto space-y-1">
+                  {statusOptions.map((option) => (
+                    <label key={option.value} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-muted/50 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={statusFilter.includes(option.value)}
+                        onChange={() => toggleStatusFilter(option.value)}
+                        className="h-4 w-4"
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <select
             value={municipioFilter}
             onChange={(e) => setMunicipioFilter(e.target.value)}
