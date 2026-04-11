@@ -219,7 +219,10 @@ export default function VistoriaTab({
           <Label htmlFor={`vistoriador-${numero}`} className="text-sm font-medium">Vistoriador</Label>
           <div className="relative">
             <Select value={vistoriador} onValueChange={setVistoriador}>
-              <SelectTrigger id={`vistoriador-${numero}`} className="w-full pr-10">
+              <SelectTrigger
+                id={`vistoriador-${numero}`}
+                className="relative w-full pr-14 [&>svg]:absolute [&>svg]:right-3 [&>svg]:top-1/2 [&>svg]:-translate-y-1/2"
+              >
                 <SelectValue placeholder="Selecione o vistoriador" />
               </SelectTrigger>
               <SelectContent>
@@ -237,7 +240,7 @@ export default function VistoriaTab({
                   e.stopPropagation();
                   setVistoriador("");
                 }}
-                className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                className="absolute right-9 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 title="Limpar vistoriador"
               >
                 <X className="h-3.5 w-3.5" />
@@ -269,7 +272,10 @@ export default function VistoriaTab({
           </Label>
           <div className="relative">
             <Select value={status} onValueChange={setStatus} disabled={!data}>
-              <SelectTrigger id={`status-${numero}`} className="w-full pr-10">
+              <SelectTrigger
+                id={`status-${numero}`}
+                className="relative w-full pr-14 [&>svg]:absolute [&>svg]:right-3 [&>svg]:top-1/2 [&>svg]:-translate-y-1/2"
+              >
                 <SelectValue placeholder="Selecione o status" />
               </SelectTrigger>
               <SelectContent>
@@ -287,7 +293,7 @@ export default function VistoriaTab({
                   e.stopPropagation();
                   setStatus("");
                 }}
-                className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                className="absolute right-9 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                 title="Limpar status"
                 disabled={!data}
               >
