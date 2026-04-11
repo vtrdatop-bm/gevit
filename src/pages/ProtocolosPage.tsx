@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Search, FileText, ChevronDown, ChevronUp, Plus, AlertTriangle, Clock, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   DisplayStatus,
   VistoriaStage,
@@ -49,6 +49,21 @@ type SortKey = "numero" | "data_solicitacao" | "razao_social" | "municipio" | "b
 type StatusFilterValue = DisplayStatus | "termo_vencido";
 
 export default function ProtocolosPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const restoredFilters = (location.state as {
+    protocolosBackFilters?: {
+      search?: string;
+      statusFilter?: StatusFilterValue[];
+      municipioFilter?: string;
+      vistoriadorFilter?: string;
+      startDateFilter?: string;
+      endDateFilter?: string;
+      sortKey?: SortKey;
+      sortAsc?: boolean;
+    };
+  } | null)?.protocolosBackFilters;
+
   const [protocolos, setProtocolos] = useState<Protocolo[]>([]);
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [vistoriaMap, setVistoriaMap] = useState<Record<string, VistoriaData>>({});
@@ -56,17 +71,16 @@ export default function ProtocolosPage() {
   const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [termosMap, setTermosMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilterValue[]>([]);
+  const [search, setSearch] = useState(restoredFilters?.search || "");
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue[]>(restoredFilters?.statusFilter || []);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
-  const [municipioFilter, setMunicipioFilter] = useState("");
-  const [vistoriadorFilter, setVistoriadorFilter] = useState("");
-  const [startDateFilter, setStartDateFilter] = useState("");
-  const [endDateFilter, setEndDateFilter] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("data_solicitacao");
-  const [sortAsc, setSortAsc] = useState(true);
+  const [municipioFilter, setMunicipioFilter] = useState(restoredFilters?.municipioFilter || "");
+  const [vistoriadorFilter, setVistoriadorFilter] = useState(restoredFilters?.vistoriadorFilter || "");
+  const [startDateFilter, setStartDateFilter] = useState(restoredFilters?.startDateFilter || "");
+  const [endDateFilter, setEndDateFilter] = useState(restoredFilters?.endDateFilter || "");
+  const [sortKey, setSortKey] = useState<SortKey>(restoredFilters?.sortKey || "data_solicitacao");
+  const [sortAsc, setSortAsc] = useState(restoredFilters?.sortAsc ?? true);
   const statusDropdownRef = useRef<HTMLDivElement | null>(null);
-  const navigate = useNavigate();
 
   const { isDev } = useAuth();
 
@@ -405,6 +419,27 @@ export default function ProtocolosPage() {
     );
   };
 
+  const openProtocoloDetail = (protocoloId: string) => {
+    navigate(location.pathname + location.search, {
+      replace: true,
+      state: {
+        ...(location.state && typeof location.state === "object" ? location.state : {}),
+        protocolosBackFilters: {
+          search,
+          statusFilter,
+          municipioFilter,
+          vistoriadorFilter,
+          startDateFilter,
+          endDateFilter,
+          sortKey,
+          sortAsc,
+        },
+      },
+    });
+
+    navigate(`/protocolo/${protocoloId}`);
+  };
+
   const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
     <th
       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider cursor-pointer hover:text-foreground transition-colors select-none"
@@ -577,7 +612,7 @@ export default function ProtocolosPage() {
                   const dl = getDeadline(p.id);
                   const dlActive = dl && dl.active;
                   return (
-                    <tr key={p.id} className={cn("hover:bg-muted/30 transition-colors cursor-pointer", dlActive && dl.remaining <= 0 && "bg-destructive/5")} onClick={() => navigate(`/protocolo/${p.id}`)}>
+                    <tr key={p.id} className={cn("hover:bg-muted/30 transition-colors cursor-pointer", dlActive && dl.remaining <= 0 && "bg-destructive/5")} onClick={() => openProtocoloDetail(p.id)}>
                       <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
                         {p.numero}
                       </td>

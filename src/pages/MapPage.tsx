@@ -48,6 +48,13 @@ export default function MapPage() {
   const location = useLocation();
   const focusProcessoId = location.state?.focusProcessoId as string | undefined;
   const focusCoords = location.state?.focusCoords as [number, number] | undefined;
+  const restoredFilters = (location.state as {
+    mapBackFilters?: {
+      filterStatus?: (DisplayStatus | "minhas")[];
+      selectedVistoriador?: string;
+      selectedRegional?: string;
+    };
+  } | null)?.mapBackFilters;
 
   const { isDev, user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -55,7 +62,7 @@ export default function MapPage() {
   const [mapReady, setMapReady] = useState(false);
   const [processos, setProcessos] = useState<MapProcess[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<(DisplayStatus | "minhas")[]>([]);
+  const [filterStatus, setFilterStatus] = useState<(DisplayStatus | "minhas")[]>(restoredFilters?.filterStatus || []);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement | null>(null);
   const statusDropdownPanelRef = useRef<HTMLDivElement | null>(null);
@@ -65,9 +72,9 @@ export default function MapPage() {
     left: 0,
     width: 0,
   });
-  const [selectedVistoriador, setSelectedVistoriador] = useState("");
+  const [selectedVistoriador, setSelectedVistoriador] = useState(restoredFilters?.selectedVistoriador || "");
   const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);
-  const [selectedRegional, setSelectedRegional] = useState("");
+  const [selectedRegional, setSelectedRegional] = useState(restoredFilters?.selectedRegional || "");
   const [regionais, setRegionais] = useState<{ id: string; nome: string }[]>([]);
   const [canChangeVistoriador, setCanChangeVistoriador] = useState(false);
 
@@ -233,6 +240,22 @@ export default function MapPage() {
       current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
     );
   };
+
+  const openProtocoloDetail = useCallback((protocoloId: string) => {
+    navigate(location.pathname + location.search, {
+      replace: true,
+      state: {
+        ...(location.state && typeof location.state === "object" ? location.state : {}),
+        mapBackFilters: {
+          filterStatus,
+          selectedVistoriador,
+          selectedRegional,
+        },
+      },
+    });
+
+    navigate(`/protocolo/${protocoloId}`);
+  }, [navigate, location.pathname, location.search, location.state, filterStatus, selectedVistoriador, selectedRegional]);
 
   const filteredProcesses = processos.filter((p) => {
     if (selectedVistoriador && p.vistoriador_id !== selectedVistoriador) return false;
@@ -420,13 +443,13 @@ export default function MapPage() {
     const handleOpenProtocolo = (e: any) => {
       const id = e.detail;
       if (id) {
-        navigate(`/protocolo/${id}`);
+        openProtocoloDetail(id);
       }
     };
 
     window.addEventListener('open-protocolo', handleOpenProtocolo);
     return () => window.removeEventListener('open-protocolo', handleOpenProtocolo);
-  }, [navigate]);
+  }, [openProtocoloDetail]);
 
   const totalGeolocalized = processos.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
   const filteredGeolocalized = filteredProcesses.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
