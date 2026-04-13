@@ -14,6 +14,8 @@ const ROLE_LABELS: Record<string, string> = {
   vistoriador: "Vistoriador",
 };
 
+const ROLE_OPTIONS = ["admin", "distribuidor", "vistoriador"] as const;
+
 const POSTOS_GRADUACOES = [
   "CEL BM", "TC BM", "MAJ BM", "CAP BM", "1º TEN BM", "2º TEN BM", "CAD BM", "ASP BM", "AL OF BM", "ST BM", "1º SGT BM", "2º SGT BM", "3º SGT BM", "AL SGT BM", "CB BM", "AL CB BM", "SD BM", "FC"
 ];
@@ -25,11 +27,11 @@ export default function UsersTab() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [canManageUsers, setCanManageUsers] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ login: "", senha: "", nome_guerra: "", patente: "SD BM", role: "vistoriador" });
+  const [form, setForm] = useState({ login: "", senha: "", nome_guerra: "", patente: "SD BM", roles: ["vistoriador"] as string[] });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ nome_guerra: "", patente: "", role: "", ativo: true });
+  const [editForm, setEditForm] = useState({ nome_guerra: "", patente: "", roles: [] as string[], ativo: true });
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchUsers = async () => {
@@ -88,11 +90,17 @@ export default function UsersTab() {
     setError("");
 
     const loginLower = form.login.toLowerCase();
+    if (form.roles.length === 0 || form.roles.length > 2) {
+      setError("Selecione 1 ou 2 perfis para o usuário.");
+      setSaving(false);
+      return;
+    }
+
     const email = loginLower.includes("@") ? loginLower : `${loginLower}@gevit.com.br`;
-    const { error: signupErr } = await supabase.auth.signUp({
+    const { data: signUpData, error: signupErr } = await supabase.auth.signUp({
       email,
       password: form.senha,
-      options: { data: { nome_guerra: form.nome_guerra, patente: form.patente, role: form.role } },
+      options: { data: { nome_guerra: form.nome_guerra, patente: form.patente, role: form.roles[0] } },
     });
 
     if (signupErr) {
@@ -101,7 +109,13 @@ export default function UsersTab() {
       return;
     }
 
-    setForm({ login: "", senha: "", nome_guerra: "", patente: "vistoriador", role: "vistoriador" });
+    const newUserId = signUpData?.user?.id;
+    if (newUserId && form.roles.length > 1) {
+      const additionalRoles = form.roles.slice(1).map((role) => ({ user_id: newUserId, role: role as any }));
+      await supabase.from("user_roles").insert(additionalRoles);
+    }
+
+    setForm({ login: "", senha: "", nome_guerra: "", patente: "SD BM", roles: ["vistoriador"] });
     setShowForm(false);
     setSaving(false);
     setTimeout(fetchUsers, 1000);
@@ -112,7 +126,7 @@ export default function UsersTab() {
     setEditForm({
       nome_guerra: p.nome_guerra,
       patente: p.patente || "SD BM",
-      role: p.roles[0] || "vistoriador",
+      roles: p.roles.length > 0 ? p.roles : ["vistoriador"],
       ativo: p.ativo,
     });
   };
@@ -139,12 +153,22 @@ export default function UsersTab() {
       return;
     }
 
-    const currentRole = p.roles[0];
-    if (currentRole !== editForm.role) {
-      if (currentRole) {
-        await supabase.from("user_roles").delete().eq("user_id", p.user_id).eq("role", currentRole as any);
-      }
-      await supabase.from("user_roles").insert({ user_id: p.user_id, role: editForm.role as any });
+    if (editForm.roles.length === 0 || editForm.roles.length > 2) {
+      toast.error("Selecione 1 ou 2 perfis.");
+      setSaving(false);
+      return;
+    }
+
+    const currentRoles = new Set(p.roles);
+    const nextRoles = new Set(editForm.roles);
+    const rolesToDelete = p.roles.filter((role) => !nextRoles.has(role));
+    const rolesToInsert = editForm.roles.filter((role) => !currentRoles.has(role));
+
+    if (rolesToDelete.length > 0) {
+      await supabase.from("user_roles").delete().eq("user_id", p.user_id).in("role", rolesToDelete as any);
+    }
+    if (rolesToInsert.length > 0) {
+      await supabase.from("user_roles").insert(rolesToInsert.map((role) => ({ user_id: p.user_id, role: role as any })));
     }
 
     toast.success("Usuário atualizado com sucesso");
@@ -220,13 +244,31 @@ export default function UsersTab() {
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm" placeholder="Mínimo 6 caracteres" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-foreground">Perfil</label>
-              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
-                <option value="admin">Administrador</option>
-                <option value="distribuidor">Distribuidor</option>
-                <option value="vistoriador">Vistoriador</option>
-              </select>
+              <label className="text-xs font-medium text-foreground">Perfis (1 ou 2)</label>
+              <div className="space-y-1.5 rounded-md border border-input bg-background px-3 py-2">
+                {ROLE_OPTIONS.map((role) => {
+                  const checked = form.roles.includes(role);
+                  const disabled = !checked && form.roles.length >= 2;
+                  return (
+                    <label key={role} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={disabled}
+                        onChange={(e) => {
+                          setForm((prev) => {
+                            if (e.target.checked) {
+                              return { ...prev, roles: [...prev.roles, role] };
+                            }
+                            return { ...prev, roles: prev.roles.filter((r) => r !== role) };
+                          });
+                        }}
+                      />
+                      <span>{ROLE_LABELS[role]}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
           <button type="submit" disabled={saving}
@@ -265,12 +307,30 @@ export default function UsersTab() {
                       </td>
                       <td className="py-2 px-3 text-muted-foreground">{(p as any).login || "—"}</td>
                       <td className="py-2 px-3">
-                        <select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                          className="h-8 rounded-md border border-input bg-background px-2 text-sm">
-                          <option value="admin">Administrador</option>
-                          <option value="distribuidor">Distribuidor</option>
-                          <option value="vistoriador">Vistoriador</option>
-                        </select>
+                        <div className="space-y-1 rounded-md border border-input bg-background px-2 py-1.5">
+                          {ROLE_OPTIONS.map((role) => {
+                            const checked = editForm.roles.includes(role);
+                            const disabled = !checked && editForm.roles.length >= 2;
+                            return (
+                              <label key={role} className="flex items-center gap-2 text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={disabled}
+                                  onChange={(e) => {
+                                    setEditForm((prev) => {
+                                      if (e.target.checked) {
+                                        return { ...prev, roles: [...prev.roles, role] };
+                                      }
+                                      return { ...prev, roles: prev.roles.filter((r) => r !== role) };
+                                    });
+                                  }}
+                                />
+                                <span>{ROLE_LABELS[role]}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
                       </td>
                       <td className="py-2 px-3">
                         <select value={editForm.ativo ? "ativo" : "inativo"} onChange={(e) => setEditForm({ ...editForm, ativo: e.target.value === "ativo" })}

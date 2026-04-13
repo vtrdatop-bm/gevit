@@ -20,6 +20,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import NotificationDaemon from "@/components/layout/NotificationDaemon";
 
 const allNavItems = [
@@ -42,30 +49,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, roles, activeRole, setActiveRole } = useAuth();
 
-  useEffect(() => {
-    if (!user) return;
-    
-    // Dev bypass
-    if (user.id === "00000000-0000-0000-0000-000000000000") {
-      setUserRole("admin");
-      return;
-    }
-
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => setUserRole(data?.role || null));
-  }, [user]);
+  const ROLE_LABELS: Record<string, string> = {
+    admin: "Administrador",
+    distribuidor: "Distribuidor",
+    vistoriador: "Vistoriador",
+  };
 
   const navItems = allNavItems.filter(
-    (item) => !userRole || item.roles.includes(userRole)
+    (item) => !activeRole || item.roles.includes(activeRole)
   );
 
   useEffect(() => {
@@ -203,6 +198,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
 
           <div className="flex items-center gap-3">
+            {roles.length > 1 && activeRole && (
+              <Select value={activeRole} onValueChange={setActiveRole}>
+                <SelectTrigger className="h-9 w-[160px]">
+                  <SelectValue placeholder="Perfil" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {ROLE_LABELS[role] || role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Link
               to="/notificacoes"
               className="relative p-2 rounded-lg hover:bg-accent transition-colors"

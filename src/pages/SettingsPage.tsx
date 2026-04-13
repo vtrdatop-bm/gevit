@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Users, MapPin, Building2, Map, UserCog, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import UsersTab from "@/components/settings/UsersTab";
 import RegionaisTab from "@/components/settings/RegionaisTab";
 import MunicipiosTab from "@/components/settings/MunicipiosTab";
@@ -22,21 +21,16 @@ type TabKey = (typeof allTabs)[number]["key"];
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { activeRole: role } = useAuth();
   const [tab, setTab] = useState<TabKey>("minha-conta");
-  const [role, setRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => setRole(data?.role || null));
-  }, [user]);
 
   const tabs = allTabs.filter((t) => !role || (t.roles as readonly string[]).includes(role));
+
+  useEffect(() => {
+    if (!tabs.some((t) => t.key === tab)) {
+      setTab("minha-conta");
+    }
+  }, [tab, tabs]);
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl">

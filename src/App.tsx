@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/pages/DashboardPage";
 import KanbanPage from "@/pages/KanbanPage";
@@ -26,32 +24,9 @@ import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
 function ProtectedRoutes() {
-  const { user, loading } = useAuth();
-  const [role, setRole] = useState<string | null>(null);
-  const [roleLoading, setRoleLoading] = useState(true);
+  const { user, loading, activeRole, rolesLoading } = useAuth();
 
-  useEffect(() => {
-    if (!user) { setRoleLoading(false); return; }
-    
-    // Dev bypass role
-    if (user.id === "00000000-0000-0000-0000-000000000000") {
-      setRole("admin");
-      setRoleLoading(false);
-      return;
-    }
-
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => {
-        setRole(data?.role || null);
-        setRoleLoading(false);
-      });
-  }, [user]);
-
-  if (loading || roleLoading) {
+  if (loading || rolesLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -61,7 +36,7 @@ function ProtectedRoutes() {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  const isVistoriador = role === "vistoriador";
+  const isVistoriador = activeRole === "vistoriador";
 
   return (
     <AppLayout>

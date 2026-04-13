@@ -7,6 +7,10 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isDev: boolean;
+  roles: string[];
+  activeRole: string | null;
+  rolesLoading: boolean;
+  setActiveRole: (role: string) => void;
   signOut: () => Promise<void>;
 }
 
@@ -15,6 +19,10 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   isDev: false,
+  roles: [],
+  activeRole: null,
+  rolesLoading: true,
+  setActiveRole: () => {},
   signOut: async () => {},
 });
 
@@ -22,6 +30,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [activeRole, setActiveRoleState] = useState<string | null>(null);
+  const [rolesLoading, setRolesLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -78,8 +89,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isDev = false;
 
+  useEffect(() => {
+    const loadRoles = async () => {
+      if (!user) {
+        setRoles([]);
+        setActiveRole(null);
+        setRolesLoading(false);
+        return;
+      }
+
+      if (user.id === "00000000-0000-0000-0000-000000000000") {
+        setRoles(["admin"]);
+        setActiveRole("admin");
+        setRolesLoading(false);
+        return;
+      }
+
+      setRolesLoading(true);
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+
+      const nextRoles = (data || []).map((r) => r.role as string);
+      setRoles(nextRoles);
+
+      const storageKey = `gevit_active_role_${user.id}`;
+      const persisted = localStorage.getItem(storageKey);
+      if (persisted && nextRoles.includes(persisted)) {
+        setActiveRoleState(persisted);
+      } else {
+        const fallbackRole = nextRoles[0] || null;
+        setActiveRoleState(fallbackRole);
+        if (fallbackRole) {
+          localStorage.setItem(storageKey, fallbackRole);
+        } else {
+          localStorage.removeItem(storageKey);
+        }
+      }
+
+      setRolesLoading(false);
+    };
+
+    void loadRoles();
+  }, [user]);
+
+  const setActiveRole = (role: string) => {
+    if (!user) return;
+    if (!roles.includes(role)) return;
+    setActiveRoleState(role);
+    localStorage.setItem(`gevit_active_role_${user.id}`, role);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, isDev, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        isDev,
+        roles,
+        activeRole,
+        rolesLoading,
+        setActiveRole,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
