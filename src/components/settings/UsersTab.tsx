@@ -212,26 +212,38 @@ export default function UsersTab() {
   };
 
   const handleDelete = async (p: Profile) => {
-    if (!confirm(`Tem certeza que deseja excluir o usuário "${[p.patente, p.nome_guerra].filter(Boolean).join(" ")}"? Esta ação não pode ser desfeita.`)) {
+    if (!confirm(`Deseja desativar o usuário "${[p.patente, p.nome_guerra].filter(Boolean).join(" ")}"? O acesso será bloqueado, mas o histórico sera mantido.`)) {
       return;
     }
 
     setDeletingId(p.id);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await supabase.functions.invoke("delete-user", {
-        body: { user_id: p.user_id },
-      });
+      const { error: deactivateErr } = await supabase
+        .from("profiles")
+        .update({ ativo: false })
+        .eq("user_id", p.user_id);
 
-      if (res.error || res.data?.error) {
-        toast.error(res.data?.error || res.error?.message || "Erro ao excluir usuário");
-      } else {
-        toast.success("Usuário excluído com sucesso");
-        fetchUsers();
+      if (deactivateErr) {
+        toast.error("Erro ao desativar usuario: " + deactivateErr.message);
+        setDeletingId(null);
+        return;
       }
+
+      const { error: rolesErr } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", p.user_id);
+
+      if (rolesErr) {
+        toast.error("Usuario desativado, mas nao foi possivel remover os perfis: " + rolesErr.message);
+      } else {
+        toast.success("Usuario desativado com sucesso");
+      }
+
+      fetchUsers();
     } catch {
-      toast.error("Erro ao excluir usuário");
+      toast.error("Erro ao desativar usuario");
     }
     setDeletingId(null);
   };
@@ -416,7 +428,7 @@ export default function UsersTab() {
                             </button>
                             {isAdmin && (
                               <button onClick={() => handleDelete(p)} disabled={deletingId === p.id}
-                                className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-50" title="Excluir">
+                                className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-50" title="Desativar">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             )}
