@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { computeDisplayStatus, DisplayStatus, displayStatusLabels, VistoriaData, computeStage, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
-import DateRangeFilter, { DateRange } from "./DateRangeFilter";
+import { DateRange } from "./DateRangeFilter";
 import {
   BarChart,
   Bar,
@@ -108,7 +108,11 @@ const BAR_COLORS = [
 
 /* ── Component ───────────────────────────────────────────────────────────────────── */
 
-export default function DashboardEstatisticas() {
+interface DashboardEstatisticasProps {
+  dateRange: DateRange;
+}
+
+export default function DashboardEstatisticas({ dateRange }: DashboardEstatisticasProps) {
   const { isDev } = useAuth();
   const [loading, setLoading] = useState(true);
   const [processos, setProcessos] = useState<RawProcesso[]>([]);
@@ -116,7 +120,6 @@ export default function DashboardEstatisticas() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [regionaisMap, setRegionaisMap] = useState<Record<string, string>>({});
   const [bairroRegionalMap, setBairroRegionalMap] = useState<Record<string, string>>({});
-  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
 
   useEffect(() => {
     async function fetchData() {
@@ -382,7 +385,11 @@ export default function DashboardEstatisticas() {
           <BarChart3 className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-bold text-foreground">Estatísticas</h3>
         </div>
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        {dateRange.from ? (
+          <span className="text-xs text-muted-foreground">
+            Filtro aplicado no dashboard
+          </span>
+        ) : null}
       </div>
 
       {/* ── Row 1: Inspection stages + Status counts ── */}

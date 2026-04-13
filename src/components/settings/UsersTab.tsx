@@ -138,17 +138,31 @@ export default function UsersTab() {
   const saveEdit = async (p: Profile) => {
     setSaving(true);
 
-    const { error: profileErr } = await supabase
+    const nomeGuerra = editForm.nome_guerra.trim();
+    if (!nomeGuerra) {
+      toast.error("Nome de guerra e obrigatorio.");
+      setSaving(false);
+      return;
+    }
+
+    const { data: updatedProfiles, error: profileErr } = await supabase
       .from("profiles")
       .update({
-        nome_guerra: editForm.nome_guerra,
+        nome_guerra: nomeGuerra,
         patente: editForm.patente || null,
         ativo: editForm.ativo,
       })
-      .eq("id", p.id);
+      .eq("user_id", p.user_id)
+      .select("id");
 
     if (profileErr) {
       toast.error("Erro ao atualizar perfil: " + profileErr.message);
+      setSaving(false);
+      return;
+    }
+
+    if (!updatedProfiles || updatedProfiles.length === 0) {
+      toast.error("Nao foi possivel salvar as alteracoes deste usuario.");
       setSaving(false);
       return;
     }
