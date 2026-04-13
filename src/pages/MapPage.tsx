@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId, sortVistoriadores } from "@/lib/vistoriaStatus";
+import { computeDeadline, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
 import { Filter, Layers, Navigation, MousePointerClick, MapPin, Search, Maximize2, Minimize2, ArrowLeft, ChevronDown } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
@@ -85,16 +86,17 @@ export default function MapPage() {
       return;
     }
 
-    const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }, { data: regionaisData }, { data: bairrosData }] = await Promise.all([
+    const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }, { data: regionaisData }, { data: bairrosData }, { data: pausasData }, { data: termosData }] = await Promise.all([
       supabase
         .from("processos")
-        .select("id, status, data_prevista, vistoriador_id, regional_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)")
-        .neq("status", "expirado"),
+        .select("id, status, data_prevista, vistoriador_id, regional_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
       supabase.from("regionais").select("id, nome").order("nome"),
       supabase.from("bairros").select("nome, municipio, regional_id"),
+      supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
+      supabase.from("termos_compromisso").select("processo_id, data_validade"),
     ]);
 
     if (regionaisData) setRegionais(regionaisData);
@@ -138,9 +140,24 @@ export default function MapPage() {
     const vistoriaMap: Record<string, any> = {};
     (vistorias || []).forEach((v) => { vistoriaMap[v.processo_id] = v; });
 
+    const pausasByProcesso: Record<string, DeadlinePausaData[]> = {};
+    (pausasData || []).forEach((p: any) => {
+      if (!pausasByProcesso[p.processo_id]) pausasByProcesso[p.processo_id] = [];
+      pausasByProcesso[p.processo_id].push(p);
+    });
+
+    const termosMap: Record<string, string> = {};
+    (termosData || []).forEach((t: any) => {
+      termosMap[t.processo_id] = t.data_validade;
+    });
+
     const mapped: MapProcess[] = (procs || []).map((p: any) => {
       const vist = vistoriaMap[p.id] || null;
       const dStatus = computeDisplayStatus(p.status, vist, p.protocolos?.data_solicitacao);
+      const deadlineResult = computeDeadline(vist, pausasByProcesso[p.id] || [], dStatus, termosMap[p.id] || null);
+      const finalStatus = deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration"
+        ? "expirado"
+        : dStatus;
       const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vist);
 
       let resolvedRegionalId = p.regional_id;
@@ -152,7 +169,7 @@ export default function MapPage() {
         id: p.id,
         vistoriador_id: activeVistoriadorId,
         status: p.status,
-        displayStatus: dStatus,
+        displayStatus: finalStatus,
         data_prevista: p.data_prevista,
         vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
         vistoria: vist,
@@ -451,8 +468,9 @@ export default function MapPage() {
     return () => window.removeEventListener('open-protocolo', handleOpenProtocolo);
   }, [openProtocoloDetail]);
 
+  const totalProcessos = processos.length;
+  const filteredTotal = filteredProcesses.length;
   const totalGeolocalized = processos.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
-  const filteredGeolocalized = filteredProcesses.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
 
   const isFiltered = filterStatus.length > 0 || selectedVistoriador !== "" || selectedRegional !== "";
 
@@ -471,11 +489,12 @@ export default function MapPage() {
             <h2 className="text-2xl font-bold text-foreground">Mapa Interativo</h2>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
+            {isFiltered
+              ? `${filteredTotal} de ${totalProcessos} processos`
+              : `${totalProcessos} processos`}
             {totalGeolocalized === 0
-              ? "Nenhuma vistoria com coordenadas cadastradas"
-              : isFiltered
-                ? `${filteredGeolocalized} de ${totalGeolocalized} vistorias`
-                : `${totalGeolocalized} vistorias`}
+              ? " - Nenhum processo com coordenadas"
+              : ` - ${totalGeolocalized} com coordenadas`}
           </p>
         </div>
       </div>

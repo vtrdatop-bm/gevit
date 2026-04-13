@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { computeDisplayStatus, DisplayStatus, displayStatusLabels, VistoriaData } from "@/lib/vistoriaStatus";
+import { computeDeadline, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
 import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
@@ -44,6 +45,8 @@ export default function DashboardPage() {
   const { isDev } = useAuth();
   const [processos, setProcessos] = useState<any[]>([]);
   const [vistorias, setVistorias] = useState<any[]>([]);
+  const [pausasByProcesso, setPausasByProcesso] = useState<Record<string, DeadlinePausaData[]>>({});
+  const [termosMap, setTermosMap] = useState<Record<string, string>>({});
   const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
@@ -65,14 +68,30 @@ export default function DashboardPage() {
         return;
       }
 
-      const [{ data: procs }, { data: vists }, { data: profs }] = await Promise.all([
-        supabase.from("processos").select("id, status, data_prevista, vistoriador_id, created_at"),
+      const [{ data: procs }, { data: vists }, { data: profs }, { data: pausas }, { data: termos }] = await Promise.all([
+        supabase.from("processos").select("id, status, data_prevista, vistoriador_id, created_at, protocolos(data_solicitacao)"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
         supabase.from("profiles").select("user_id, nome_guerra, ativo"),
+        supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
+        supabase.from("termos_compromisso").select("processo_id, data_validade"),
       ]);
       setProcessos(procs || []);
       setVistorias(vists || []);
       setProfiles(profs || []);
+
+      const pMap: Record<string, DeadlinePausaData[]> = {};
+      (pausas || []).forEach((p: any) => {
+        if (!pMap[p.processo_id]) pMap[p.processo_id] = [];
+        pMap[p.processo_id].push(p);
+      });
+      setPausasByProcesso(pMap);
+
+      const tMap: Record<string, string> = {};
+      (termos || []).forEach((t: any) => {
+        tMap[t.processo_id] = t.data_validade;
+      });
+      setTermosMap(tMap);
+
       setLoading(false);
     }
     fetch();
@@ -102,8 +121,22 @@ export default function DashboardPage() {
     const total = filteredProcessos.length;
     const byStatus: Record<string, number> = {};
     filteredProcessos.forEach((p) => {
-      const display = computeDisplayStatus(p.status, vistoriaMap[p.id] || null);
-      byStatus[display] = (byStatus[display] || 0) + 1;
+      const baseStatus = computeDisplayStatus(
+        p.status,
+        vistoriaMap[p.id] || null,
+        p.protocolos?.data_solicitacao || null
+      );
+      const deadline = computeDeadline(
+        vistoriaMap[p.id] || null,
+        pausasByProcesso[p.id] || [],
+        baseStatus,
+        termosMap[p.id] || null
+      );
+      const finalStatus = deadline.active && deadline.remaining <= 0 && deadline.type === "expiration"
+        ? "expirado"
+        : baseStatus;
+
+      byStatus[finalStatus] = (byStatus[finalStatus] || 0) + 1;
     });
 
     const certificados = byStatus["certificado"] || 0;
@@ -125,7 +158,7 @@ export default function DashboardPage() {
     const taxaCertificacao = total > 0 ? Math.round(((certificados + certificadosTermo) / total) * 100) : 0;
 
     return { total, aguardando, atribuidos, certificados, certificadosTermo, pendentes, expirados, pieData, vistoriadoresAtivos, taxaCertificacao };
-  }, [filteredProcessos, profiles, vistoriaMap]);
+  }, [filteredProcessos, profiles, vistoriaMap, pausasByProcesso, termosMap]);
 
   if (loading) {
     return (

@@ -187,6 +187,10 @@ export default function ProtocolosPage() {
     return map;
   }, [processos]);
 
+  const protocolosComProcesso = useMemo(() => {
+    return protocolos.filter((p) => Boolean(processoByProtocolo[p.id]));
+  }, [protocolos, processoByProtocolo]);
+
   const protocoloById = useMemo(() => {
     const map: Record<string, Protocolo> = {};
     protocolos.forEach((p) => { map[p.id] = p; });
@@ -227,9 +231,9 @@ export default function ProtocolosPage() {
   };
 
   const uniqueMunicipios = useMemo(() => {
-    const set = new Set(protocolos.map(p => p.municipio).filter(Boolean));
+    const set = new Set(protocolosComProcesso.map(p => p.municipio).filter(Boolean));
     return Array.from(set).sort();
-  }, [protocolos]);
+  }, [protocolosComProcesso]);
 
   const uniqueVistoriadores = useMemo(() => {
     const set = new Set<string>();
@@ -273,7 +277,7 @@ export default function ProtocolosPage() {
 
     const snapshots: Record<string, TimelineSnapshot> = {};
 
-    protocolos.forEach((protocolo) => {
+    protocolosComProcesso.forEach((protocolo) => {
       const proc = processoByProtocolo[protocolo.id];
       const vistoria = proc ? vistoriaMap[proc.id] : null;
 
@@ -330,7 +334,7 @@ export default function ProtocolosPage() {
     });
 
     return snapshots;
-  }, [hasPeriodFilter, startDateFilter, endDateFilter, protocolos, processoByProtocolo, vistoriaMap]);
+  }, [hasPeriodFilter, startDateFilter, endDateFilter, protocolosComProcesso, processoByProtocolo, vistoriaMap]);
 
   const getEffectiveDisplayInfo = (protocoloId: string): { status: DisplayStatus; stage: VistoriaStage } | null => {
     if (hasPeriodFilter) {
@@ -344,7 +348,7 @@ export default function ProtocolosPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    let list = protocolos;
+    let list = protocolosComProcesso;
     if (q) {
       list = list.filter((p) =>
         p.numero.toLowerCase().includes(q) ||
@@ -402,7 +406,7 @@ export default function ProtocolosPage() {
 
       return sortAsc ? cmp : -cmp;
     });
-  }, [protocolos, search, statusFilter, municipioFilter, vistoriadorFilter, hasPeriodFilter, periodSnapshotByProtocolo, sortKey, sortAsc, processoByProtocolo, pausasByProcesso, termosMap]);
+  }, [protocolosComProcesso, search, statusFilter, municipioFilter, vistoriadorFilter, hasPeriodFilter, periodSnapshotByProtocolo, sortKey, sortAsc, processoByProtocolo, pausasByProcesso, termosMap]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -475,8 +479,8 @@ export default function ProtocolosPage() {
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">
               {search || statusFilter.length > 0 || municipioFilter || vistoriadorFilter || startDateFilter || endDateFilter
-                ? `${filtered.length} protocolos de ${protocolos.length} protocolos`
-                : `${protocolos.length} protocolos cadastrados`
+                ? `${filtered.length} processos de ${protocolosComProcesso.length} processos`
+                : `${protocolosComProcesso.length} processos`
               }
             </p>
           </div>
