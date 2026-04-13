@@ -13,6 +13,13 @@ BEGIN
     ON public.profiles
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
+  ELSE
+    CREATE POLICY "Users update own profile"
+    ON public.profiles
+    FOR UPDATE
+    TO authenticated
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
   END IF;
 END $$;
 
@@ -27,6 +34,13 @@ BEGIN
   ) THEN
     ALTER POLICY "Admins update all profiles"
     ON public.profiles
+    USING (public.has_role(auth.uid(), 'admin'::app_role))
+    WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role));
+  ELSE
+    CREATE POLICY "Admins update all profiles"
+    ON public.profiles
+    FOR UPDATE
+    TO authenticated
     USING (public.has_role(auth.uid(), 'admin'::app_role))
     WITH CHECK (public.has_role(auth.uid(), 'admin'::app_role));
   END IF;
