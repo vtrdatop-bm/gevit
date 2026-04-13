@@ -82,10 +82,11 @@ export default function KanbanPage() {
         setLoading(false);
         return;
       }
-      const [{ data: procs }, { data: regionais }, { data: profiles }, { data: bairrosData }, { data: vistoriasData }, { data: pausasData }, { data: termosData }] = await Promise.all([
+      const [{ data: procs }, { data: protocolosData }, { data: regionais }, { data: profiles }, { data: bairrosData }, { data: vistoriasData }, { data: pausasData }, { data: termosData }] = await Promise.all([
         supabase
           .from("processos")
           .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao)"),
+        supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao"),
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("bairros").select("nome, municipio, regional_id"),
@@ -159,7 +160,39 @@ export default function KanbanPage() {
         };
       });
 
-      setProcessos(mapped);
+      const protocoloIdsComProcesso = new Set((mapped || []).map((p) => p.protocolo_id));
+      const orfaos: ProcessoWithProtocolo[] = (protocolosData || [])
+        .filter((proto: any) => !protocoloIdsComProcesso.has(proto.id))
+        .map((proto: any) => {
+          const resolvedRegionalId = bairroRegionalMap[`${proto.bairro}|${proto.municipio}`] || null;
+          const dStatus = computeDisplayStatus("regional", null, proto.data_solicitacao);
+          const deadlineResult = computeDeadline(null, [], dStatus, null);
+          const finalStatus = deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration"
+            ? "expirado"
+            : dStatus;
+
+          return {
+            id: `proto-${proto.id}`,
+            protocolo_id: proto.id,
+            dbStatus: "regional",
+            displayStatus: finalStatus,
+            stage: 1,
+            data_prevista: null,
+            data_solicitacao: proto.data_solicitacao || "",
+            vistoriador_id: null,
+            regional_id: resolvedRegionalId,
+            protocolos: proto,
+            regional_nome: regMap[resolvedRegionalId || ""] || "",
+            vistoriador_nome: "Não atribuído",
+            dias_restantes: 999,
+            deadline: deadlineResult,
+            data_1_retorno: null,
+            data_2_retorno: null,
+            vistoria_completa: null,
+          };
+        });
+
+      setProcessos([...(mapped || []), ...orfaos]);
       setRegionaisMap(regMap);
       setLoading(false);
     };

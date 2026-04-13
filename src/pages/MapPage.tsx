@@ -86,10 +86,11 @@ export default function MapPage() {
       return;
     }
 
-    const [{ data: procs }, { data: profilesData }, { data: vistorias }, { data: roles }, { data: regionaisData }, { data: bairrosData }, { data: pausasData }, { data: termosData }] = await Promise.all([
+    const [{ data: procs }, { data: protocolosData }, { data: profilesData }, { data: vistorias }, { data: roles }, { data: regionaisData }, { data: bairrosData }, { data: pausasData }, { data: termosData }] = await Promise.all([
       supabase
         .from("processos")
         .select("id, status, data_prevista, vistoriador_id, regional_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)"),
+      supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
@@ -178,7 +179,31 @@ export default function MapPage() {
       };
     });
 
-    setProcessos(mapped);
+    const protocoloIdsComProcesso = new Set((mapped || []).map((p) => p.protocolo?.id).filter(Boolean));
+    const orfaos: MapProcess[] = (protocolosData || [])
+      .filter((proto: any) => !protocoloIdsComProcesso.has(proto.id))
+      .map((proto: any) => {
+        const dStatus = computeDisplayStatus("regional", null, proto.data_solicitacao);
+        const deadlineResult = computeDeadline(null, [], dStatus, null);
+        const finalStatus = deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration"
+          ? "expirado"
+          : dStatus;
+        const resolvedRegionalId = bairroRegionalMap[`${proto.bairro}|${proto.municipio}`] || null;
+
+        return {
+          id: `proto-${proto.id}`,
+          vistoriador_id: null,
+          status: "regional" as ProcessStatus,
+          displayStatus: finalStatus,
+          data_prevista: null,
+          vistoriador_nome: "Não atribuído",
+          vistoria: null,
+          protocolo: proto,
+          regional_id: resolvedRegionalId,
+        };
+      });
+
+    setProcessos([...(mapped || []), ...orfaos]);
     setLoading(false);
   }, [user, isDev]);
 

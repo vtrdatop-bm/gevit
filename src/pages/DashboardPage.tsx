@@ -43,6 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { isDev } = useAuth();
+  const [protocolos, setProtocolos] = useState<any[]>([]);
   const [processos, setProcessos] = useState<any[]>([]);
   const [vistorias, setVistorias] = useState<any[]>([]);
   const [pausasByProcesso, setPausasByProcesso] = useState<Record<string, DeadlinePausaData[]>>({});
@@ -68,13 +69,15 @@ export default function DashboardPage() {
         return;
       }
 
-      const [{ data: procs }, { data: vists }, { data: profs }, { data: pausas }, { data: termos }] = await Promise.all([
+      const [{ data: prots }, { data: procs }, { data: vists }, { data: profs }, { data: pausas }, { data: termos }] = await Promise.all([
+        supabase.from("protocolos").select("id, data_solicitacao, created_at"),
         supabase.from("processos").select("id, status, data_prevista, vistoriador_id, created_at, protocolos(data_solicitacao)"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
         supabase.from("profiles").select("user_id, nome_guerra, ativo"),
         supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
         supabase.from("termos_compromisso").select("processo_id, data_validade"),
       ]);
+      setProtocolos(prots || []);
       setProcessos(procs || []);
       setVistorias(vists || []);
       setProfiles(profs || []);
@@ -97,9 +100,17 @@ export default function DashboardPage() {
     fetch();
   }, [isDev]);
 
-  const filteredProcessos = useMemo(() => {
-    if (!dateRange.from && !dateRange.to) return processos;
-    return processos.filter((p) => {
+  const processoByProtocolo = useMemo(() => {
+    const map: Record<string, any> = {};
+    processos.forEach((p: any) => {
+      map[p.protocolo_id] = p;
+    });
+    return map;
+  }, [processos]);
+
+  const filteredProtocolos = useMemo(() => {
+    if (!dateRange.from && !dateRange.to) return protocolos;
+    return protocolos.filter((p) => {
       const d = new Date(p.created_at);
       if (dateRange.from && d < dateRange.from) return false;
       if (dateRange.to) {
@@ -109,7 +120,7 @@ export default function DashboardPage() {
       }
       return true;
     });
-  }, [processos, dateRange]);
+  }, [protocolos, dateRange]);
 
   const vistoriaMap = useMemo(() => {
     const m: Record<string, VistoriaData> = {};
@@ -118,19 +129,25 @@ export default function DashboardPage() {
   }, [vistorias]);
 
   const stats = useMemo(() => {
-    const total = filteredProcessos.length;
+    const total = filteredProtocolos.length;
     const byStatus: Record<string, number> = {};
-    filteredProcessos.forEach((p) => {
+    filteredProtocolos.forEach((proto) => {
+      const proc = processoByProtocolo[proto.id];
+      if (!proc) {
+        byStatus.regional = (byStatus.regional || 0) + 1;
+        return;
+      }
+
       const baseStatus = computeDisplayStatus(
-        p.status,
-        vistoriaMap[p.id] || null,
-        p.protocolos?.data_solicitacao || null
+        proc.status,
+        vistoriaMap[proc.id] || null,
+        proto.data_solicitacao || null
       );
       const deadline = computeDeadline(
-        vistoriaMap[p.id] || null,
-        pausasByProcesso[p.id] || [],
+        vistoriaMap[proc.id] || null,
+        pausasByProcesso[proc.id] || [],
         baseStatus,
-        termosMap[p.id] || null
+        termosMap[proc.id] || null
       );
       const finalStatus = deadline.active && deadline.remaining <= 0 && deadline.type === "expiration"
         ? "expirado"
@@ -158,7 +175,7 @@ export default function DashboardPage() {
     const taxaCertificacao = total > 0 ? Math.round(((certificados + certificadosTermo) / total) * 100) : 0;
 
     return { total, aguardando, atribuidos, certificados, certificadosTermo, pendentes, expirados, pieData, vistoriadoresAtivos, taxaCertificacao };
-  }, [filteredProcessos, profiles, vistoriaMap, pausasByProcesso, termosMap]);
+  }, [filteredProtocolos, profiles, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
 
   if (loading) {
     return (

@@ -188,8 +188,8 @@ export default function ProtocolosPage() {
   }, [processos]);
 
   const protocolosComProcesso = useMemo(() => {
-    return protocolos.filter((p) => Boolean(processoByProtocolo[p.id]));
-  }, [protocolos, processoByProtocolo]);
+    return protocolos;
+  }, [protocolos]);
 
   const protocoloById = useMemo(() => {
     const map: Record<string, Protocolo> = {};
@@ -199,7 +199,9 @@ export default function ProtocolosPage() {
 
   const getDisplayInfo = (protocoloId: string): { status: DisplayStatus; stage: VistoriaStage } | null => {
     const proc = processoByProtocolo[protocoloId];
-    if (!proc) return null;
+    if (!proc) {
+      return { status: "regional", stage: 1 };
+    }
     const vistoria = vistoriaMap[proc.id] || null;
     const proto = protocoloById[protocoloId];
     
