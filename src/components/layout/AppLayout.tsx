@@ -70,25 +70,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
 
     const fetchUnread = async () => {
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from("notificacoes")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
         .eq("lida", false);
-      setUnreadCount(count || 0);
+
+      if (!error) {
+        setUnreadCount(count || 0);
+      }
     };
-    fetchUnread();
+    void fetchUnread();
 
-    const channel = supabase
-      .channel("notificacoes-count")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notificacoes", filter: `user_id=eq.${user.id}` },
-        () => fetchUnread()
-      )
-      .subscribe();
+    const intervalId = window.setInterval(() => {
+      void fetchUnread();
+    }, 15000);
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      window.clearInterval(intervalId);
+    };
   }, [user]);
 
   const handleSignOut = async () => {
