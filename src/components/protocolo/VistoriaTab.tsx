@@ -186,7 +186,7 @@ export default function VistoriaTab({
             <Label className="text-sm font-medium">Data de Solicitação</Label>
             <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4" />
-              {dataSolicitacao ? new Date(dataSolicitacao).toLocaleDateString("pt-BR") : "Não informada"}
+              {dataSolicitacao ? new Date(`${dataSolicitacao}T00:00:00`).toLocaleDateString("pt-BR") : "Não informada"}
             </div>
           </div>
         ) : (
