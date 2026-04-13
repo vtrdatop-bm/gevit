@@ -110,9 +110,10 @@ const BAR_COLORS = [
 
 interface DashboardEstatisticasProps {
   dateRange: DateRange;
+  totalProtocolosFiltrados?: number;
 }
 
-export default function DashboardEstatisticas({ dateRange }: DashboardEstatisticasProps) {
+export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltrados }: DashboardEstatisticasProps) {
   const { isDev } = useAuth();
   const [loading, setLoading] = useState(true);
   const [processos, setProcessos] = useState<RawProcesso[]>([]);
@@ -196,7 +197,8 @@ export default function DashboardEstatisticas({ dateRange }: DashboardEstatistic
   /* ── Compute statistics ────────────────────────────────────────────────────────── */
 
   const stats = useMemo(() => {
-    const totalProcessos = filtered.length;
+    const processosSemRegistro = Math.max(0, (totalProtocolosFiltrados ?? filtered.length) - filtered.length);
+    const totalProcessos = filtered.length + processosSemRegistro;
 
     // --- 1) Inspections by stage ---
     let stage1 = 0, stage2 = 0, stage3 = 0;
@@ -216,6 +218,9 @@ export default function DashboardEstatisticas({ dateRange }: DashboardEstatistic
 
     // --- 2) Status counts ---
     const byStatus: Record<string, number> = {};
+    if (processosSemRegistro > 0) {
+      byStatus.regional = processosSemRegistro;
+    }
     filtered.forEach((p) => {
       const v = vistoriaMap[p.id] as VistoriaData | undefined;
       const ds = computeDisplayStatus(p.status, v || null, p.protocolos?.data_solicitacao);
@@ -363,7 +368,7 @@ export default function DashboardEstatisticas({ dateRange }: DashboardEstatistic
       byStatus,
       totalAreaVistoriada,
     };
-  }, [filtered, vistoriaMap, profileMap, regionaisMap, bairroRegionalMap]);
+  }, [filtered, vistoriaMap, profileMap, regionaisMap, bairroRegionalMap, totalProtocolosFiltrados]);
 
   /* ── Render ─────────────────────────────────────────────────────────────────────── */
 

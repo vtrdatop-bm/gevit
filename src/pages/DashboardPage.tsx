@@ -318,7 +318,7 @@ export default function DashboardPage() {
 
       {/* Estatísticas */}
       <hr className="border-border" />
-      <DashboardEstatisticas dateRange={dateRange} />
+      <DashboardEstatisticas dateRange={dateRange} totalProtocolosFiltrados={filteredProtocolos.length} />
     </div>
   );
 }
