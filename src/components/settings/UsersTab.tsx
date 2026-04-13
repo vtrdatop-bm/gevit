@@ -145,24 +145,44 @@ export default function UsersTab() {
       return;
     }
 
-    const { data: updatedProfiles, error: profileErr } = await supabase
+    const payload = {
+      nome_guerra: nomeGuerra,
+      patente: editForm.patente || null,
+      ativo: editForm.ativo,
+    };
+
+    const { data: updatedById, error: updateByIdErr } = await supabase
       .from("profiles")
-      .update({
-        nome_guerra: nomeGuerra,
-        patente: editForm.patente || null,
-        ativo: editForm.ativo,
-      })
-      .eq("user_id", p.user_id)
+      .update(payload)
+      .eq("id", p.id)
       .select("id");
 
-    if (profileErr) {
-      toast.error("Erro ao atualizar perfil: " + profileErr.message);
+    if (updateByIdErr) {
+      toast.error("Erro ao atualizar perfil: " + updateByIdErr.message);
       setSaving(false);
       return;
     }
 
-    if (!updatedProfiles || updatedProfiles.length === 0) {
-      toast.error("Nao foi possivel salvar as alteracoes deste usuario.");
+    let updatedCount = updatedById?.length || 0;
+
+    if (updatedCount === 0 && p.user_id) {
+      const { data: updatedByUserId, error: updateByUserIdErr } = await supabase
+        .from("profiles")
+        .update(payload)
+        .eq("user_id", p.user_id)
+        .select("id");
+
+      if (updateByUserIdErr) {
+        toast.error("Erro ao atualizar perfil: " + updateByUserIdErr.message);
+        setSaving(false);
+        return;
+      }
+
+      updatedCount = updatedByUserId?.length || 0;
+    }
+
+    if (updatedCount === 0) {
+      toast.error("Sem permissao para salvar este usuario. Verifique as policies de UPDATE em profiles.");
       setSaving(false);
       return;
     }
