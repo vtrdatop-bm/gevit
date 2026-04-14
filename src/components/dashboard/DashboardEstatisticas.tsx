@@ -508,8 +508,8 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "Até 1ª Vistoria", value: stats.avgTempos.primeiraVistoria, desc: "Solicitação → 1ª vistoria" },
-            { label: "1º Retorno", value: stats.avgTempos.retorno1, desc: "1ª vistoria → retorno" },
-            { label: "2º Retorno", value: stats.avgTempos.retorno2, desc: "2ª vistoria → retorno" },
+            { label: "1º Retorno", value: stats.avgTempos.retorno1, desc: "1º retorno → 2ª vistoria" },
+            { label: "2º Retorno", value: stats.avgTempos.retorno2, desc: "2º retorno → 3ª vistoria" },
             { label: "Até Certificação", value: stats.avgTempos.certificacao, desc: "Solicitação → certificação" },
           ].map((t) => (
             <div key={t.label} className="text-center p-3 rounded-xl bg-accent/50 space-y-1">
