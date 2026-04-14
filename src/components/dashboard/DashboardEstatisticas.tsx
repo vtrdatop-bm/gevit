@@ -478,6 +478,22 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
                   </tr>
                 );
               })}
+              {/* Linha Totais */}
+              {(() => {
+                const vals = [0, 1, 2].map(i =>
+                  ["pendencias", "certificado", "certificado_termo"].reduce((sum, key) => sum + (stats.stageStatusGrid[key]?.[i] || 0), 0)
+                );
+                const total = vals.reduce((a, b) => a + b, 0);
+                return (
+                  <tr className="border-t border-border font-bold bg-muted/40">
+                    <td className="py-2.5 px-3 text-foreground">Totais</td>
+                    {vals.map((v, i) => (
+                      <td key={i} className="text-center py-2.5 px-3 text-foreground">{v}</td>
+                    ))}
+                    <td className="text-center py-2.5 px-3 text-foreground">{total}</td>
+                  </tr>
+                );
+              })()}
             </tbody>
           </table>
         </div>
