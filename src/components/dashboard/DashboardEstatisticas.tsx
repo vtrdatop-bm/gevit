@@ -245,18 +245,19 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
     };
     filtered.forEach((p) => {
       const v = vistoriaMap[p.id] as VistoriaData | undefined;
-      const stage = computeStage(v || null);
-      const ds = computeDisplayStatus(p.status, v || null, p.protocolos?.data_solicitacao);
-
-      if (!stage) return;
-
-      if (ds === "pendencias") {
-        stageStatusGrid.pendencias[stage - 1]++;
-      } else if (ds === "certificado") {
-        stageStatusGrid.certificado[stage - 1]++;
-      } else if (ds === "certificado_termo") {
-        stageStatusGrid.certificado_termo[stage - 1]++;
-      }
+      if (!v) return;
+      // Etapa 1
+      if (v.status_1_vistoria === "pendencia") stageStatusGrid.pendencias[0]++;
+      if (v.status_1_vistoria === "reprovado") stageStatusGrid.certificado[0]++;
+      if (v.status_1_vistoria === "aprovado") stageStatusGrid.certificado_termo[0]++;
+      // Etapa 2
+      if (v.status_2_vistoria === "pendencia") stageStatusGrid.pendencias[1]++;
+      if (v.status_2_vistoria === "reprovado") stageStatusGrid.certificado[1]++;
+      if (v.status_2_vistoria === "aprovado") stageStatusGrid.certificado_termo[1]++;
+      // Etapa 3
+      if (v.status_3_vistoria === "pendencia") stageStatusGrid.pendencias[2]++;
+      if (v.status_3_vistoria === "reprovado") stageStatusGrid.certificado[2]++;
+      if (v.status_3_vistoria === "aprovado") stageStatusGrid.certificado_termo[2]++;
     });
 
     // --- 4) Average times ---
