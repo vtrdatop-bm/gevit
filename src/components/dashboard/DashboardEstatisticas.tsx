@@ -274,12 +274,12 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       const d1 = daysBetween(sol, v.data_1_vistoria);
       if (d1 !== null) tempos1Vist.push(d1);
 
-      // 1st return time (diferença entre data_1_retorno e data_2_atribuicao)
-      const r1 = daysBetween(v.data_2_atribuicao, v.data_1_retorno);
+      // 1st return time (diferença entre data_2_vistoria e data_1_retorno)
+      const r1 = daysBetween(v.data_1_retorno, v.data_2_vistoria);
       if (r1 !== null) temposRetorno1.push(r1);
 
-      // 2nd return time (diferença entre data_2_retorno e data_2_atribuicao)
-      const r2 = daysBetween(v.data_2_atribuicao, v.data_2_retorno);
+      // 2nd return time (diferença entre data_3_vistoria e data_2_retorno)
+      const r2 = daysBetween(v.data_2_retorno, v.data_3_vistoria);
       if (r2 !== null) temposRetorno2.push(r2);
 
       // Time to certification
