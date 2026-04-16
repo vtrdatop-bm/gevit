@@ -42,9 +42,9 @@
     --status-pending: 0 84% 60%;
     --status-risk: 52 98% 48%;
     --status-retorno: 28 95% 52%;
-    --status-expired: 0 0% 45%;
+    --status-expired: 350 55% 40%;
     --status-assigned: 262 83% 58%;
-    --status-cancelado: 350 55% 40%;
+    --status-cancelado: 0 0% 45%;
 
     /* Sidebar */
     --sidebar-background: 222 47% 11%;

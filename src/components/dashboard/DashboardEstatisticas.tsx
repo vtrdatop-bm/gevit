@@ -234,6 +234,7 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       { key: "expirado", label: "Expirados", count: byStatus["expirado"] || 0 },
       { key: "regional", label: "Aguardando", count: byStatus["regional"] || 0 },
       { key: "atribuido", label: "Atribuído", count: byStatus["atribuido"] || 0 },
+      { key: "cancelado", label: "Cancelados", count: byStatus["cancelado"] || 0 },
     ];
 
     // --- 3) Status by stage ---

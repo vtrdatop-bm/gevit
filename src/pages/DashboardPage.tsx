@@ -38,7 +38,8 @@ const STATUS_COLORS: Record<string, string> = {
   pendencias: "hsl(0, 84%, 60%)",
   certificado_termo: "hsl(217, 91%, 60%)",
   certificado: "hsl(142, 71%, 45%)",
-  expirado: "hsl(0, 0%, 45%)",
+  expirado: "hsl(350, 55%, 40%)",
+  cancelado: "hsl(0, 0%, 45%)",
 };
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -162,6 +163,7 @@ export default function DashboardPage() {
     const aguardando = byStatus["regional"] || 0;
     const atribuidos = byStatus["atribuido"] || 0;
     const expirados = byStatus["expirado"] || 0;
+    const cancelados = byStatus["cancelado"] || 0;
 
     const pieData = Object.entries(byStatus)
       .filter(([, v]) => v > 0)
@@ -174,7 +176,7 @@ export default function DashboardPage() {
     const vistoriadoresAtivos = profiles.filter((p) => p.ativo).length;
     const taxaCertificacao = total > 0 ? Math.round(((certificados + certificadosTermo) / total) * 100) : 0;
 
-    return { total, aguardando, atribuidos, certificados, certificadosTermo, pendentes, expirados, pieData, vistoriadoresAtivos, taxaCertificacao };
+    return { total, aguardando, atribuidos, certificados, certificadosTermo, pendentes, expirados, cancelados, pieData, vistoriadoresAtivos, taxaCertificacao };
   }, [filteredProtocolos, profiles, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
 
   if (loading) {
@@ -299,7 +301,8 @@ export default function DashboardPage() {
           </h3>
           <div className="space-y-4">
             {[
-              { label: "Expirados", value: String(stats.expirados), icon: XCircle, color: "text-status-pending" },
+              { label: "Cancelados", value: String(stats.cancelados), icon: XCircle, color: "text-status-cancelado" },
+              { label: "Expirados", value: String(stats.expirados), icon: XCircle, color: "text-status-expired" },
               { label: "Usuários ativos", value: String(stats.vistoriadoresAtivos), icon: Users, color: "text-primary" },
               { label: "Taxa de certificação", value: `${stats.taxaCertificacao}%`, icon: TrendingUp, color: "text-status-certified" },
               { label: "Pendências", value: String(stats.pendentes), icon: AlertTriangle, color: "text-status-risk" },

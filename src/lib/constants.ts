@@ -5,8 +5,8 @@ export const STATUS_MARKER_COLORS = {
   pendencias: "#ef4444",    // Vermelho
   certificado_termo: "#3b82f6", // Azul
   certificado: "#10b981",   // Verde
-  expirado: "#4b5563",      // Cinza escuro
-  cancelado: "#881337",     // Rose escuro (dark red)
+  expirado: "#881337",      // Vinho/Vermelho escuro
+  cancelado: "#4b5563",     // Preto/Cinza escuro
 } as const;
 
 export const REGIONAL_COLORS = [

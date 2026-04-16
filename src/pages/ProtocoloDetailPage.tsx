@@ -520,6 +520,18 @@ export default function ProtocoloDetailPage() {
     }
   };
 
+  const handleCancelProtocolo = async () => {
+    if (!processo) return;
+    try {
+      const { error } = await supabase.from("processos").update({ status: "cancelado" }).eq("id", processo.id);
+      if (error) throw error;
+      toast.success("Protocolo cancelado");
+      await fetchData();
+    } catch (error: any) {
+      toast.error("Erro ao cancelar: " + error.message);
+    }
+  };
+
   const formatCpfCnpjInput = (value: string): string => {
     const digits = value.replace(/\D/g, "").slice(0, 14);
     if (digits.length <= 11) {
@@ -575,6 +587,9 @@ export default function ProtocoloDetailPage() {
           <div className="flex gap-2 ml-auto sm:ml-0">
             <button onClick={() => setDeleteDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors whitespace-nowrap">
               <Trash2 className="w-3.5 h-3.5" /> Excluir
+            </button>
+            <button onClick={handleCancelProtocolo} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-zinc-800 text-zinc-900 dark:border-zinc-200 dark:text-zinc-100 text-sm font-medium hover:bg-zinc-800 hover:text-white dark:hover:bg-zinc-200 dark:hover:text-black transition-colors whitespace-nowrap">
+              <X className="w-3.5 h-3.5" /> Cancelar
             </button>
             <button onClick={startEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors whitespace-nowrap">
               <Pencil className="w-3.5 h-3.5" /> Editar
