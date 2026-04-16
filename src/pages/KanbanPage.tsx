@@ -26,6 +26,7 @@ import { ProcessoData, VistoriaData } from "@/types/database";
 
 const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] = [
   { key: "regional", label: STATUS_LABELS.regional, dotColor: "bg-[hsl(var(--status-risk))]" },
+  { key: "aguardando_retorno", label: "Aguardando Retorno", dotColor: "bg-orange-400" },
   { key: "atribuido", label: STATUS_LABELS.atribuido, dotColor: "bg-[hsl(var(--status-assigned))]" },
   { key: "pendencias", label: STATUS_LABELS.pendencias, dotColor: "bg-[hsl(var(--status-pending))]" },
   { key: "certificado_termo", label: STATUS_LABELS.certificado_termo, dotColor: "bg-[hsl(var(--status-certified-term))]" },

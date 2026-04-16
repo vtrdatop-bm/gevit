@@ -6,6 +6,7 @@
 
 export type DisplayStatus =
   | "regional"
+  | "aguardando_retorno"
   | "atribuido"
   | "pendencias"
   | "certificado_termo"
@@ -52,7 +53,7 @@ export function computeDisplayStatus(
     } else if (vistoria.data_3_atribuicao) {
       status = "atribuido";
     } else if (vistoria.data_2_retorno) {
-      status = "regional";
+      status = "aguardando_retorno";
     } 
     // --- STAGE 2 ---
     else if (vistoria.status_2_vistoria) {
@@ -62,7 +63,7 @@ export function computeDisplayStatus(
     } else if (vistoria.data_2_atribuicao) {
       status = "atribuido";
     } else if (vistoria.data_1_retorno) {
-      status = "regional";
+      status = "aguardando_retorno";
     }
     // --- STAGE 1 ---
     else if (vistoria.status_1_vistoria) {
@@ -139,6 +140,7 @@ export function getCurrentVistoriadorId(
 
 export const displayStatusLabels: Record<DisplayStatus, string> = {
   regional: "Aguardando vistoria",
+  aguardando_retorno: "Aguardando Retorno",
   atribuido: "Atribuído",
   pendencias: "Vistoria com Pendência",
   certificado_termo: "Certificado Provisório",
@@ -148,6 +150,7 @@ export const displayStatusLabels: Record<DisplayStatus, string> = {
 
 export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
   regional: "status-badge-risk",
+  aguardando_retorno: "status-badge-risk",
   atribuido: "status-badge-assigned",
   pendencias: "status-badge-pending",
   certificado_termo: "status-badge-term",
@@ -157,6 +160,7 @@ export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
 
 export const displayStatusDotColor: Record<DisplayStatus, string> = {
   regional: "bg-[hsl(var(--status-risk))]",
+  aguardando_retorno: "bg-orange-400",
   atribuido: "bg-[hsl(var(--status-assigned))]",
   pendencias: "bg-[hsl(var(--status-pending))]",
   certificado_termo: "bg-[hsl(var(--status-certified-term))]",
