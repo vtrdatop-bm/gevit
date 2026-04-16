@@ -44,6 +44,8 @@ export default function ProtocoloDetailPage() {
   const [novoBairroRegional, setNovoBairroRegional] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const lastCnpjSearched = useRef<string>("");
   const bairroRef = useRef<HTMLDivElement>(null);
@@ -522,13 +524,17 @@ export default function ProtocoloDetailPage() {
 
   const handleCancelProtocolo = async () => {
     if (!processo) return;
+    setIsCanceling(true);
     try {
       const { error } = await supabase.from("processos").update({ status: "cancelado" }).eq("id", processo.id);
       if (error) throw error;
       toast.success("Protocolo cancelado");
+      setCancelDialogOpen(false);
       await fetchData();
     } catch (error: any) {
       toast.error("Erro ao cancelar: " + error.message);
+    } finally {
+      setIsCanceling(false);
     }
   };
 
@@ -588,7 +594,7 @@ export default function ProtocoloDetailPage() {
             <button onClick={() => setDeleteDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors whitespace-nowrap">
               <Trash2 className="w-3.5 h-3.5" /> Excluir
             </button>
-            <button onClick={handleCancelProtocolo} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-zinc-800 text-zinc-900 dark:border-zinc-200 dark:text-zinc-100 text-sm font-medium hover:bg-zinc-800 hover:text-white dark:hover:bg-zinc-200 dark:hover:text-black transition-colors whitespace-nowrap">
+            <button onClick={() => setCancelDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-zinc-800 text-zinc-900 dark:border-zinc-200 dark:text-zinc-100 text-sm font-medium hover:bg-zinc-800 hover:text-white dark:hover:bg-zinc-200 dark:hover:text-black transition-colors whitespace-nowrap">
               <X className="w-3.5 h-3.5" /> Cancelar
             </button>
             <button onClick={startEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors whitespace-nowrap">
@@ -861,9 +867,25 @@ export default function ProtocoloDetailPage() {
             <p className="text-xs text-muted-foreground p-3 bg-destructive/10 rounded-lg border border-destructive/20 text-destructive-foreground">Esta ação é permanente e excluirá também todas as vistorias, documentos e históricos associados a este protocolo.</p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting} className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">Cancelar</button>
+            <button onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting} className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">Voltar</button>
             <button onClick={handleDeleteProtocolo} disabled={isDeleting} className="px-4 h-9 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2">
               {isDeleting ? <><Loader2 className="w-4 h-4 animate-spin" />Excluindo...</> : "Sim, Excluir"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertCircle className="w-5 h-5 opacity-70" />Confirmar Cancelamento</DialogTitle></DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-foreground">Você tem certeza que deseja cancelar o protocolo **{protocolo.numero}**?</p>
+            <p className="text-xs text-muted-foreground p-3 bg-muted rounded-lg border border-border">Esta ação mudará o status do protocolo para "Cancelado". Você poderá visualizá-lo nos filtros e relatórios, mas ele não constará mais nas listas de pendências ativas.</p>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={() => setCancelDialogOpen(false)} disabled={isCanceling} className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">Voltar</button>
+            <button onClick={handleCancelProtocolo} disabled={isCanceling} className="px-4 h-9 rounded-md bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2">
+              {isCanceling ? <><Loader2 className="w-4 h-4 animate-spin" />Aguarde...</> : "Sim, Cancelar"}
             </button>
           </div>
         </DialogContent>
