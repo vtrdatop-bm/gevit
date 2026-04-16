@@ -210,7 +210,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
         <KpiCard
           title="Total de Processos"
           value={stats.total}
@@ -245,6 +245,12 @@ export default function DashboardPage() {
           value={stats.pendentes}
           icon={AlertTriangle}
           color="bg-status-pending/15"
+        />
+        <KpiCard
+          title="Cancelados"
+          value={stats.cancelados}
+          icon={XCircle}
+          color="bg-status-cancelado/15 text-status-cancelado"
         />
       </div>
 
