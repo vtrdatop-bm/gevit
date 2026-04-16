@@ -44,6 +44,7 @@
     --status-retorno: 28 95% 52%;
     --status-expired: 0 0% 45%;
     --status-assigned: 262 83% 58%;
+    --status-cancelado: 350 55% 40%;
 
     /* Sidebar */
     --sidebar-background: 222 47% 11%;
@@ -96,6 +97,9 @@
   }
   .status-badge-retorno {
     @apply bg-status-retorno/15 text-status-retorno border-status-retorno/30;
+  }
+  .status-badge-cancelado {
+    @apply bg-status-cancelado/15 text-status-cancelado border-status-cancelado/30;
   }
   .status-badge-expired {
     @apply bg-status-expired/15 text-status-expired border-status-expired/30;

@@ -6,6 +6,7 @@ export const STATUS_MARKER_COLORS = {
   certificado_termo: "#3b82f6", // Azul
   certificado: "#10b981",   // Verde
   expirado: "#4b5563",      // Cinza escuro
+  cancelado: "#881337",     // Rose escuro (dark red)
 } as const;
 
 export const REGIONAL_COLORS = [
@@ -38,4 +39,5 @@ export const STATUS_LABELS = {
   expirado: "Expirado",
   pendencias: "Pendência",
   atribuido: "Atribuído",
+  cancelado: "Cancelado",
 } as const;

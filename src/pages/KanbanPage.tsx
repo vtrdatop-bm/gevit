@@ -32,6 +32,7 @@ const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] =
   { key: "certificado_termo", label: STATUS_LABELS.certificado_termo, dotColor: "bg-[hsl(var(--status-certified-term))]" },
   { key: "certificado", label: STATUS_LABELS.certificado, dotColor: "bg-[hsl(var(--status-certified))]" },
   { key: "expirado", label: STATUS_LABELS.expirado, dotColor: "bg-[hsl(var(--status-expired))]" },
+  { key: "cancelado", label: "Cancelado", dotColor: "bg-[hsl(var(--status-cancelado))]" },
 ];
 
 

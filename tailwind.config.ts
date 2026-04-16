@@ -69,6 +69,7 @@ export default {
           expired: "hsl(var(--status-expired))",
           assigned: "hsl(var(--status-assigned))",
           retorno: "hsl(var(--status-retorno))",
+          cancelado: "hsl(var(--status-cancelado))",
         },
         chart: {
           "1": "hsl(var(--chart-1))",

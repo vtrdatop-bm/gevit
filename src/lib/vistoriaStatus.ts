@@ -11,7 +11,8 @@ export type DisplayStatus =
   | "pendencias"
   | "certificado_termo"
   | "certificado"
-  | "expirado";
+  | "expirado"
+  | "cancelado";
 
 export type VistoriaStage = 1 | 2 | 3 | null;
 
@@ -41,6 +42,9 @@ export function computeDisplayStatus(
   vistoria?: VistoriaData | null,
   dataSolicitacao?: string | null
 ): DisplayStatus {
+  // Terminal state — never overridden
+  if (dbStatus === "cancelado") return "cancelado";
+
   // 1. Calculate the "natural" status first
   let status: DisplayStatus = dbStatus as DisplayStatus;
 
@@ -146,6 +150,7 @@ export const displayStatusLabels: Record<DisplayStatus, string> = {
   certificado_termo: "Certificado Provisório",
   certificado: "Certificado",
   expirado: "Expirados",
+  cancelado: "Cancelado",
 };
 
 export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
@@ -156,6 +161,7 @@ export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
   certificado_termo: "status-badge-term",
   certificado: "status-badge-certified",
   expirado: "status-badge-expired",
+  cancelado: "status-badge-cancelado",
 };
 
 export const displayStatusDotColor: Record<DisplayStatus, string> = {
@@ -166,6 +172,7 @@ export const displayStatusDotColor: Record<DisplayStatus, string> = {
   certificado_termo: "bg-[hsl(var(--status-certified-term))]",
   certificado: "bg-[hsl(var(--status-certified))]",
   expirado: "bg-[hsl(var(--status-expired))]",
+  cancelado: "bg-[hsl(var(--status-cancelado))]",
 };
 
 /**

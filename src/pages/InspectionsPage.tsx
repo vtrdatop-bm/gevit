@@ -31,7 +31,7 @@ interface ProcessoComProtocolo {
   };
 }
 
-type FilterStatus = "all" | "regional" | "atribuido" | "pendencias" | "certificado_termo" | "certificado";
+type FilterStatus = "all" | "regional" | "aguardando_retorno" | "atribuido" | "pendencias" | "certificado_termo" | "certificado" | "cancelado";
 
 export default function InspectionsPage() {
   const { user } = useAuth();
@@ -80,7 +80,7 @@ export default function InspectionsPage() {
         .eq("vistoriador_id", user.id),
       supabase
         .from("vistorias")
-        .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria"),
+        .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
     ]).then(([{ data: procs }, { data: vist }]) => {
       setProcessos((procs as any) || []);
       const vm: Record<string, VistoriaData> = {};
@@ -120,10 +120,12 @@ export default function InspectionsPage() {
   const filterOptions: { value: FilterStatus; label: string }[] = [
     { value: "all", label: "Todos" },
     { value: "regional", label: "Aguardando Vistoria" },
+    { value: "aguardando_retorno", label: "Aguardando Retorno" },
     { value: "atribuido", label: "Atribuído" },
     { value: "pendencias", label: "Com Pendência" },
     { value: "certificado_termo", label: "Cert. Provisório" },
     { value: "certificado", label: "Certificado" },
+    { value: "cancelado", label: "Cancelado" },
   ];
 
   return (

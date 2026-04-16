@@ -269,6 +269,7 @@ export default function MapPage() {
       { value: "expirado", label: getDisplayStatusLabel("expirado") },
       { value: "certificado_termo", label: getDisplayStatusLabel("certificado_termo") },
       { value: "certificado", label: getDisplayStatusLabel("certificado") },
+      { value: "cancelado", label: getDisplayStatusLabel("cancelado") },
     ];
 
     if (canChangeVistoriador) {
