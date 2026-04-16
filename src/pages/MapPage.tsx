@@ -345,6 +345,7 @@ export default function MapPage() {
 
     import("leaflet").then((L) => {
       const map = mapInstance.current;
+      if (!map) return; // Component unmounted before import resolved
 
       map.eachLayer((layer: any) => {
         if (layer instanceof L.CircleMarker) map.removeLayer(layer);

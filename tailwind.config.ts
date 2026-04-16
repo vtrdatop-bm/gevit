@@ -68,6 +68,7 @@ export default {
           risk: "hsl(var(--status-risk))",
           expired: "hsl(var(--status-expired))",
           assigned: "hsl(var(--status-assigned))",
+          retorno: "hsl(var(--status-retorno))",
         },
         chart: {
           "1": "hsl(var(--chart-1))",
