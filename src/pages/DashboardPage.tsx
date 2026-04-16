@@ -33,7 +33,8 @@ import DashboardEstatisticas from "@/components/dashboard/DashboardEstatisticas"
 
 
 const STATUS_COLORS: Record<string, string> = {
-  regional: "hsl(45, 93%, 47%)",
+  regional: "#eab308",
+  aguardando_retorno: "#f97316",
   atribuido: "hsl(270, 60%, 55%)",
   pendencias: "hsl(0, 84%, 60%)",
   certificado_termo: "hsl(217, 91%, 60%)",

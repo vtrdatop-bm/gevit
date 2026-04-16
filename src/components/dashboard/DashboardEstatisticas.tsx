@@ -228,13 +228,13 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
     });
 
     const statusCounts = [
+      { key: "cancelado", label: "Cancelados", count: byStatus["cancelado"] || 0 },
       { key: "certificado", label: "Certificado", count: byStatus["certificado"] || 0 },
       { key: "certificado_termo", label: "Cert. Provisório", count: byStatus["certificado_termo"] || 0 },
       { key: "pendencias", label: "Pendência", count: byStatus["pendencias"] || 0 },
       { key: "expirado", label: "Expirados", count: byStatus["expirado"] || 0 },
       { key: "regional", label: "Aguardando", count: byStatus["regional"] || 0 },
       { key: "atribuido", label: "Atribuído", count: byStatus["atribuido"] || 0 },
-      { key: "cancelado", label: "Cancelados", count: byStatus["cancelado"] || 0 },
     ];
 
     // --- 3) Status by stage ---
