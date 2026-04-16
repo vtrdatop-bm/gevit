@@ -162,6 +162,7 @@ export default function DashboardPage() {
     const certificadosTermo = byStatus["certificado_termo"] || 0;
     const pendentes = byStatus["pendencias"] || 0;
     const aguardando = byStatus["regional"] || 0;
+    const aguardandoRetorno = byStatus["aguardando_retorno"] || 0;
     const atribuidos = byStatus["atribuido"] || 0;
     const expirados = byStatus["expirado"] || 0;
     const cancelados = byStatus["cancelado"] || 0;
@@ -177,7 +178,7 @@ export default function DashboardPage() {
     const vistoriadoresAtivos = profiles.filter((p) => p.ativo).length;
     const taxaCertificacao = total > 0 ? Math.round(((certificados + certificadosTermo) / total) * 100) : 0;
 
-    return { total, aguardando, atribuidos, certificados, certificadosTermo, pendentes, expirados, cancelados, pieData, vistoriadoresAtivos, taxaCertificacao };
+    return { total, aguardando, aguardandoRetorno, atribuidos, certificados, certificadosTermo, pendentes, expirados, cancelados, pieData, vistoriadoresAtivos, taxaCertificacao };
   }, [filteredProtocolos, profiles, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
 
   if (loading) {
@@ -210,7 +211,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-8 gap-4">
         <KpiCard
           title="Total de Processos"
           value={stats.total}
@@ -221,6 +222,12 @@ export default function DashboardPage() {
           value={stats.aguardando}
           icon={Clock}
           color="bg-status-risk/15"
+        />
+        <KpiCard
+          title="Aguardando Retorno"
+          value={stats.aguardandoRetorno}
+          icon={Clock}
+          color="bg-status-retorno/15 text-status-retorno"
         />
         <KpiCard
           title="Atribuído"
