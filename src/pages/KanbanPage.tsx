@@ -26,7 +26,7 @@ import { ProcessoData, VistoriaData } from "@/types/database";
 
 const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] = [
   { key: "regional", label: STATUS_LABELS.regional, dotColor: "bg-[hsl(var(--status-risk))]" },
-  { key: "aguardando_retorno", label: "Aguardando Retorno", dotColor: "bg-orange-400" },
+  { key: "aguardando_retorno", label: "Aguardando Retorno", dotColor: "bg-[hsl(var(--status-retorno))]" },
   { key: "atribuido", label: STATUS_LABELS.atribuido, dotColor: "bg-[hsl(var(--status-assigned))]" },
   { key: "pendencias", label: STATUS_LABELS.pendencias, dotColor: "bg-[hsl(var(--status-pending))]" },
   { key: "certificado_termo", label: STATUS_LABELS.certificado_termo, dotColor: "bg-[hsl(var(--status-certified-term))]" },
@@ -257,8 +257,13 @@ export default function KanbanPage() {
 
   const getByStatus = (procs: ProcessoWithProtocolo[], status: DisplayStatus) =>
     procs.filter((p) => p.displayStatus === status).sort((a, b) => {
+      if (status === "aguardando_retorno") {
+        // Sort ascending by the active return date (2º retorno takes precedence, then 1º retorno)
+        const dateA = a.data_2_retorno || a.data_1_retorno || a.data_solicitacao;
+        const dateB = b.data_2_retorno || b.data_1_retorno || b.data_solicitacao;
+        return dateA.localeCompare(dateB);
+      }
       if (status === "regional") {
-        // User wants to prioritize return dates in sorting
         const dateA = a.data_2_retorno || a.data_1_retorno || a.data_solicitacao;
         const dateB = b.data_2_retorno || b.data_1_retorno || b.data_solicitacao;
         return dateA.localeCompare(dateB);

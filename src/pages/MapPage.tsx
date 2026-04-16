@@ -263,6 +263,7 @@ export default function MapPage() {
   const statusOptions = useMemo(() => {
     const base: Array<{ value: DisplayStatus | "minhas"; label: string }> = [
       { value: "regional", label: getDisplayStatusLabel("regional") },
+      { value: "aguardando_retorno", label: getDisplayStatusLabel("aguardando_retorno") },
       { value: "atribuido", label: getDisplayStatusLabel("atribuido") },
       { value: "pendencias", label: getDisplayStatusLabel("pendencias") },
       { value: "expirado", label: getDisplayStatusLabel("expirado") },

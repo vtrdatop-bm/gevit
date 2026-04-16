@@ -150,7 +150,7 @@ export const displayStatusLabels: Record<DisplayStatus, string> = {
 
 export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
   regional: "status-badge-risk",
-  aguardando_retorno: "status-badge-risk",
+  aguardando_retorno: "status-badge-retorno",
   atribuido: "status-badge-assigned",
   pendencias: "status-badge-pending",
   certificado_termo: "status-badge-term",
@@ -160,7 +160,7 @@ export const displayStatusBadgeClass: Record<DisplayStatus, string> = {
 
 export const displayStatusDotColor: Record<DisplayStatus, string> = {
   regional: "bg-[hsl(var(--status-risk))]",
-  aguardando_retorno: "bg-orange-400",
+  aguardando_retorno: "bg-[hsl(var(--status-retorno))]",
   atribuido: "bg-[hsl(var(--status-assigned))]",
   pendencias: "bg-[hsl(var(--status-pending))]",
   certificado_termo: "bg-[hsl(var(--status-certified-term))]",

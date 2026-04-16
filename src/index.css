@@ -40,7 +40,8 @@
     --status-certified: 142 71% 45%;
     --status-certified-term: 217 91% 60%;
     --status-pending: 0 84% 60%;
-    --status-risk: 45 93% 47%;
+    --status-risk: 52 98% 48%;
+    --status-retorno: 28 95% 52%;
     --status-expired: 0 0% 45%;
     --status-assigned: 262 83% 58%;
 
@@ -92,6 +93,9 @@
   }
   .status-badge-risk {
     @apply bg-status-risk/15 text-status-risk border-status-risk/30;
+  }
+  .status-badge-retorno {
+    @apply bg-status-retorno/15 text-status-retorno border-status-retorno/30;
   }
   .status-badge-expired {
     @apply bg-status-expired/15 text-status-expired border-status-expired/30;
