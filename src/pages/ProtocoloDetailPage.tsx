@@ -469,17 +469,15 @@ export default function ProtocoloDetailPage() {
         }));
 
         if (protocolo) {
-          const { error: protError } = await supabase
-            .from("protocolos")
-            .update({
-              latitude: lat,
-              longitude: lng,
-            })
-            .eq("id", id);
+          const { error: protError } = await supabase.rpc("update_protocolo_coordinates", {
+            p_id: id,
+            p_latitude: Number(lat),
+            p_longitude: Number(lng)
+          });
 
           if (protError) {
             console.error("Erro ao salvar no banco:", protError);
-            toast.error("Localizado, mas erro ao salvar no banco");
+            toast.error("Localizado, mas sem permissão para salvar no banco");
           } else {
             toast.success("Localizado com precisão na cidade correta!");
           }
@@ -518,17 +516,14 @@ export default function ProtocoloDetailPage() {
           setUpdatingLocation(false);
         } else {
           try {
-            const { data, error } = await supabase
-              .from("protocolos")
-              .update({
-                latitude: latitude,
-                longitude: longitude,
-              })
-              .eq("id", protocolo.id)
-              .select();
+            const { data, error } = await supabase.rpc("update_protocolo_coordinates", {
+              p_id: protocolo.id,
+              p_latitude: Number(latitude),
+              p_longitude: Number(longitude)
+            });
 
             if (error) throw error;
-            if (!data || data.length === 0) {
+            if (!data) {
               throw new Error("Sem permissão para atualizar essas coordenadas ou registro não encontrado.");
             }
             
