@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { Navigation, ExternalLink, Copy, ArrowLeft } from "lucide-react";
+import { Navigation, ExternalLink, Copy, ArrowLeft, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import RouteMap from "@/components/routes/RouteMap";
@@ -57,6 +57,18 @@ export default function RoutesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [canChangeVistoriador, setCanChangeVistoriador] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -81,7 +93,7 @@ export default function RoutesPage() {
         const isAdminOrDist = userRoles?.some(
           (r) => r.role === "admin" || r.role === "distribuidor"
         );
-        setCanChangeVistoriador(!!isAdminOrDist);
+        setCanChangeVistoriador(true); // Permitir que todos (inclusive vistoriadores) mudem o campo
 
         // Default to current user if they are a vistoriador
         const isVistoriador = roles?.some((r) => r.user_id === user.id);
@@ -185,6 +197,13 @@ export default function RoutesPage() {
       else next.add(id);
       return next;
     });
+  };
+
+  const getVistoriadorName = (vId: string | null) => {
+    if (!vId) return "Não atribuído";
+    const v = vistoriadores.find(v => v.user_id === vId);
+    if (!v) return "Desconhecido";
+    return `${v.patente ? v.patente + " " : ""}${v.nome_guerra || "Usuário sem nome"}`;
   };
 
   const toggleAll = () => {
@@ -350,40 +369,50 @@ export default function RoutesPage() {
               className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
             />
           </div>
-          <div className="row-span-2">
+          <div className="relative" ref={dropdownRef}>
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">
               Vistoriadores {selectedVistoriadores.size === 0 && <span className="text-[10px] font-normal">(todos)</span>}
             </label>
-            <div className={cn(
-              "border border-input rounded-lg bg-background p-2.5 max-h-32 sm:max-h-40 overflow-y-auto space-y-2",
-              !canChangeVistoriador && "opacity-60 bg-muted/30"
-            )}>
-              {vistoriadores.map((v) => (
-                <label key={v.user_id} className={cn("flex items-center gap-2 text-sm select-none", canChangeVistoriador ? "cursor-pointer" : "cursor-not-allowed")}>
-                  <input
-                    type="checkbox"
-                    disabled={!canChangeVistoriador}
-                    checked={selectedVistoriadores.has(v.user_id)}
-                    onChange={(e) => {
-                      if (!canChangeVistoriador) return;
-                      setSelectedVistoriadores(prev => {
-                        const next = new Set(prev);
-                        if (e.target.checked) next.add(v.user_id);
-                        else next.delete(v.user_id);
-                        return next;
-                      });
-                    }}
-                    className="w-4 h-4 rounded border-input accent-primary flex-shrink-0"
-                  />
-                  <span className="truncate">
-                    {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
-                  </span>
-                </label>
-              ))}
-              {vistoriadores.length === 0 && (
-                <p className="text-xs text-muted-foreground italic">Nenhum disponível</p>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="w-full flex items-center justify-between text-sm rounded-lg border border-input bg-background px-3 py-2 text-left"
+            >
+              <span className="truncate">
+                {selectedVistoriadores.size === 0
+                  ? "Todos selecionados"
+                  : `${selectedVistoriadores.size} selecionado(s)`}
+              </span>
+              <ChevronDown className="w-4 h-4 opacity-50" />
+            </button>
+            
+            {dropdownOpen && (
+              <div className="absolute z-[100] top-[calc(100%+4px)] left-0 right-0 border border-input rounded-lg bg-popover shadow-lg p-2 max-h-48 overflow-y-auto space-y-2">
+                {vistoriadores.map((v) => (
+                  <label key={v.user_id} className="flex items-center gap-2 text-sm select-none cursor-pointer w-full hover:bg-accent hover:text-accent-foreground px-2 py-1.5 rounded-md transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={selectedVistoriadores.has(v.user_id)}
+                      onChange={(e) => {
+                        setSelectedVistoriadores(prev => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(v.user_id);
+                          else next.delete(v.user_id);
+                          return next;
+                        });
+                      }}
+                      className="w-4 h-4 rounded border-input accent-primary flex-shrink-0"
+                    />
+                    <span className="truncate">
+                      {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
+                    </span>
+                  </label>
+                ))}
+                {vistoriadores.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic px-2 py-1">Nenhum disponível</p>
+                )}
+              </div>
+            )}
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">Prioridade da Rota</label>
@@ -481,6 +510,11 @@ export default function RoutesPage() {
                   <p className="text-xs text-muted-foreground truncate">
                     {process.protocolo.endereco}, {process.protocolo.bairro}
                   </p>
+                  <div className="mt-1">
+                    <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-secondary text-secondary-foreground border border-border">
+                      {getVistoriadorName(process.vistoriador_id)}
+                    </span>
+                  </div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
@@ -541,6 +575,11 @@ export default function RoutesPage() {
                         <p className="text-xs text-muted-foreground truncate">
                           {process.protocolo.endereco}, {process.protocolo.bairro}
                         </p>
+                        <div className="mt-1">
+                          <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-secondary text-secondary-foreground border border-border">
+                            {getVistoriadorName(process.vistoriador_id)}
+                          </span>
+                        </div>
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-xs text-muted-foreground">{process.protocolo.municipio}</p>
