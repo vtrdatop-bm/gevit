@@ -48,7 +48,7 @@ export default function RoutesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [dataLimite, setDataLimite] = useState("");
-  const [selectedVistoriador, setSelectedVistoriador] = useState("");
+  const [selectedVistoriadores, setSelectedVistoriadores] = useState<Set<string>>(new Set());
   const [routePriority, setRoutePriority] = useState<"coord" | "date">("coord");
   const [routeGenerated, setRouteGenerated] = useState(false);
   const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
@@ -86,7 +86,7 @@ export default function RoutesPage() {
         // Default to current user if they are a vistoriador
         const isVistoriador = roles?.some((r) => r.user_id === user.id);
         if (isVistoriador) {
-          setSelectedVistoriador(user.id);
+          setSelectedVistoriadores(new Set([user.id]));
         }
       }
 
@@ -137,7 +137,7 @@ export default function RoutesPage() {
 
     return processos
       .filter((p) => {
-        if (selectedVistoriador && p.vistoriador_id !== selectedVistoriador) return false;
+        if (selectedVistoriadores.size > 0 && (!p.vistoriador_id || !selectedVistoriadores.has(p.vistoriador_id))) return false;
 
         const dates = pendingAttrMap[p.id];
         if (!dates?.length) return false;
@@ -149,7 +149,7 @@ export default function RoutesPage() {
         ...p,
         datasAtribuicao: (pendingAttrMap[p.id] || []).filter((d) => d <= dataLimite),
       }));
-  }, [processos, selectedVistoriador, pendingAttrMap, dataLimite]);
+  }, [processos, selectedVistoriadores, pendingAttrMap, dataLimite]);
 
   const selectedProcesses = filteredProcesses.filter((p) => selectedIds.has(p.id));
 
@@ -316,7 +316,7 @@ export default function RoutesPage() {
     setSelectedIds(new Set());
     setRouteGenerated(false);
     setOptimizedOrder([]);
-  }, [dataLimite, selectedVistoriador, routePriority]);
+  }, [dataLimite, selectedVistoriadores, routePriority]);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -350,24 +350,40 @@ export default function RoutesPage() {
               className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
             />
           </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1.5">Vistoriador</label>
-            <select
-              value={selectedVistoriador}
-              onChange={(e) => setSelectedVistoriador(e.target.value)}
-              disabled={!canChangeVistoriador}
-              className={cn(
-                "w-full text-sm rounded-lg border border-input bg-background px-3 py-2",
-                !canChangeVistoriador && "opacity-60 cursor-not-allowed"
-              )}
-            >
-              {canChangeVistoriador && <option value="">Todos</option>}
+          <div className="row-span-2">
+            <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+              Vistoriadores {selectedVistoriadores.size === 0 && <span className="text-[10px] font-normal">(todos)</span>}
+            </label>
+            <div className={cn(
+              "border border-input rounded-lg bg-background p-2.5 max-h-32 sm:max-h-40 overflow-y-auto space-y-2",
+              !canChangeVistoriador && "opacity-60 bg-muted/30"
+            )}>
               {vistoriadores.map((v) => (
-                <option key={v.user_id} value={v.user_id}>
-                  {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
-                </option>
+                <label key={v.user_id} className={cn("flex items-center gap-2 text-sm select-none", canChangeVistoriador ? "cursor-pointer" : "cursor-not-allowed")}>
+                  <input
+                    type="checkbox"
+                    disabled={!canChangeVistoriador}
+                    checked={selectedVistoriadores.has(v.user_id)}
+                    onChange={(e) => {
+                      if (!canChangeVistoriador) return;
+                      setSelectedVistoriadores(prev => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.add(v.user_id);
+                        else next.delete(v.user_id);
+                        return next;
+                      });
+                    }}
+                    className="w-4 h-4 rounded border-input accent-primary flex-shrink-0"
+                  />
+                  <span className="truncate">
+                    {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
+                  </span>
+                </label>
               ))}
-            </select>
+              {vistoriadores.length === 0 && (
+                <p className="text-xs text-muted-foreground italic">Nenhum disponível</p>
+              )}
+            </div>
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">Prioridade da Rota</label>
