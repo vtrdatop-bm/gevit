@@ -47,6 +47,7 @@ export default function ProtocoloDetailPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [updatingLocation, setUpdatingLocation] = useState(false);
   const lastCnpjSearched = useRef<string>("");
   const bairroRef = useRef<HTMLDivElement>(null);
 
@@ -494,7 +495,61 @@ export default function ProtocoloDetailPage() {
     }
   };
 
+  const handleUpdateCurrentLocation = () => {
+    if (!protocolo) return;
+    setUpdatingLocation(true);
 
+    if (!navigator.geolocation) {
+      toast.error("Geolocalização não suportada por este navegador");
+      setUpdatingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const finalLat = latitude.toFixed(6);
+        const finalLon = longitude.toFixed(6);
+
+        if (editing) {
+          handleEditChange("latitude", finalLat);
+          handleEditChange("longitude", finalLon);
+          toast.success("Coordenadas obtidas! Lembre-se de salvar.");
+          setUpdatingLocation(false);
+        } else {
+          try {
+            const { error } = await supabase
+              .from("protocolos")
+              .update({
+                latitude: latitude,
+                longitude: longitude,
+              })
+              .eq("id", protocolo.id);
+
+            if (error) throw error;
+            
+            toast.success("Localização atualizada com sucesso no protocolo!");
+            await fetchData();
+          } catch (error: any) {
+             console.error("Erro ao atualizar localização:", error);
+             toast.error("Erro ao salvar localização: " + error.message);
+          } finally {
+             setUpdatingLocation(false);
+          }
+        }
+      },
+      (error) => {
+        console.error("Erro de geolocalização:", error);
+        toast.error("Não foi possível obter sua localização. Verifique as permissões de GPS.");
+        setUpdatingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
 
   const handleDeleteProtocolo = async () => {
     if (!protocolo) return;
@@ -742,16 +797,22 @@ export default function ProtocoloDetailPage() {
                   />
                 </div>
               </div>
-              <button type="button" onClick={geocodeAddress} disabled={geocoding || (!editForm.cep && (!editForm.endereco || !editForm.municipio))} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50 w-full justify-center">
-                {geocoding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
-                {geocoding ? "Buscando..." : "Buscar coordenadas"}
-              </button>
-              {(editForm.latitude && editForm.longitude) && (
-                <button type="button" onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors w-full justify-center text-primary">
-                  <MapPin className="w-3.5 h-3.5" />
-                  Abrir no mapa
+              <div className="flex flex-col gap-2 pt-1">
+                <button type="button" onClick={geocodeAddress} disabled={geocoding || (!editForm.cep && (!editForm.endereco || !editForm.municipio))} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50 w-full justify-center">
+                  {geocoding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                  {geocoding ? "Buscando..." : "Buscar pelo endereço"}
                 </button>
-              )}
+                <button type="button" onClick={handleUpdateCurrentLocation} disabled={updatingLocation} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input bg-zinc-50 dark:bg-zinc-900 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 w-full justify-center">
+                  {updatingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
+                  {updatingLocation ? "Capturando..." : "Usar minha localização atual"}
+                </button>
+                {(editForm.latitude && editForm.longitude) && (
+                  <button type="button" onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors w-full justify-center text-primary mt-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    Abrir no mapa
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-1 text-sm">
@@ -759,15 +820,27 @@ export default function ProtocoloDetailPage() {
               <p>{protocolo.endereco}</p>
               <p className="text-muted-foreground">{protocolo.bairro} — {protocolo.municipio}</p>
               {protocolo.area && <p className="text-muted-foreground">Área: {formatArea(protocolo.area)} m²</p>}
-              {protocolo.latitude && protocolo.longitude && (
-                <>
+              
+              <div className="pt-2 flex flex-col gap-1.5">
+                {protocolo.latitude && protocolo.longitude ? (
                   <p className="text-muted-foreground text-xs font-mono">📍 {Number(protocolo.latitude).toFixed(6)}, {Number(protocolo.longitude).toFixed(6)}</p>
-                  <button onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })} className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline mt-1">
-                    <MapPin className="w-3 h-3" />
-                    Abrir no mapa
+                ) : (
+                  <p className="text-muted-foreground text-xs italic">Sem coordenadas registradas</p>
+                )}
+                
+                <div className="flex items-center gap-4 mt-0.5">
+                  {protocolo.latitude && protocolo.longitude && (
+                    <button onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })} className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+                      <MapPin className="w-3.5 h-3.5" />
+                      Abrir no mapa
+                    </button>
+                  )}
+                  <button onClick={handleUpdateCurrentLocation} disabled={updatingLocation} className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-primary transition-colors disabled:opacity-50">
+                    {updatingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
+                    {updatingLocation ? "Atualizando..." : "Usar local atual"}
                   </button>
-                </>
-              )}
+                </div>
+              </div>
             </div>
           )}
         </div>
