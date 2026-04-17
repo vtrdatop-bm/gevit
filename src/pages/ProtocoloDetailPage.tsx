@@ -518,15 +518,22 @@ export default function ProtocoloDetailPage() {
           setUpdatingLocation(false);
         } else {
           try {
-            const { error } = await supabase
+            const { data, error } = await supabase
               .from("protocolos")
               .update({
                 latitude: latitude,
                 longitude: longitude,
               })
-              .eq("id", protocolo.id);
+              .eq("id", protocolo.id)
+              .select();
 
             if (error) throw error;
+            if (!data || data.length === 0) {
+              throw new Error("Sem permissão para atualizar essas coordenadas ou registro não encontrado.");
+            }
+            
+            // Atualiza estado local imediatamente para refletir na tela
+            setProtocolo((prev) => prev ? { ...prev, latitude, longitude } : prev);
             
             toast.success("Localização atualizada com sucesso no protocolo!");
             await fetchData();
