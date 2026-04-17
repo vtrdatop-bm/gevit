@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Calendar, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TermoData {
   id: string;
@@ -73,6 +74,9 @@ export default function VistoriaTab({
   const [numeroTermo, setNumeroTermo] = useState(termo?.numero_termo || "");
   const [validadeTermo, setValidadeTermo] = useState(termo?.data_validade || "");
   const [saving, setSaving] = useState(false);
+
+  const { activeRole } = useAuth();
+  const isVistoriador = activeRole === "vistoriador";
 
   // Sync Termo data if it loads later
   useEffect(() => {
@@ -197,6 +201,7 @@ export default function VistoriaTab({
               type="date"
               value={retorno}
               onChange={(e) => setRetorno(e.target.value)}
+              disabled={isVistoriador}
               className="h-9 w-full text-sm px-2 py-0 bg-background border-input min-w-0 box-border"
             />
           </div>
@@ -210,6 +215,7 @@ export default function VistoriaTab({
             type="date"
             value={atribuicao}
             onChange={(e) => setAtribuicao(e.target.value)}
+            disabled={isVistoriador}
             className="h-9 w-full text-sm px-2 py-0 bg-background border-input min-w-0 box-border"
           />
         </div>
@@ -218,7 +224,7 @@ export default function VistoriaTab({
         <div className="space-y-2">
           <Label htmlFor={`vistoriador-${numero}`} className="text-sm font-medium">Vistoriador</Label>
           <div className="relative">
-            <Select value={vistoriador} onValueChange={setVistoriador}>
+            <Select value={vistoriador} onValueChange={setVistoriador} disabled={isVistoriador}>
               <SelectTrigger
                 id={`vistoriador-${numero}`}
                 className="relative w-full pr-14 [&>svg]:absolute [&>svg]:right-3 [&>svg]:top-1/2 [&>svg]:-translate-y-1/2"
@@ -240,7 +246,8 @@ export default function VistoriaTab({
                   e.stopPropagation();
                   setVistoriador("");
                 }}
-                className="absolute right-9 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                disabled={isVistoriador}
+                className="absolute right-9 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                 title="Limpar vistoriador"
               >
                 <X className="h-3.5 w-3.5" />
@@ -260,6 +267,7 @@ export default function VistoriaTab({
               setData(e.target.value);
               if (!e.target.value) setStatus("");
             }}
+            disabled={isVistoriador}
             className="h-9 w-full text-sm px-2 py-0 bg-background border-input min-w-0 box-border"
           />
         </div>
@@ -271,7 +279,7 @@ export default function VistoriaTab({
             {!data && <span className="text-[10px] text-muted-foreground ml-1">(preencha a data)</span>}
           </Label>
           <div className="relative">
-            <Select value={status} onValueChange={setStatus} disabled={!data}>
+            <Select value={status} onValueChange={setStatus} disabled={!data || isVistoriador}>
               <SelectTrigger
                 id={`status-${numero}`}
                 className="relative w-full pr-14 [&>svg]:absolute [&>svg]:right-3 [&>svg]:top-1/2 [&>svg]:-translate-y-1/2"
@@ -295,7 +303,7 @@ export default function VistoriaTab({
                 }}
                 className="absolute right-9 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                 title="Limpar status"
-                disabled={!data}
+                disabled={!data || isVistoriador}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -310,9 +318,10 @@ export default function VistoriaTab({
             id={`observacoes-${numero}`}
             value={obs}
             onChange={(e) => setObs(e.target.value)}
+            disabled={isVistoriador}
             placeholder="Digite observações desta vistoria"
             rows={3}
-            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y disabled:opacity-50"
           />
         </div>
       </div>
@@ -331,6 +340,7 @@ export default function VistoriaTab({
                 id={`numero-termo-${numero}`}
                 value={numeroTermo}
                 onChange={(e) => setNumeroTermo(e.target.value)}
+                disabled={isVistoriador}
                 placeholder="Ex.: 001/2026"
               />
             </div>
@@ -341,6 +351,7 @@ export default function VistoriaTab({
                 type="date"
                 value={validadeTermo}
                 onChange={(e) => setValidadeTermo(e.target.value)}
+                disabled={isVistoriador}
               />
             </div>
           </div>
@@ -348,14 +359,16 @@ export default function VistoriaTab({
       )}
 
       <div className="flex justify-end pt-2">
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          size="lg"
-          className="min-w-[120px]"
-        >
-          {saving ? "Salvando..." : "Salvar"}
-        </Button>
+        {!isVistoriador && (
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            size="lg"
+            className="min-w-[120px]"
+          >
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+        )}
       </div>
     </div>
   );
