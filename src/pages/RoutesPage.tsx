@@ -73,17 +73,23 @@ export default function RoutesPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      // Buscar apenas user_id dos vistoriadores
+
+      // Buscar todos os perfis ativos que tenham papel de vistoriador
       const { data: vistoriadorRoles } = await supabase
         .from("user_roles")
         .select("user_id")
         .eq("role", "vistoriador");
       const vistoriadorIds = vistoriadorRoles?.map((r) => r.user_id) || [];
-      const [{ data: profiles }, { data: procsData }, { data: vistoriasData }] = await Promise.all([
-        supabase
+      let profiles: Vistoriador[] = [];
+      if (vistoriadorIds.length > 0) {
+        const { data: allProfiles } = await supabase
           .from("profiles")
           .select("user_id, patente, nome_guerra")
-          .in("user_id", vistoriadorIds),
+          .in("user_id", vistoriadorIds)
+          .eq("ativo", true);
+        profiles = allProfiles || [];
+      }
+      const [{ data: procsData }, { data: vistoriasData }] = await Promise.all([
         supabase
           .from("processos")
           .select("id, protocolo_id, vistoriador_id, status, protocolos(nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
@@ -94,7 +100,7 @@ export default function RoutesPage() {
       ]);
 
       setCanChangeVistoriador(true); // Permitir múltipla seleção para todos os perfis
-      if (profiles) setVistoriadores(sortVistoriadores(profiles));
+      setVistoriadores(sortVistoriadores(profiles));
 
       if (procsData) {
         const mapped = procsData
