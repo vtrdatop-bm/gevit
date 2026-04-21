@@ -1,3 +1,5 @@
+  // Novo: status cancelado
+  const isCancelado = processo?.status === "cancelado";
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -227,7 +229,7 @@ export default function ProtocoloDetailPage() {
   }, [protocolo, editing]);
 
   const startEdit = () => {
-    if (!protocolo) return;
+    if (!protocolo || isCancelado) return;
     setEditing(true);
   };
 
@@ -236,7 +238,7 @@ export default function ProtocoloDetailPage() {
   };
 
   const saveEdit = async () => {
-    if (!protocolo) return;
+    if (!protocolo || isCancelado) return;
     setSaving(true);
 
     if (!editForm.nome_fantasia || !editForm.nome_fantasia.trim()) {
@@ -558,16 +560,26 @@ export default function ProtocoloDetailPage() {
     if (!protocolo) return;
     setIsDeleting(true);
     try {
-      if (processo) {
+      // Exclui todos os registros relacionados ao protocolo
+      // Primeiro, busca o processo relacionado ao protocolo
+      let processoId = processo?.id;
+      if (!processoId) {
+        // Busca processo se não estiver carregado
+        const { data: procData, error: procError } = await supabase.from("processos").select("id").eq("protocolo_id", protocolo.id).single();
+        if (procError) throw procError;
+        processoId = procData?.id;
+      }
+      if (processoId) {
         await Promise.all([
-          supabase.from("notificacoes").delete().eq("processo_id", processo.id),
-          supabase.from("vistorias").delete().eq("processo_id", processo.id),
-          supabase.from("pausas").delete().eq("processo_id", processo.id),
-          supabase.from("termos_compromisso").delete().eq("processo_id", processo.id),
+          supabase.from("notificacoes").delete().eq("processo_id", processoId),
+          supabase.from("vistorias").delete().eq("processo_id", processoId),
+          supabase.from("pausas").delete().eq("processo_id", processoId),
+          supabase.from("termos_compromisso").delete().eq("processo_id", processoId),
         ]);
-        const { error: errProc } = await supabase.from("processos").delete().eq("id", processo.id);
+        const { error: errProc } = await supabase.from("processos").delete().eq("id", processoId);
         if (errProc) throw errProc;
       }
+      // Por fim, exclui o protocolo
       const { error } = await supabase.from("protocolos").delete().eq("id", protocolo.id);
       if (error) throw error;
       toast.success("Protocolo excluído com sucesso");
@@ -649,7 +661,7 @@ export default function ProtocoloDetailPage() {
         </div>
         {!editing ? (
           <div className="flex gap-2 ml-auto sm:ml-0">
-            {!isVistoriador && (
+            {!isVistoriador && !isCancelado && (
               <>
                 <button onClick={() => setDeleteDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors whitespace-nowrap">
                   <Trash2 className="w-3.5 h-3.5" /> Excluir
@@ -662,13 +674,16 @@ export default function ProtocoloDetailPage() {
                 </button>
               </>
             )}
+            {isCancelado && (
+              <span className="font-medium text-xs bg-status-cancelado/15 text-status-cancelado border border-status-cancelado/30 px-2 py-0.5 rounded ml-2">Cancelado</span>
+            )}
           </div>
         ) : (
           <div className="flex gap-2 ml-auto sm:ml-0">
             <button onClick={cancelEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors whitespace-nowrap">
               <X className="w-3.5 h-3.5" /> Cancelar
             </button>
-            <button onClick={saveEdit} disabled={saving} className="flex items-center gap-1.5 px-3 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap">
+            <button onClick={saveEdit} disabled={saving || isCancelado} className="flex items-center gap-1.5 px-3 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap">
               <Save className="w-3.5 h-3.5" /> {saving ? "Salvando..." : "Salvar"}
             </button>
           </div>
