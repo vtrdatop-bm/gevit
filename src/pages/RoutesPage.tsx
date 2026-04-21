@@ -73,10 +73,17 @@ export default function RoutesPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
+      // Buscar apenas user_id dos vistoriadores
+      const { data: vistoriadorRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "vistoriador");
+      const vistoriadorIds = vistoriadorRoles?.map((r) => r.user_id) || [];
       const [{ data: profiles }, { data: procsData }, { data: vistoriasData }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("user_id, patente, nome_guerra"),
+          .select("user_id, patente, nome_guerra")
+          .in("user_id", vistoriadorIds),
         supabase
           .from("processos")
           .select("id, protocolo_id, vistoriador_id, status, protocolos(nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
@@ -108,6 +115,17 @@ export default function RoutesPage() {
     }
     fetchData();
   }, []);
+
+  // Sempre manter o usuário logado selecionado
+  useEffect(() => {
+    if (user && vistoriadores.length > 0) {
+      setSelectedVistoriadores((prev) => {
+        const next = new Set(prev);
+        next.add(user.id);
+        return next;
+      });
+    }
+  }, [user, vistoriadores]);
 
   // For each processo, find attribution dates that are pending (no result yet)
   const pendingAttrMap = useMemo(() => {
