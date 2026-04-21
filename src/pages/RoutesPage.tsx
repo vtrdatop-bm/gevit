@@ -73,8 +73,19 @@ export default function RoutesPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      const [{ data: roles }, { data: procsData }, { data: vistoriasData }] = await Promise.all([
-        supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
+      const [{ data: profiles }, { data: procsData }, { data: vistoriasData }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("user_id, patente, nome_guerra")
+          .in(
+            "user_id",
+            (
+              await supabase
+                .from("user_roles")
+                .select("user_id")
+                .eq("role", "vistoriador")
+            ).data?.map((r) => r.user_id) || []
+          ),
         supabase
           .from("processos")
           .select("id, protocolo_id, vistoriador_id, status, protocolos(nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
@@ -84,20 +95,8 @@ export default function RoutesPage() {
           .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria"),
       ]);
 
-      // Check if current user is admin or distribuidor
-      if (user) {
-        setCanChangeVistoriador(true); // Permitir múltipla seleção para todos os perfis
-        // Default: se for vistoriador, não força seleção única
-      }
-
-      if (roles?.length) {
-        const ids = roles.map((r) => r.user_id);
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, patente, nome_guerra")
-          .in("user_id", ids);
-        if (profiles) setVistoriadores(sortVistoriadores(profiles));
-      }
+      setCanChangeVistoriador(true); // Permitir múltipla seleção para todos os perfis
+      if (profiles) setVistoriadores(sortVistoriadores(profiles));
 
       if (procsData) {
         const mapped = procsData
