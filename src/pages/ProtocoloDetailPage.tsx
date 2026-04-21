@@ -20,6 +20,8 @@ import { DETAIL_MOCK_DATA } from "@/mocks/mockData";
 
 
 export default function ProtocoloDetailPage() {
+    // Status cancelado: bloquear edição e ações
+    const isCancelado = processo?.status === "cancelado";
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isDev, activeRole } = useAuth();
