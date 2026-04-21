@@ -373,7 +373,6 @@ export default function RoutesPage() {
               </span>
               <ChevronDown className="w-4 h-4 opacity-50" />
             </button>
-            
             {dropdownOpen && (
               <div className="absolute z-[100] top-[calc(100%+4px)] left-0 right-0 border border-input rounded-lg bg-popover shadow-lg p-2 max-h-48 overflow-y-auto space-y-2">
                 {vistoriadores.map((v) => (
