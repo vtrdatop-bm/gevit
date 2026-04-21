@@ -373,6 +373,7 @@ export default function RoutesPage() {
               className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
             />
           </div>
+          {/* Dropdown de vistoriadores sempre visível */}
           <div className="relative" ref={dropdownRef}>
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">
               Vistoriadores {selectedVistoriadores.size === 0 && <span className="text-[10px] font-normal">(todos)</span>}
