@@ -76,16 +76,7 @@ export default function RoutesPage() {
       const [{ data: profiles }, { data: procsData }, { data: vistoriasData }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("user_id, patente, nome_guerra")
-          .in(
-            "user_id",
-            (
-              await supabase
-                .from("user_roles")
-                .select("user_id")
-                .eq("role", "vistoriador")
-            ).data?.map((r) => r.user_id) || []
-          ),
+          .select("user_id, patente, nome_guerra"),
         supabase
           .from("processos")
           .select("id, protocolo_id, vistoriador_id, status, protocolos(nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
