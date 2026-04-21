@@ -86,20 +86,8 @@ export default function RoutesPage() {
 
       // Check if current user is admin or distribuidor
       if (user) {
-        const { data: userRoles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-        const isAdminOrDist = userRoles?.some(
-          (r) => r.role === "admin" || r.role === "distribuidor"
-        );
-        setCanChangeVistoriador(true); // Permitir que todos (inclusive vistoriadores) mudem o campo
-
-        // Default to current user if they are a vistoriador
-        const isVistoriador = roles?.some((r) => r.user_id === user.id);
-        if (isVistoriador) {
-          setSelectedVistoriadores(new Set([user.id]));
-        }
+        setCanChangeVistoriador(true); // Permitir múltipla seleção para todos os perfis
+        // Default: se for vistoriador, não força seleção única
       }
 
       if (roles?.length) {
