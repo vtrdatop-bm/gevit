@@ -74,21 +74,22 @@ export default function RoutesPage() {
     async function fetchData() {
       setLoading(true);
 
-      // Buscar todos os perfis ativos que tenham papel de vistoriador
+      // Buscar todos os perfis ativos
+      const { data: allProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, patente, nome_guerra")
+        .eq("ativo", true);
+
+      // Buscar todos os user_ids que têm papel de vistoriador
       const { data: vistoriadorRoles } = await supabase
         .from("user_roles")
         .select("user_id")
         .eq("role", "vistoriador");
       const vistoriadorIds = vistoriadorRoles?.map((r) => r.user_id) || [];
-      let profiles: Vistoriador[] = [];
-      if (vistoriadorIds.length > 0) {
-        const { data: allProfiles } = await supabase
-          .from("profiles")
-          .select("user_id, patente, nome_guerra")
-          .in("user_id", vistoriadorIds)
-          .eq("ativo", true);
-        profiles = allProfiles || [];
-      }
+
+      // Filtrar apenas perfis que são vistoriadores
+      const profiles = (allProfiles || []).filter((p) => vistoriadorIds.includes(p.user_id));
+
       const [{ data: procsData }, { data: vistoriasData }] = await Promise.all([
         supabase
           .from("processos")
