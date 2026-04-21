@@ -387,8 +387,10 @@ export default function RoutesPage() {
                   <label key={v.user_id} className="flex items-center gap-2 text-sm select-none cursor-pointer w-full hover:bg-accent hover:text-accent-foreground px-2 py-1.5 rounded-md transition-colors">
                     <input
                       type="checkbox"
-                      checked={selectedVistoriadores.has(v.user_id)}
+                      checked={selectedVistoriadores.has(v.user_id) || (user && v.user_id === user.id)}
+                      disabled={user && v.user_id === user.id}
                       onChange={(e) => {
+                        if (user && v.user_id === user.id) return; // Não permite desmarcar a si mesmo
                         setSelectedVistoriadores(prev => {
                           const next = new Set(prev);
                           if (e.target.checked) next.add(v.user_id);
@@ -400,6 +402,7 @@ export default function RoutesPage() {
                     />
                     <span className="truncate">
                       {v.patente ? `${v.patente} ` : ""}{v.nome_guerra || "Usuário sem nome"}
+                      {user && v.user_id === user.id && " (você)"}
                     </span>
                   </label>
                 ))}
