@@ -1,5 +1,5 @@
-  // Novo: status cancelado
-  const isCancelado = processo?.status === "cancelado";
+// Novo: status cancelado
+// (declarar dentro do componente)
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
