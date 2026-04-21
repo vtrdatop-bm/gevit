@@ -20,14 +20,14 @@ import { DETAIL_MOCK_DATA } from "@/mocks/mockData";
 
 
 export default function ProtocoloDetailPage() {
-    // Status cancelado: bloquear edição e ações
-    const isCancelado = processo?.status === "cancelado";
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isDev, activeRole } = useAuth();
   const isVistoriador = activeRole === "vistoriador";
   const [protocolo, setProtocolo] = useState<ProtocoloData | null>(null);
   const [processo, setProcesso] = useState<ProcessoData | null>(null);
+  // Status cancelado: bloquear edição e ações
+  const isCancelado = processo?.status === "cancelado";
   const [vistoria, setVistoria] = useState<VistoriaData | null>(null);
   const [termo, setTermo] = useState<TermoData | null>(null);
   const [pausas, setPausas] = useState<{ id: string; data_inicio: string; data_fim: string | null; etapa: string; motivo: string | null }[]>([]);
