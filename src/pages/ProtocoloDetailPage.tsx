@@ -121,6 +121,11 @@ export default function ProtocoloDetailPage() {
 
     // Se não encontrou o protocolo, não faz mais nada (não cria processo/vistoria)
     if (!prot) {
+      setProtocolo(null);
+      setProcesso(null);
+      setVistoria(null);
+      setTermo(null);
+      setPausas([]);
       setLoading(false);
       return;
     }
