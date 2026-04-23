@@ -557,7 +557,7 @@ export default function ProtocoloDetailPage() {
       // Exclui todos os registros relacionados ao protocolo
       let processoId = processo?.id;
       if (!processoId) {
-        const { data: procData, error: procError } = await supabase.from("processos").select("id").eq("protocolo_id", protocolo.id).single();
+        const { data: procData, error: procError } = await supabase.from("processos").select("id").eq("protocolo_id", protocolo.id).maybeSingle();
         if (procError) throw new Error("Erro ao buscar processo relacionado: " + procError.message);
         processoId = procData?.id;
       }
