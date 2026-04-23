@@ -587,7 +587,11 @@ export default function ProtocoloDetailPage() {
         window.location.reload(); // força atualização da listagem
       }, 300);
     } catch (error: any) {
+      // Mostra erro detalhado no toast e no console
       toast.error("Erro ao excluir protocolo: " + (error.message || JSON.stringify(error)));
+      // Log detalhado no console para depuração
+      // eslint-disable-next-line no-console
+      console.error("Erro detalhado ao excluir protocolo:", error);
       setDeleteDialogOpen(false);
     } finally {
       setIsDeleting(false);
