@@ -118,6 +118,13 @@ export default function ProtocoloDetailPage() {
       supabase.from("regionais_municipios").select("regional_id, municipio_id"),
     ]);
 
+
+    // Se não encontrou o protocolo, não faz mais nada (não cria processo/vistoria)
+    if (!prot) {
+      setLoading(false);
+      return;
+    }
+
     setProtocolo(prot);
     setMunicipios(muns || []);
     setBairros(bairs || []);
@@ -166,21 +173,6 @@ export default function ProtocoloDetailPage() {
       setVistoria(finalVistData as any);
       setTermo(termoRes.data);
       setPausas(pausasRes.data || []);
-    } else {
-      const { data: newProc } = await supabase
-        .from("processos")
-        .insert({ protocolo_id: id })
-        .select()
-        .single();
-      if (newProc) {
-        setProcesso(newProc);
-        const { data: newVist } = await supabase
-          .from("vistorias")
-          .insert({ processo_id: newProc.id })
-          .select()
-          .single();
-        setVistoria(newVist);
-      }
     }
 
     setLoading(false);
