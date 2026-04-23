@@ -599,12 +599,16 @@ export default function ProtocoloDetailPage() {
     setIsCanceling(true);
     try {
       const { error } = await supabase.from("processos").update({ status: "cancelado" }).eq("id", processo.id);
-      if (error) throw error;
+      if (error) {
+        // Mostra mensagem detalhada do erro do Supabase
+        toast.error("Erro ao cancelar: " + (error.message || JSON.stringify(error)));
+        return;
+      }
       toast.success("Protocolo cancelado");
       setCancelDialogOpen(false);
       await fetchData();
     } catch (error: any) {
-      toast.error("Erro ao cancelar: " + error.message);
+      toast.error("Erro inesperado ao cancelar: " + (error.message || JSON.stringify(error)));
     } finally {
       setIsCanceling(false);
     }
