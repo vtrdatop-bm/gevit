@@ -563,31 +563,34 @@ export default function ProtocoloDetailPage() {
     setIsDeleting(true);
     try {
       // Exclui todos os registros relacionados ao protocolo
-      // Primeiro, busca o processo relacionado ao protocolo
       let processoId = processo?.id;
       if (!processoId) {
-        // Busca processo se não estiver carregado
         const { data: procData, error: procError } = await supabase.from("processos").select("id").eq("protocolo_id", protocolo.id).single();
-        if (procError) throw procError;
+        if (procError) throw new Error("Erro ao buscar processo relacionado: " + procError.message);
         processoId = procData?.id;
       }
       if (processoId) {
-        await Promise.all([
-          supabase.from("notificacoes").delete().eq("processo_id", processoId),
-          supabase.from("vistorias").delete().eq("processo_id", processoId),
-          supabase.from("pausas").delete().eq("processo_id", processoId),
-          supabase.from("termos_compromisso").delete().eq("processo_id", processoId),
-        ]);
+        const { error: notifErr } = await supabase.from("notificacoes").delete().eq("processo_id", processoId);
+        if (notifErr) throw new Error("Erro ao excluir notificações: " + notifErr.message);
+        const { error: vistErr } = await supabase.from("vistorias").delete().eq("processo_id", processoId);
+        if (vistErr) throw new Error("Erro ao excluir vistorias: " + vistErr.message);
+        const { error: pausasErr } = await supabase.from("pausas").delete().eq("processo_id", processoId);
+        if (pausasErr) throw new Error("Erro ao excluir pausas: " + pausasErr.message);
+        const { error: termosErr } = await supabase.from("termos_compromisso").delete().eq("processo_id", processoId);
+        if (termosErr) throw new Error("Erro ao excluir termos de compromisso: " + termosErr.message);
         const { error: errProc } = await supabase.from("processos").delete().eq("id", processoId);
-        if (errProc) throw errProc;
+        if (errProc) throw new Error("Erro ao excluir processo: " + errProc.message);
       }
       // Por fim, exclui o protocolo
-      const { error } = await supabase.from("protocolos").delete().eq("id", protocolo.id);
-      if (error) throw error;
+      const { error: protoErr } = await supabase.from("protocolos").delete().eq("id", protocolo.id);
+      if (protoErr) throw new Error("Erro ao excluir protocolo: " + protoErr.message);
       toast.success("Protocolo excluído com sucesso");
-      navigate("/protocolos");
+      setTimeout(() => {
+        navigate("/protocolos", { replace: true });
+        window.location.reload(); // força atualização da listagem
+      }, 300);
     } catch (error: any) {
-      toast.error("Erro ao excluir protocolo: " + error.message);
+      toast.error("Erro ao excluir protocolo: " + (error.message || JSON.stringify(error)));
       setDeleteDialogOpen(false);
     } finally {
       setIsDeleting(false);
