@@ -992,7 +992,17 @@ export default function ProtocoloDetailPage() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={() => setCancelDialogOpen(false)} disabled={isCanceling} className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">Voltar</button>
-            <button onClick={handleCancelProtocolo} disabled={isCanceling} className="px-4 h-9 rounded-md bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (!processo) {
+                  toast.error("Não foi possível cancelar: processo não encontrado.");
+                  return;
+                }
+                handleCancelProtocolo();
+              }}
+              disabled={isCanceling || !processo}
+              className="px-4 h-9 rounded-md bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+            >
               {isCanceling ? <><Loader2 className="w-4 h-4 animate-spin" />Aguarde...</> : "Sim, Cancelar"}
             </button>
           </div>
