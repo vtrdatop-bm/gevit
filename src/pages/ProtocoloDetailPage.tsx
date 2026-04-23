@@ -973,11 +973,11 @@ export default function ProtocoloDetailPage() {
       </Dialog>
 
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" aria-describedby="cancel-desc">
           <DialogHeader><DialogTitle className="flex items-center gap-2"><AlertCircle className="w-5 h-5 opacity-70" />Confirmar Cancelamento</DialogTitle></DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-foreground">Você tem certeza que deseja cancelar o protocolo **{protocolo.numero}**?</p>
-            <p className="text-xs text-muted-foreground p-3 bg-muted rounded-lg border border-border">Esta ação mudará o status do protocolo para "Cancelado". Você poderá visualizá-lo nos filtros e relatórios, mas ele não constará mais nas listas de pendências ativas.</p>
+            <p id="cancel-desc" className="text-xs text-muted-foreground p-3 bg-muted rounded-lg border border-border">Esta ação mudará o status do protocolo para "Cancelado". Você poderá visualizá-lo nos filtros e relatórios, mas ele não constará mais nas listas de pendências ativas.</p>
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={() => setCancelDialogOpen(false)} disabled={isCanceling} className="px-4 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors">Voltar</button>
