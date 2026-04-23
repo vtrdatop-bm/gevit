@@ -110,7 +110,7 @@ export default function ProtocoloDetailPage() {
     }
 
     const [{ data: prot }, { data: procs }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
-      supabase.from("protocolos").select("*").eq("id", id).single(),
+      supabase.from("protocolos").select("*").eq("id", id).maybeSingle(),
       supabase.from("processos").select("*").eq("protocolo_id", id),
       supabase.from("municipios").select("id, nome").order("nome"),
       supabase.from("bairros").select("id, nome, municipio").order("nome"),
@@ -167,7 +167,7 @@ export default function ProtocoloDetailPage() {
           .from("vistorias")
           .insert({ processo_id: proc.id })
           .select()
-          .single();
+          .maybeSingle();
         finalVistData = createdVist;
       }
       setVistoria(finalVistData as any);

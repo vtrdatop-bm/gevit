@@ -134,7 +134,7 @@ export default function VistoriaTab({
         .from("vistorias")
         .select("*")
         .eq("id", vistoriaId)
-        .single();
+        .maybeSingle();
 
       if (latestVistData) {
         const newGlobalStatus = computeProcessStatus(latestVistData);

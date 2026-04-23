@@ -436,7 +436,7 @@ export default function ManualProtocolForm() {
       cep: form.cep?.replace(/\D/g, "") || null,
       latitude: form.latitude ? parseFloat(form.latitude) : null,
       longitude: form.longitude ? parseFloat(form.longitude) : null,
-    }).select().single();
+    }).select().maybeSingle();
 
     if (error) {
       if (error.code === "23505") {
@@ -451,7 +451,7 @@ export default function ManualProtocolForm() {
         .from("processos")
         .insert({ protocolo_id: inserted.id, status: "regional" })
         .select()
-        .single();
+        .maybeSingle();
 
       if (proc && !procError) {
         // Auto-create vistoria linked to the processo
