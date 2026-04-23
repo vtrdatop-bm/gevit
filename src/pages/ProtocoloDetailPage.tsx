@@ -667,17 +667,21 @@ export default function ProtocoloDetailPage() {
         </div>
         {!editing ? (
           <div className="flex gap-2 ml-auto sm:ml-0">
-            {!isVistoriador && !isCancelado && (
+            {(!isVistoriador && (!isCancelado || activeRole === "admin" || activeRole === "distribuidor")) && (
               <>
                 <button onClick={() => setDeleteDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors whitespace-nowrap">
                   <Trash2 className="w-3.5 h-3.5" /> Excluir
                 </button>
-                <button onClick={() => setCancelDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-zinc-800 text-zinc-900 dark:border-zinc-200 dark:text-zinc-100 text-sm font-medium hover:bg-zinc-800 hover:text-white dark:hover:bg-zinc-200 dark:hover:text-black transition-colors whitespace-nowrap">
-                  <X className="w-3.5 h-3.5" /> Cancelar
-                </button>
-                <button onClick={startEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors whitespace-nowrap">
-                  <Pencil className="w-3.5 h-3.5" /> Editar
-                </button>
+                {!isCancelado && (
+                  <>
+                    <button onClick={() => setCancelDialogOpen(true)} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-zinc-800 text-zinc-900 dark:border-zinc-200 dark:text-zinc-100 text-sm font-medium hover:bg-zinc-800 hover:text-white dark:hover:bg-zinc-200 dark:hover:text-black transition-colors whitespace-nowrap">
+                      <X className="w-3.5 h-3.5" /> Cancelar
+                    </button>
+                    <button onClick={startEdit} className="flex items-center gap-1.5 px-3 h-9 rounded-md border border-input text-sm font-medium hover:bg-accent transition-colors whitespace-nowrap">
+                      <Pencil className="w-3.5 h-3.5" /> Editar
+                    </button>
+                  </>
+                )}
               </>
             )}
             {isCancelado && (
@@ -706,28 +710,28 @@ export default function ProtocoloDetailPage() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label htmlFor="numero" className="text-sm font-medium">Nº Protocolo</label>
-                <input id="numero" value={editForm.numero || ""} onChange={(e) => handleEditChange("numero", formatProtocoloNumero(e.target.value))} className={inputClass} />
+                <input id="numero" value={editForm.numero || ""} onChange={(e) => handleEditChange("numero", formatProtocoloNumero(e.target.value))} className={inputClass} disabled={isCancelado} />
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="data_solicitacao" className="text-sm font-medium">Data Solicitação</label>
-                <input id="data_solicitacao" type="date" value={editForm.data_solicitacao || ""} onChange={(e) => handleEditChange("data_solicitacao", e.target.value)} className={inputClass} />
+                <input id="data_solicitacao" type="date" value={editForm.data_solicitacao || ""} onChange={(e) => handleEditChange("data_solicitacao", e.target.value)} className={inputClass} disabled={isCancelado} />
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="cnpj" className="text-sm font-medium">CPF/CNPJ</label>
                 <div className="flex gap-2 overflow-hidden">
-                  <input id="cnpj" value={editForm.cnpj || ""} onChange={(e) => handleEditChange("cnpj", formatCpfCnpjInput(e.target.value))} className={cn(inputClass, "min-w-0")} />
-                  <button type="button" onClick={() => lookupCnpj((editForm.cnpj || "").replace(/\D/g, ""))} disabled={cnpjLoading || (editForm.cnpj || "").replace(/\D/g, "").length !== 14} className="flex items-center justify-center px-3 h-9 rounded-md border border-input hover:bg-accent transition-colors disabled:opacity-50 shrink-0">
+                  <input id="cnpj" value={editForm.cnpj || ""} onChange={(e) => handleEditChange("cnpj", formatCpfCnpjInput(e.target.value))} className={cn(inputClass, "min-w-0")} disabled={isCancelado} />
+                  <button type="button" onClick={() => lookupCnpj((editForm.cnpj || "").replace(/\D/g, ""))} disabled={isCancelado || cnpjLoading || (editForm.cnpj || "").replace(/\D/g, "").length !== 14} className="flex items-center justify-center px-3 h-9 rounded-md border border-input hover:bg-accent transition-colors disabled:opacity-50 shrink-0">
                     {cnpjLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="razao_social" className="text-sm font-medium">Razão Social</label>
-                <input id="razao_social" value={editForm.razao_social || ""} onChange={(e) => handleEditChange("razao_social", e.target.value)} className={inputClass} />
+                <input id="razao_social" value={editForm.razao_social || ""} onChange={(e) => handleEditChange("razao_social", e.target.value)} className={inputClass} disabled={isCancelado} />
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="nome_fantasia" className="text-sm font-medium">Nome Fantasia</label>
-                <input id="nome_fantasia" value={editForm.nome_fantasia || ""} onChange={(e) => handleEditChange("nome_fantasia", e.target.value)} className={inputClass} />
+                <input id="nome_fantasia" value={editForm.nome_fantasia || ""} onChange={(e) => handleEditChange("nome_fantasia", e.target.value)} className={inputClass} disabled={isCancelado} />
               </div>
             </div>
           ) : (
@@ -749,22 +753,22 @@ export default function ProtocoloDetailPage() {
             <div className="space-y-2">
               <div className="space-y-1">
                 <label htmlFor="cep" className="text-xs text-muted-foreground">CEP</label>
-                <input id="cep" value={editForm.cep || ""} onChange={(e) => handleEditChange("cep", formatCep(e.target.value))} placeholder="00000-000" className={inputClass} />
+                <input id="cep" value={editForm.cep || ""} onChange={(e) => handleEditChange("cep", formatCep(e.target.value))} placeholder="00000-000" className={inputClass} disabled={isCancelado} />
               </div>
               <div className="space-y-1">
                 <label htmlFor="endereco" className="text-xs text-muted-foreground">Endereço</label>
-                <input id="endereco" value={editForm.endereco || ""} onChange={(e) => handleEditChange("endereco", e.target.value)} className={inputClass} />
+                <input id="endereco" value={editForm.endereco || ""} onChange={(e) => handleEditChange("endereco", e.target.value)} className={inputClass} disabled={isCancelado} />
               </div>
               <div className="space-y-1">
                 <label htmlFor="municipio" className="text-xs text-muted-foreground">Município</label>
-                <select id="municipio" value={editForm.municipio || ""} onChange={(e) => handleEditChange("municipio", e.target.value)} className={inputClass}>
+                <select id="municipio" value={editForm.municipio || ""} onChange={(e) => handleEditChange("municipio", e.target.value)} className={inputClass} disabled={isCancelado}>
                   <option value="">Selecione</option>
                   {municipios.map((m) => <option key={m.id} value={m.nome}>{m.nome}</option>)}
                 </select>
               </div>
               <div className="space-y-1 relative" ref={bairroRef}>
                 <label htmlFor="bairro" className="text-xs text-muted-foreground">Bairro</label>
-                <input id="bairro" value={bairroDropdownOpen ? bairroSearch : (editForm.bairro || "")} onChange={(e) => { setBairroSearch(e.target.value); if (!bairroDropdownOpen) setBairroDropdownOpen(true); }} onFocus={() => { setBairroSearch(editForm.bairro || ""); setBairroDropdownOpen(true); }} placeholder={editForm.municipio ? "Digite para buscar..." : "Selecione o município primeiro"} disabled={!editForm.municipio} className={cn(inputClass, !editForm.municipio && "opacity-50")} />
+                <input id="bairro" value={bairroDropdownOpen ? bairroSearch : (editForm.bairro || "")} onChange={(e) => { setBairroSearch(e.target.value); if (!bairroDropdownOpen) setBairroDropdownOpen(true); }} onFocus={() => { setBairroSearch(editForm.bairro || ""); setBairroDropdownOpen(true); }} placeholder={editForm.municipio ? "Digite para buscar..." : "Selecione o município primeiro"} disabled={!editForm.municipio || isCancelado} className={cn(inputClass, (!editForm.municipio || isCancelado) && "opacity-50")} />
                 {bairroDropdownOpen && editForm.municipio && (
                   <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-md max-h-48 overflow-y-auto">
                     {bairrosFiltered.map((b) => (
@@ -773,7 +777,7 @@ export default function ProtocoloDetailPage() {
                       </button>
                     ))}
                     {bairroNotFound && (
-                      <button type="button" onClick={() => openNovoBairroDialog(bairroSearch)} disabled={savingBairro} className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent transition-colors flex items-center gap-1.5 border-t border-border">
+                      <button type="button" onClick={() => openNovoBairroDialog(bairroSearch)} disabled={savingBairro || isCancelado} className="w-full text-left px-3 py-2 text-sm text-primary hover:bg-accent transition-colors flex items-center gap-1.5 border-t border-border">
                         <Plus className="w-3.5 h-3.5" />
                         {savingBairro ? "Cadastrando..." : `Cadastrar "${bairroSearch}"`}
                       </button>
@@ -790,52 +794,55 @@ export default function ProtocoloDetailPage() {
                   onBlur={(e) => { if (e.target.value) handleEditChange("area", formatAreaOnBlur(e.target.value)); }}
                   className={inputClass}
                   placeholder="Ex: 1.234,56"
+                  disabled={isCancelado}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <label htmlFor="latitude" className="text-xs text-muted-foreground">Latitude</label>
-                  <input
-                    id="latitude"
-                    value={editForm.latitude || ""}
-                    onChange={(e) => handleEditChange("latitude", truncateCoordinate(e.target.value.replace(",", ".")))}
-                    onPaste={(e) => {
-                      const text = e.clipboardData.getData("text");
-                      if (text.includes(",")) {
-                        e.preventDefault();
-                        const [lat, lng] = text.split(",").map(s => s.trim());
-                        if (lat && lng) {
-                          handleEditChange("latitude", truncateCoordinate(lat));
-                          handleEditChange("longitude", truncateCoordinate(lng));
+                    <input
+                      id="latitude"
+                      value={editForm.latitude || ""}
+                      onChange={(e) => handleEditChange("latitude", truncateCoordinate(e.target.value.replace(",", ".")))}
+                      onPaste={(e) => {
+                        const text = e.clipboardData.getData("text");
+                        if (text.includes(",")) {
+                          e.preventDefault();
+                          const [lat, lng] = text.split(",").map(s => s.trim());
+                          if (lat && lng) {
+                            handleEditChange("latitude", truncateCoordinate(lat));
+                            handleEditChange("longitude", truncateCoordinate(lng));
+                          }
                         }
-                      }
-                    }}
-                    placeholder="-9.975403"
-                    className={inputClass}
-                  />
+                      }}
+                      placeholder="-9.975403"
+                      className={inputClass}
+                      disabled={isCancelado}
+                    />
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="longitude" className="text-xs text-muted-foreground">Longitude</label>
-                  <input
-                    id="longitude"
-                    value={editForm.longitude || ""}
-                    onChange={(e) => handleEditChange("longitude", truncateCoordinate(e.target.value.replace(",", ".")))}
-                    placeholder="-67.842870"
-                    className={inputClass}
-                  />
+                    <input
+                      id="longitude"
+                      value={editForm.longitude || ""}
+                      onChange={(e) => handleEditChange("longitude", truncateCoordinate(e.target.value.replace(",", ".")))}
+                      placeholder="-67.842870"
+                      className={inputClass}
+                      disabled={isCancelado}
+                    />
                 </div>
               </div>
               <div className="flex flex-col gap-2 pt-1">
-                <button type="button" onClick={geocodeAddress} disabled={geocoding || (!editForm.cep && (!editForm.endereco || !editForm.municipio))} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50 w-full justify-center">
+                <button type="button" onClick={geocodeAddress} disabled={isCancelado || geocoding || (!editForm.cep && (!editForm.endereco || !editForm.municipio))} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50 w-full justify-center">
                   {geocoding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
                   {geocoding ? "Buscando..." : "Buscar pelo endereço"}
                 </button>
-                <button type="button" onClick={handleUpdateCurrentLocation} disabled={updatingLocation} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input bg-zinc-50 dark:bg-zinc-900 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 w-full justify-center">
+                <button type="button" onClick={handleUpdateCurrentLocation} disabled={isCancelado || updatingLocation} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input bg-zinc-50 dark:bg-zinc-900 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 w-full justify-center">
                   {updatingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
                   {updatingLocation ? "Capturando..." : "Usar minha localização atual"}
                 </button>
                 {(editForm.latitude && editForm.longitude) && (
-                  <button type="button" onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors w-full justify-center text-primary mt-1">
+                  <button type="button" onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })} className="flex items-center gap-1.5 px-3 h-8 rounded-md border border-input text-xs font-medium hover:bg-accent transition-colors w-full justify-center text-primary mt-1" disabled={isCancelado}>
                     <MapPin className="w-3.5 h-3.5" />
                     Abrir no mapa
                   </button>
