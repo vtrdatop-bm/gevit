@@ -386,7 +386,7 @@ export default function MapPage() {
         // Better: count and maybe show a badge (though CircleMarker is limited)
         const primaryProcess = groupProcesses[0];
         const isEventoUnico = !!primaryProcess.protocolo.evento_unico;
-        const color = isEventoUnico ? "#d946ef" : STATUS_MARKER_COLORS[primaryProcess.displayStatus];
+        const color = isEventoUnico ? "#06b6d4" : STATUS_MARKER_COLORS[primaryProcess.displayStatus];
         const isMultiple = groupProcesses.length > 1;
 
         const marker = L.circleMarker([lat, lng], {
