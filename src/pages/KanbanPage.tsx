@@ -438,27 +438,32 @@ export default function KanbanPage() {
                                 <h4 className="text-[13px] font-semibold text-foreground mb-1">
                                   {process.protocolos.nome_fantasia || process.protocolos.razao_social}
                                 </h4>
-                                {process.protocolos.evento_unico && process.protocolos.data_evento && (
-                                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-700 mb-2">
-                                    <Calendar className="w-3 h-3 shrink-0" />
-                                    <span>Evento: {new Date(process.protocolos.data_evento + "T00:00:00").toLocaleDateString("pt-BR")}</span>
-                                  </div>
-                                )}
 
-                                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2">
+
+                                <div className="flex items-center gap-1.5 text-[11px] mb-2">
                                   <Calendar className="w-3 h-3 shrink-0" />
-                                  <span>
-                                    {process.data_2_retorno ? (
-                                      `2º Retorno: ${new Date(process.data_2_retorno + "T00:00:00").toLocaleDateString("pt-BR")}`
-                                    ) : process.data_1_retorno ? (
-                                      `1º Retorno: ${new Date(process.data_1_retorno + "T00:00:00").toLocaleDateString("pt-BR")}`
-                                    ) : process.protocolos.evento_unico && process.protocolos.data_evento ? (
-                                      `Solicitação: ${new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}` +
-                                      `  |  Evento: ${new Date(process.protocolos.data_evento + "T00:00:00").toLocaleDateString("pt-BR")}`
-                                    ) : (
-                                      `Solicitação: ${new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}`
-                                    )}
-                                  </span>
+                                  {process.data_2_retorno ? (
+                                    <span className="text-muted-foreground">
+                                      {`2º Retorno: ${new Date(process.data_2_retorno + "T00:00:00").toLocaleDateString("pt-BR")}`}
+                                    </span>
+                                  ) : process.data_1_retorno ? (
+                                    <span className="text-muted-foreground">
+                                      {`1º Retorno: ${new Date(process.data_1_retorno + "T00:00:00").toLocaleDateString("pt-BR")}`}
+                                    </span>
+                                  ) : process.protocolos.evento_unico && process.protocolos.data_evento ? (
+                                    <>
+                                      <span className="text-muted-foreground">
+                                        {`Solicitação: ${new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}`}
+                                      </span>
+                                      <span className="font-bold text-cyan-700 ml-2">
+                                        Evento: {new Date(process.protocolos.data_evento + "T00:00:00").toLocaleDateString("pt-BR")}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-muted-foreground">
+                                      {`Solicitação: ${new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}`}
+                                    </span>
+                                  )}
                                 </div>
 
                                 {selectedProcess === process.id && (
