@@ -391,7 +391,7 @@ export default function KanbanPage() {
                                   key={process.id}
                                   className={cn(
                                     "kanban-card cursor-pointer",
-                                    process.protocolos.evento_unico && "!bg-fuchsia-100 !border-fuchsia-400",
+                                    process.protocolos.evento_unico && "!bg-cyan-100 !border-cyan-400",
                                     process.stage === 2 && "!bg-amber-100/50 !border-amber-200",
                                     process.stage === 3 && "!bg-rose-100/60 !border-rose-300",
                                     selectedProcess === process.id && "ring-2 ring-primary ring-offset-1"
@@ -410,16 +410,11 @@ export default function KanbanPage() {
                                     {process.protocolos.numero}
                                   </span>
                                   {process.protocolos.evento_unico && (
-                                    <span className="ml-2 font-bold text-xs bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-400 px-2 py-0.5 rounded">
+                                    <span className="ml-2 font-bold text-xs bg-cyan-100 text-cyan-700 border border-cyan-400 px-2 py-0.5 rounded">
                                       Evento Único
                                     </span>
                                   )}
-                                  {process.protocolos.evento_unico && process.protocolos.data_evento && (
-                                    <span className="ml-auto font-bold text-xs bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-400 px-2 py-0.5 rounded flex items-center gap-1" title="Data do Evento">
-                                      <Calendar className="w-3 h-3" />
-                                      {new Date(process.protocolos.data_evento + "T00:00:00").toLocaleDateString("pt-BR")}
-                                    </span>
-                                  )}
+                                  {/* Data do evento NÃO é etiqueta, exibir como texto abaixo do título */}
                                   {!process.protocolos.evento_unico && process.stage >= 1 && (
                                     <span className="ml-auto font-medium text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
                                       {process.stage}ª Vist.
@@ -444,7 +439,7 @@ export default function KanbanPage() {
                                   {process.protocolos.nome_fantasia || process.protocolos.razao_social}
                                 </h4>
                                 {process.protocolos.evento_unico && process.protocolos.data_evento && (
-                                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-fuchsia-700 mb-2">
+                                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-700 mb-2">
                                     <Calendar className="w-3 h-3 shrink-0" />
                                     <span>Evento: {new Date(process.protocolos.data_evento + "T00:00:00").toLocaleDateString("pt-BR")}</span>
                                   </div>

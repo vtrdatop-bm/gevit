@@ -624,7 +624,7 @@ export default function ProtocolosPage() {
                       className={cn(
                         "hover:bg-muted/30 transition-colors cursor-pointer",
                         dlActive && dl.remaining <= 0 && "bg-destructive/5",
-                        isEventoUnico && "bg-fuchsia-100/60 border-fuchsia-400"
+                        isEventoUnico && "bg-cyan-100/60 border-cyan-400"
                       )}
                       style={isEventoUnico ? { borderLeft: '6px solid #d946ef' } : {}}
                       onClick={() => openProtocoloDetail(p.id)}
@@ -633,7 +633,7 @@ export default function ProtocolosPage() {
                         <div className="flex items-center gap-2">
                           {p.numero}
                           {isEventoUnico && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-fuchsia-600 text-white border border-fuchsia-700 ml-1" title="Evento Único">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cyan-600 text-white border border-cyan-700 ml-1" title="Evento Único">
                               Evento Único
                             </span>
                           )}

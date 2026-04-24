@@ -775,7 +775,7 @@ export default function ProtocoloDetailPage() {
               <div className="flex items-center gap-2">
                 <p className="font-medium">{protocolo.nome_fantasia || protocolo.razao_social}</p>
                 {protocolo.evento_unico && (
-                  <span className="font-bold text-xs bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-400 px-2 py-0.5 rounded ml-2">
+                  <span className="font-bold text-xs bg-cyan-100 text-cyan-700 border border-cyan-400 px-2 py-0.5 rounded ml-2">
                     Evento Único
                   </span>
                 )}
