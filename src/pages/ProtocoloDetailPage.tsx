@@ -224,6 +224,7 @@ export default function ProtocoloDetailPage() {
         latitude: truncateCoordinate(protocolo.latitude?.toString() || ""),
         longitude: truncateCoordinate(protocolo.longitude?.toString() || ""),
         evento_unico: protocolo.evento_unico || false,
+        data_evento: protocolo.data_evento || "",
       });
     }
   }, [protocolo, editing]);
