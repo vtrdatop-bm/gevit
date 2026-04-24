@@ -232,8 +232,8 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
     const eventoUnicoCount = filtered.filter((p) => (p as any).evento_unico).length;
 
     const statusCounts = [
-      { key: "evento_unico", label: "Evento Único", count: eventoUnicoCount, color: "#d946ef" },
       { key: "cancelado", label: "Cancelados", count: byStatus["cancelado"] || 0 },
+      { key: "evento_unico", label: "Evento Único", count: eventoUnicoCount, color: "#d946ef" },
       { key: "certificado", label: "Certificado", count: byStatus["certificado"] || 0 },
       { key: "certificado_termo", label: "Cert. Provisório", count: byStatus["certificado_termo"] || 0 },
       { key: "pendencias", label: "Pendência", count: byStatus["pendencias"] || 0 },

@@ -133,9 +133,10 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     const total = filteredProtocolos.length;
     const byStatus: Record<string, number> = {};
-    let eventoUnicoCount = 0;
+    // Corrigir contagem de evento único para considerar apenas protocolos únicos
+    const eventoUnicoIds = new Set();
     filteredProtocolos.forEach((proto) => {
-      if (proto.evento_unico) eventoUnicoCount++;
+      if (proto.evento_unico) eventoUnicoIds.add(proto.id);
       const proc = processoByProtocolo[proto.id];
       if (!proc) {
         byStatus.regional = (byStatus.regional || 0) + 1;
@@ -159,6 +160,7 @@ export default function DashboardPage() {
 
       byStatus[finalStatus] = (byStatus[finalStatus] || 0) + 1;
     });
+    const eventoUnicoCount = eventoUnicoIds.size;
 
     const certificados = byStatus["certificado"] || 0;
     const certificadosTermo = byStatus["certificado_termo"] || 0;
