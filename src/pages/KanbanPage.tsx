@@ -89,7 +89,7 @@ export default function KanbanPage() {
       const [{ data: procs }, { data: protocolosData }, { data: regionais }, { data: profiles }, { data: bairrosData }, { data: vistoriasData }, { data: pausasData }, { data: termosData }] = await Promise.all([
         supabase
           .from("processos")
-          .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao)"),
+          .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, data_evento)")
         supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao"),
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),

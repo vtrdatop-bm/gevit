@@ -140,7 +140,7 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       }
 
       const [{ data: procs }, { data: vists }, { data: profs }, { data: regionais }, { data: bairros }] = await Promise.all([
-        supabase.from("processos").select("id, status, vistoriador_id, regional_id, created_at, protocolos(data_solicitacao, bairro, municipio, area)"),
+        supabase.from("processos").select("id, status, vistoriador_id, regional_id, created_at, protocolos(data_solicitacao, bairro, municipio, area, evento_unico, data_evento)"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("regionais").select("id, nome").order("nome"),
