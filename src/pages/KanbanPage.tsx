@@ -56,6 +56,8 @@ interface ProcessoWithProtocolo {
     municipio: string;
     area: number | null;
     data_solicitacao: string;
+    evento_unico?: boolean;
+    data_evento?: string | null;
   };
   regional_nome?: string;
   vistoriador_nome?: string;
@@ -397,7 +399,13 @@ export default function KanbanPage() {
                                   <span className="text-xs font-mono text-muted-foreground shrink-0">
                                     {process.protocolos.numero}
                                   </span>
-                                  {process.stage >= 1 && (
+                                  {process.protocolos.evento_unico && process.protocolos.data_evento && (
+                                    <span className="ml-auto font-bold text-xs bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-400 px-2 py-0.5 rounded flex items-center gap-1" title="Data do Evento">
+                                      <Calendar className="w-3 h-3" />
+                                      {new Date(process.protocolos.data_evento + "T00:00:00").toLocaleDateString("pt-BR")}
+                                    </span>
+                                  )}
+                                  {!process.protocolos.evento_unico && process.stage >= 1 && (
                                     <span className="ml-auto font-medium text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
                                       {process.stage}ª Vist.
                                     </span>
@@ -420,6 +428,12 @@ export default function KanbanPage() {
                                 <h4 className="text-[13px] font-semibold text-foreground mb-1">
                                   {process.protocolos.nome_fantasia || process.protocolos.razao_social}
                                 </h4>
+                                {process.protocolos.evento_unico && process.protocolos.data_evento && (
+                                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-fuchsia-700 mb-2">
+                                    <Calendar className="w-3 h-3 shrink-0" />
+                                    <span>Evento: {new Date(process.protocolos.data_evento + "T00:00:00").toLocaleDateString("pt-BR")}</span>
+                                  </div>
+                                )}
 
                                 <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2">
                                   <Calendar className="w-3 h-3 shrink-0" />

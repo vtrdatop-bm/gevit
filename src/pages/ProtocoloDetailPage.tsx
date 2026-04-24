@@ -276,6 +276,8 @@ export default function ProtocoloDetailPage() {
       cep: editForm.cep ? editForm.cep.replace(/\D/g, "") : null,
       latitude: editForm.latitude ? parseFloat(String(editForm.latitude).replace(",", ".")) : null,
       longitude: editForm.longitude ? parseFloat(String(editForm.longitude).replace(",", ".")) : null,
+      evento_unico: !!editForm.evento_unico,
+      data_evento: editForm.data_evento || null,
     }).eq("id", protocolo.id).select();
 
     if (error) {
@@ -713,17 +715,33 @@ export default function ProtocoloDetailPage() {
           </div>
           {editing ? (
             <div className="space-y-4">
-                            {/* Checkbox Evento Único */}
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                id="evento_unico"
-                                checked={!!editForm.evento_unico}
-                                onChange={e => handleEditChange("evento_unico", e.target.checked)}
-                                className="accent-primary w-4 h-4"
-                                disabled={isCancelado}
-                              />
-                              <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
+                            {/* Checkbox Evento Único + Data do Evento */}
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id="evento_unico"
+                                  checked={!!editForm.evento_unico}
+                                  onChange={e => handleEditChange("evento_unico", e.target.checked)}
+                                  className="accent-primary w-4 h-4"
+                                  disabled={isCancelado}
+                                />
+                                <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
+                              </div>
+                              {editForm.evento_unico && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <label htmlFor="data_evento" className="text-sm font-medium">Data do Evento</label>
+                                  <input
+                                    type="date"
+                                    id="data_evento"
+                                    value={editForm.data_evento || ""}
+                                    onChange={e => handleEditChange("data_evento", e.target.value)}
+                                    className="h-9 rounded border border-input px-2 text-sm"
+                                    required={!!editForm.evento_unico}
+                                    disabled={isCancelado}
+                                  />
+                                </div>
+                              )}
                             </div>
               <div className="space-y-1.5">
                 <label htmlFor="numero" className="text-sm font-medium">Nº Protocolo</label>

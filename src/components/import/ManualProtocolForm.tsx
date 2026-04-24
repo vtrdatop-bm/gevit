@@ -440,6 +440,8 @@ export default function ManualProtocolForm() {
       cep: form.cep?.replace(/\D/g, "") || null,
       latitude: form.latitude ? parseFloat(form.latitude) : null,
       longitude: form.longitude ? parseFloat(form.longitude) : null,
+      evento_unico: !!form.evento_unico,
+      data_evento: form.data_evento || null,
     }).select().maybeSingle();
 
     if (error) {
@@ -474,17 +476,32 @@ export default function ManualProtocolForm() {
     <>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Checkbox Evento Único */}
-                    <div className="flex items-center gap-2 md:col-span-2">
-                      <input
-                        type="checkbox"
-                        id="evento_unico"
-                        checked={!!form.evento_unico}
-                        onChange={handleEventoUnicoChange}
-                        className="accent-primary w-4 h-4"
-                      />
-                      <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
-                    </div>
+          {/* Checkbox Evento Único + Data do Evento */}
+          <div className="flex flex-col gap-2 md:col-span-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="evento_unico"
+                checked={!!form.evento_unico}
+                onChange={handleEventoUnicoChange}
+                className="accent-primary w-4 h-4"
+              />
+              <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
+            </div>
+            {form.evento_unico && (
+              <div className="flex items-center gap-2 mt-1">
+                <label htmlFor="data_evento" className="text-sm font-medium">Data do Evento</label>
+                <input
+                  type="date"
+                  id="data_evento"
+                  value={form.data_evento || ""}
+                  onChange={e => handleChange("data_evento", e.target.value)}
+                  className="h-9 rounded border border-input px-2 text-sm"
+                  required={!!form.evento_unico}
+                />
+              </div>
+            )}
+          </div>
           <Field label="Nº Protocolo" required>
             <input value={form.numero || ""} onChange={(e) => handleChange("numero", formatProtocoloNumero(e.target.value))} required placeholder="VT0000.0000.0000-00" className={inputClass} />
           </Field>

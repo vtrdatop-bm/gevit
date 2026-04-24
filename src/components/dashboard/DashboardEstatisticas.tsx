@@ -196,6 +196,7 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
 
   /* ── Compute statistics ────────────────────────────────────────────────────────── */
 
+
   const stats = useMemo(() => {
     const processosSemRegistro = Math.max(0, (totalProtocolosFiltrados ?? filtered.length) - filtered.length);
     const totalProcessos = filtered.length + processosSemRegistro;
@@ -216,7 +217,7 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       { name: "3ª Vistoria", value: stage3 },
     ];
 
-    // --- 2) Status counts ---
+    // --- 2) Status counts + Evento Único ---
     const byStatus: Record<string, number> = {};
     if (processosSemRegistro > 0) {
       byStatus.regional = processosSemRegistro;
@@ -227,7 +228,11 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       byStatus[ds] = (byStatus[ds] || 0) + 1;
     });
 
+    // Evento Único: conta protocolos marcados
+    const eventoUnicoCount = filtered.filter((p) => (p as any).evento_unico).length;
+
     const statusCounts = [
+      { key: "evento_unico", label: "Evento Único", count: eventoUnicoCount, color: "#d946ef" },
       { key: "cancelado", label: "Cancelados", count: byStatus["cancelado"] || 0 },
       { key: "certificado", label: "Certificado", count: byStatus["certificado"] || 0 },
       { key: "certificado_termo", label: "Cert. Provisório", count: byStatus["certificado_termo"] || 0 },
@@ -436,10 +441,23 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
           </div>
           <div className="space-y-2">
             {stats.statusCounts.map((s) => (
-              <div key={s.key} className="flex items-center justify-between p-2.5 rounded-lg bg-accent/40">
-                <span className="text-sm text-foreground">{s.label}</span>
+              <div
+                key={s.key}
+                className={
+                  "flex items-center justify-between p-2.5 rounded-lg bg-accent/40" +
+                  (s.key === "evento_unico" ? " border-2 border-fuchsia-500 bg-fuchsia-100/60" : "")
+                }
+              >
+                <span className={"text-sm flex items-center gap-2 " + (s.key === "evento_unico" ? "font-bold text-fuchsia-700" : "text-foreground") }>
+                  {s.label}
+                  {s.key === "evento_unico" && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-fuchsia-600 text-white border border-fuchsia-700 ml-1">
+                      Evento Único
+                    </span>
+                  )}
+                </span>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-foreground">{s.count}</span>
+                  <span className={"text-sm font-bold " + (s.key === "evento_unico" ? "text-fuchsia-700" : "text-foreground")}>{s.count}</span>
                   <span className="text-xs text-muted-foreground min-w-[40px] text-right">{pct(s.count)}</span>
                 </div>
               </div>
