@@ -447,11 +447,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
               >
                 <span className="text-sm flex items-center gap-2 text-foreground">
                   {s.label}
-                  {s.key === "evento_unico" && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-accent text-foreground border border-border ml-1">
-                      Evento Único
-                    </span>
-                  )}
                 </span>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-bold text-foreground">{s.count}</span>
