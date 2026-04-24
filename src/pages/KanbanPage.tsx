@@ -409,6 +409,11 @@ export default function KanbanPage() {
                                   <span className="text-xs font-mono text-muted-foreground shrink-0">
                                     {process.protocolos.numero}
                                   </span>
+                                  {process.protocolos.evento_unico && (
+                                    <span className="ml-2 font-bold text-xs bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-400 px-2 py-0.5 rounded">
+                                      Evento Único
+                                    </span>
+                                  )}
                                   {process.protocolos.evento_unico && process.protocolos.data_evento && (
                                     <span className="ml-auto font-bold text-xs bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-400 px-2 py-0.5 rounded flex items-center gap-1" title="Data do Evento">
                                       <Calendar className="w-3 h-3" />

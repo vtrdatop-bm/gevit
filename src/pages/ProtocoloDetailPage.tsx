@@ -771,7 +771,14 @@ export default function ProtocoloDetailPage() {
             </div>
           ) : (
             <div className="space-y-1 text-sm">
-              <p className="font-medium">{protocolo.nome_fantasia || protocolo.razao_social}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">{protocolo.nome_fantasia || protocolo.razao_social}</p>
+                {protocolo.evento_unico && (
+                  <span className="font-bold text-xs bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-400 px-2 py-0.5 rounded ml-2">
+                    Evento Único
+                  </span>
+                )}
+              </div>
               {protocolo.nome_fantasia && <p className="text-muted-foreground text-xs">{protocolo.razao_social}</p>}
               <p className="text-muted-foreground font-mono text-xs">
                 {getCpfCnpjLabel(protocolo.cnpj)}: {formatCpfCnpj(protocolo.cnpj)}
