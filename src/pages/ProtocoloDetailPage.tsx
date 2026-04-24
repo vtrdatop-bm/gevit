@@ -908,7 +908,10 @@ export default function ProtocoloDetailPage() {
                 
                 <div className="flex items-center gap-4 mt-0.5">
                   {protocolo.latitude && protocolo.longitude && (
-                    <button onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id } })} className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline">
+                    <button
+                      onClick={() => navigate("/mapa", { state: { focusProcessoId: processo?.id, focusCoords: [Number(protocolo.latitude), Number(protocolo.longitude)] } })}
+                      className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                    >
                       <MapPin className="w-3.5 h-3.5" />
                       Abrir no mapa
                     </button>

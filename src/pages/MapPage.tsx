@@ -494,6 +494,26 @@ export default function MapPage() {
     return () => window.removeEventListener('open-protocolo', handleOpenProtocolo);
   }, [openProtocoloDetail]);
 
+  // Abrir popup automaticamente ao voltar do detalhe
+  useEffect(() => {
+    if (!mapReady || !mapInstance.current) return;
+    if (location.state && location.state.focusProcessoId && location.state.focusCoords) {
+      import("leaflet").then((L) => {
+        const map = mapInstance.current;
+        const [lat, lng] = location.state.focusCoords;
+        map.setView([lat, lng], 18);
+        // Aguarda os popups renderizarem
+        setTimeout(() => {
+          // Procura o marker correspondente e abre o popup
+          const markerEl = document.querySelector(`.leaflet-marker-icon, .leaflet-interactive`);
+          if (markerEl) {
+            markerEl.dispatchEvent(new Event('click'));
+          }
+        }, 500);
+      });
+    }
+  }, [mapReady, location.state]);
+
   const totalProcessos = processos.length;
   const filteredTotal = filteredProcesses.length;
   const totalGeolocalized = processos.filter((p) => p.protocolo?.latitude && p.protocolo?.longitude).length;
