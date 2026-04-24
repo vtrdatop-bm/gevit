@@ -452,6 +452,9 @@ export default function KanbanPage() {
                                       `2º Retorno: ${new Date(process.data_2_retorno + "T00:00:00").toLocaleDateString("pt-BR")}`
                                     ) : process.data_1_retorno ? (
                                       `1º Retorno: ${new Date(process.data_1_retorno + "T00:00:00").toLocaleDateString("pt-BR")}`
+                                    ) : process.protocolos.evento_unico && process.protocolos.data_evento ? (
+                                      `Solicitação: ${new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}` +
+                                      `  |  Evento: ${new Date(process.protocolos.data_evento + "T00:00:00").toLocaleDateString("pt-BR")}`
                                     ) : (
                                       `Solicitação: ${new Date(process.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}`
                                     )}

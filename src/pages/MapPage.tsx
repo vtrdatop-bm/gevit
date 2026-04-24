@@ -420,6 +420,7 @@ export default function MapPage() {
                   <div style="font-size: 11px; color: #666; margin-bottom: 8px; line-height: 1.3;">
                     ${process.protocolo.razao_social}
                   </div>
+                  ${process.protocolo.evento_unico ? `<div style=\"font-size: 11px; color: #0e7490; font-weight: bold; margin-bottom: 6px;\">Evento Único</div>` : ""}
                   <div style="display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px;">
                     <div style="font-size: 11px; color: #444; display: flex; align-items: start; gap: 4px;">
                       <span>📍</span> <span>${process.protocolo.endereco}, ${process.protocolo.bairro}</span>
@@ -427,12 +428,8 @@ export default function MapPage() {
                     <div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
                       <span>📋</span> <span>${getDisplayStatusLabel(process.displayStatus, process.vistoria)}</span>
                     </div>
-                    ${stage ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
-                      <span>🔍</span> <span>${stage}${result ? ` — ${result}` : ""}</span>
-                    </div>` : ""}
-                    ${process.vistoriador_nome ? `<div style="font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;">
-                      <span>👤</span> <span>${process.vistoriador_nome}</span>
-                    </div>` : ""}
+                    ${stage ? `<div style=\"font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;\">\n                      <span>🔍</span> <span>${stage}${result ? ` — ${result}` : ""}</span>\n                    </div>` : ""}
+                    ${process.vistoriador_nome ? `<div style=\"font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;\">\n                      <span>👤</span> <span>${process.vistoriador_nome}</span>\n                    </div>` : ""}
                   </div>
                   <button 
                     onclick="window.dispatchEvent(new CustomEvent('open-protocolo', { detail: '${process.protocolo.id}' }))"
