@@ -391,6 +391,7 @@ export default function KanbanPage() {
                                   key={process.id}
                                   className={cn(
                                     "kanban-card cursor-pointer",
+                                    process.protocolos.evento_unico && "!bg-fuchsia-100 !border-fuchsia-400",
                                     process.stage === 2 && "!bg-amber-100/50 !border-amber-200",
                                     process.stage === 3 && "!bg-rose-100/60 !border-rose-300",
                                     selectedProcess === process.id && "ring-2 ring-primary ring-offset-1"
