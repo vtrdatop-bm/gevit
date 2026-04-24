@@ -420,7 +420,7 @@ export default function MapPage() {
                   <div style="font-size: 11px; color: #666; margin-bottom: 8px; line-height: 1.3;">
                     ${process.protocolo.razao_social}
                   </div>
-                  ${process.protocolo.evento_unico ? `<div style=\"font-size: 11px; color: #0e7490; font-weight: bold; margin-bottom: 6px;\">Evento Único</div>` : ""}
+                  ${process.protocolo.evento_unico ? `<div style=\"font-size: 11px; color: #0e7490; font-weight: bold; margin-bottom: 6px;\">Evento Único${process.protocolo.data_evento ? ` — ${new Date(process.protocolo.data_evento + 'T00:00:00').toLocaleDateString('pt-BR')}` : ''}</div>` : ""}
                   <div style="display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px;">
                     <div style="font-size: 11px; color: #444; display: flex; align-items: start; gap: 4px;">
                       <span>📍</span> <span>${process.protocolo.endereco}, ${process.protocolo.bairro}</span>
