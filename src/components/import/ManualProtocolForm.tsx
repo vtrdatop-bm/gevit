@@ -52,6 +52,10 @@ export default function ManualProtocolForm() {
   const DUPLICATE_PROTOCOL_MESSAGE = "Este protocolo já existe.";
   const navigate = useNavigate();
   const [form, setForm] = useState<FormData>(() => {
+      // Evento Único
+      const handleEventoUnicoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setForm((prev) => ({ ...prev, evento_unico: e.target.checked }));
+      };
     const saved = sessionStorage.getItem("manual_protocol_form");
     return saved ? JSON.parse(saved) : {};
   });
@@ -470,6 +474,17 @@ export default function ManualProtocolForm() {
     <>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Checkbox Evento Único */}
+                    <div className="flex items-center gap-2 md:col-span-2">
+                      <input
+                        type="checkbox"
+                        id="evento_unico"
+                        checked={!!form.evento_unico}
+                        onChange={handleEventoUnicoChange}
+                        className="accent-primary w-4 h-4"
+                      />
+                      <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
+                    </div>
           <Field label="Nº Protocolo" required>
             <input value={form.numero || ""} onChange={(e) => handleChange("numero", formatProtocoloNumero(e.target.value))} required placeholder="VT0000.0000.0000-00" className={inputClass} />
           </Field>

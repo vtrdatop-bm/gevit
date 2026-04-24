@@ -617,10 +617,27 @@ export default function ProtocolosPage() {
                   const info = getEffectiveDisplayInfo(p.id);
                   const dl = getDeadline(p.id);
                   const dlActive = dl && dl.active;
+                  const isEventoUnico = !!p.evento_unico;
                   return (
-                    <tr key={p.id} className={cn("hover:bg-muted/30 transition-colors cursor-pointer", dlActive && dl.remaining <= 0 && "bg-destructive/5")} onClick={() => openProtocoloDetail(p.id)}>
+                    <tr
+                      key={p.id}
+                      className={cn(
+                        "hover:bg-muted/30 transition-colors cursor-pointer",
+                        dlActive && dl.remaining <= 0 && "bg-destructive/5",
+                        isEventoUnico && "bg-fuchsia-100/60 border-fuchsia-400"
+                      )}
+                      style={isEventoUnico ? { borderLeft: '6px solid #d946ef' } : {}}
+                      onClick={() => openProtocoloDetail(p.id)}
+                    >
                       <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
-                        {p.numero}
+                        <div className="flex items-center gap-2">
+                          {p.numero}
+                          {isEventoUnico && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-fuchsia-600 text-white border border-fuchsia-700 ml-1" title="Evento Único">
+                              Evento Único
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                         {new Date(p.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}

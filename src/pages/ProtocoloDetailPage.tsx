@@ -223,6 +223,7 @@ export default function ProtocoloDetailPage() {
         cep: formatCep(protocolo.cep) || "",
         latitude: truncateCoordinate(protocolo.latitude?.toString() || ""),
         longitude: truncateCoordinate(protocolo.longitude?.toString() || ""),
+        evento_unico: protocolo.evento_unico || false,
       });
     }
   }, [protocolo, editing]);
@@ -712,6 +713,18 @@ export default function ProtocoloDetailPage() {
           </div>
           {editing ? (
             <div className="space-y-4">
+                            {/* Checkbox Evento Único */}
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id="evento_unico"
+                                checked={!!editForm.evento_unico}
+                                onChange={e => handleEditChange("evento_unico", e.target.checked)}
+                                className="accent-primary w-4 h-4"
+                                disabled={isCancelado}
+                              />
+                              <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
+                            </div>
               <div className="space-y-1.5">
                 <label htmlFor="numero" className="text-sm font-medium">Nº Protocolo</label>
                 <input id="numero" value={editForm.numero || ""} onChange={(e) => handleEditChange("numero", formatProtocoloNumero(e.target.value))} className={inputClass} disabled={isCancelado} />
