@@ -501,12 +501,13 @@ export default function MapPage() {
     if (!mapReady || !mapInstance.current) return;
     // Sempre prioriza o último protocolo aberto, se existir
     const lastId = location.state?.lastOpenedProtocoloId;
+    const lastCoords = location.state?.lastOpenedCoords;
     const focusId = location.state?.focusProcessoId;
     const focusCoords = location.state?.focusCoords;
-    if (lastId && focusCoords) {
+    if (lastId && lastCoords) {
       import("leaflet").then((L) => {
         const map = mapInstance.current;
-        const [lat, lng] = focusCoords;
+        const [lat, lng] = lastCoords;
         map.setView([lat, lng], 18);
         setTimeout(() => {
           const markerEl = document.querySelector(`.leaflet-marker-icon, .leaflet-interactive`);
