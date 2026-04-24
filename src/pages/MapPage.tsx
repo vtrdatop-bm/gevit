@@ -89,8 +89,8 @@ export default function MapPage() {
     const [{ data: procs }, { data: protocolosData }, { data: profilesData }, { data: vistorias }, { data: roles }, { data: regionaisData }, { data: bairrosData }, { data: pausasData }, { data: termosData }] = await Promise.all([
       supabase
         .from("processos")
-        .select("id, status, data_prevista, vistoriador_id, regional_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao)"),
-      supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao"),
+        .select("id, status, data_prevista, vistoriador_id, regional_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao, evento_unico, data_evento)"),
+      supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao, evento_unico, data_evento"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
@@ -286,6 +286,7 @@ export default function MapPage() {
   };
 
   const openProtocoloDetail = useCallback((protocoloId: string) => {
+    // Sempre registra o último protocolo aberto
     navigate(location.pathname + location.search, {
       replace: true,
       state: {
@@ -295,6 +296,7 @@ export default function MapPage() {
           selectedVistoriador,
           selectedRegional,
         },
+        lastOpenedProtocoloId: protocoloId,
       },
     });
 
@@ -497,14 +499,28 @@ export default function MapPage() {
   // Abrir popup automaticamente ao voltar do detalhe
   useEffect(() => {
     if (!mapReady || !mapInstance.current) return;
-    if (location.state && location.state.focusProcessoId && location.state.focusCoords) {
+    // Sempre prioriza o último protocolo aberto, se existir
+    const lastId = location.state?.lastOpenedProtocoloId;
+    const focusId = location.state?.focusProcessoId;
+    const focusCoords = location.state?.focusCoords;
+    if (lastId && focusCoords) {
       import("leaflet").then((L) => {
         const map = mapInstance.current;
-        const [lat, lng] = location.state.focusCoords;
+        const [lat, lng] = focusCoords;
         map.setView([lat, lng], 18);
-        // Aguarda os popups renderizarem
         setTimeout(() => {
-          // Procura o marker correspondente e abre o popup
+          const markerEl = document.querySelector(`.leaflet-marker-icon, .leaflet-interactive`);
+          if (markerEl) {
+            markerEl.dispatchEvent(new Event('click'));
+          }
+        }, 500);
+      });
+    } else if (focusId && focusCoords) {
+      import("leaflet").then((L) => {
+        const map = mapInstance.current;
+        const [lat, lng] = focusCoords;
+        map.setView([lat, lng], 18);
+        setTimeout(() => {
           const markerEl = document.querySelector(`.leaflet-marker-icon, .leaflet-interactive`);
           if (markerEl) {
             markerEl.dispatchEvent(new Event('click'));
