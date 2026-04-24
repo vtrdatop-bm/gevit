@@ -72,8 +72,8 @@ export default function DashboardPage() {
       }
 
       const [{ data: prots }, { data: procs }, { data: vists }, { data: profs }, { data: pausas }, { data: termos }] = await Promise.all([
-        supabase.from("protocolos").select("id, data_solicitacao, created_at"),
-        supabase.from("processos").select("id, protocolo_id, status, data_prevista, vistoriador_id, created_at, protocolos(data_solicitacao)"),
+        supabase.from("protocolos").select("id, data_solicitacao, created_at, evento_unico, data_evento"),
+        supabase.from("processos").select("id, protocolo_id, status, data_prevista, vistoriador_id, created_at, protocolos(data_solicitacao, evento_unico, data_evento)"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
         supabase.from("profiles").select("user_id, nome_guerra, ativo"),
         supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),

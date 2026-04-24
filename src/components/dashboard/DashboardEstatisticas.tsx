@@ -443,21 +443,18 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
             {stats.statusCounts.map((s) => (
               <div
                 key={s.key}
-                className={
-                  "flex items-center justify-between p-2.5 rounded-lg bg-accent/40" +
-                  (s.key === "evento_unico" ? " border-2 border-cyan-500 bg-cyan-100/60" : "")
-                }
+                className="flex items-center justify-between p-2.5 rounded-lg bg-accent/40"
               >
-                <span className={"text-sm flex items-center gap-2 " + (s.key === "evento_unico" ? "font-bold text-cyan-700" : "text-foreground") }>
+                <span className="text-sm flex items-center gap-2 text-foreground">
                   {s.label}
                   {s.key === "evento_unico" && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cyan-600 text-white border border-cyan-700 ml-1">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-accent text-foreground border border-border ml-1">
                       Evento Único
                     </span>
                   )}
                 </span>
                 <div className="flex items-center gap-3">
-                  <span className={"text-sm font-bold " + (s.key === "evento_unico" ? "text-cyan-700" : "text-foreground")}>{s.count}</span>
+                  <span className="text-sm font-bold text-foreground">{s.count}</span>
                   <span className="text-xs text-muted-foreground min-w-[40px] text-right">{pct(s.count)}</span>
                 </div>
               </div>
