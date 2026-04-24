@@ -133,7 +133,9 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     const total = filteredProtocolos.length;
     const byStatus: Record<string, number> = {};
+    let eventoUnicoCount = 0;
     filteredProtocolos.forEach((proto) => {
+      if (proto.evento_unico) eventoUnicoCount++;
       const proc = processoByProtocolo[proto.id];
       if (!proc) {
         byStatus.regional = (byStatus.regional || 0) + 1;
@@ -167,18 +169,22 @@ export default function DashboardPage() {
     const expirados = byStatus["expirado"] || 0;
     const cancelados = byStatus["cancelado"] || 0;
 
-    const pieData = Object.entries(byStatus)
-      .filter(([, v]) => v > 0)
-      .map(([status, value]) => ({
-        name: displayStatusLabels[status as DisplayStatus] || status,
-        value,
-        color: STATUS_COLORS[status] || "hsl(220, 9%, 46%)",
-      }));
+    // Adiciona Evento Único ao gráfico de pizza
+    const pieData = [
+      ...(eventoUnicoCount > 0 ? [{ name: "Evento Único", value: eventoUnicoCount, color: "#06b6d4" }] : []),
+      ...Object.entries(byStatus)
+        .filter(([, v]) => v > 0)
+        .map(([status, value]) => ({
+          name: displayStatusLabels[status as DisplayStatus] || status,
+          value,
+          color: STATUS_COLORS[status] || "hsl(220, 9%, 46%)",
+        }))
+    ];
 
     const vistoriadoresAtivos = profiles.filter((p) => p.ativo).length;
     const taxaCertificacao = total > 0 ? Math.round(((certificados + certificadosTermo) / total) * 100) : 0;
 
-    return { total, aguardando, aguardandoRetorno, atribuidos, certificados, certificadosTermo, pendentes, expirados, cancelados, pieData, vistoriadoresAtivos, taxaCertificacao };
+    return { total, aguardando, aguardandoRetorno, atribuidos, certificados, certificadosTermo, pendentes, expirados, cancelados, pieData, vistoriadoresAtivos, taxaCertificacao, eventoUnicoCount };
   }, [filteredProtocolos, profiles, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
 
   if (loading) {
@@ -216,6 +222,12 @@ export default function DashboardPage() {
           title="Total de Processos"
           value={stats.total}
           icon={LayoutDashboard}
+        />
+        <KpiCard
+          title="Evento Único"
+          value={stats.eventoUnicoCount}
+          icon={TrendingUp}
+          color="bg-cyan-100 text-cyan-700"
         />
         <KpiCard
           title="Aguardando Vistoria"
