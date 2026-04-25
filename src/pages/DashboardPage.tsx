@@ -133,10 +133,9 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     const total = filteredProtocolos.length;
     const byStatus: Record<string, number> = {};
-    // Corrigir contagem de evento único para considerar apenas protocolos com evento_unico true
-    let eventoUnicoCount = 0;
+    // Corrigir contagem de evento único para considerar apenas protocolos onde evento_unico === true
+    const eventoUnicoCount = filteredProtocolos.filter((proto) => proto.evento_unico === true).length;
     filteredProtocolos.forEach((proto) => {
-      if (proto.evento_unico === true || proto.protocolos?.evento_unico === true) eventoUnicoCount++;
       const proc = processoByProtocolo[proto.id];
       if (!proc) {
         byStatus.regional = (byStatus.regional || 0) + 1;

@@ -2,15 +2,14 @@
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 async function check() {
-    const { count, error } = await supabase
+    const { data, error } = await supabase
         .from('protocolos')
-        .select('*', { count: 'exact', head: true });
+        .select('*');
 
     if (error) {
-        console.error('Error fetching count:', error);
-        return;
+        console.error('Error:', error);
+    } else {
+        console.log('All protocols:', data);
     }
-
-    console.log('Total protocols count:', count);
 }
 check();

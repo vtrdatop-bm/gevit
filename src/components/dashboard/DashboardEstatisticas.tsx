@@ -229,7 +229,7 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
     });
 
     // Evento Único: conta protocolos marcados corretamente
-    const eventoUnicoCount = filtered.filter((p) => p.protocolos?.evento_unico).length;
+    const eventoUnicoCount = filtered.filter((p) => p.protocolos?.evento_unico === true).length;
 
     const statusCounts = [
       { key: "cancelado", label: "Cancelados", count: byStatus["cancelado"] || 0 },
