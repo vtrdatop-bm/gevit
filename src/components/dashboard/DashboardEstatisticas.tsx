@@ -228,7 +228,8 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       byStatus[ds] = (byStatus[ds] || 0) + 1;
     });
 
-    // Evento Único: conta protocolos marcados corretamente
+    console.log('DashboardEstatisticas filtered:', filtered);
+	// Evento Único: conta protocolos marcados corretamente
     const eventoUnicoCount = filtered.filter((p) => p.protocolos?.evento_unico === true).length;
 
     const statusCounts = [

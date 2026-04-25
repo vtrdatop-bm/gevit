@@ -133,7 +133,8 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     const total = filteredProtocolos.length;
     const byStatus: Record<string, number> = {};
-    // Corrigir contagem de evento único para considerar apenas protocolos onde evento_unico === true
+    console.log('DashboardPage filteredProtocolos:', filteredProtocolos);
+	// Corrigir contagem de evento único para considerar apenas protocolos onde evento_unico === true
     const eventoUnicoCount = filteredProtocolos.filter((proto) => proto.evento_unico === true).length;
     filteredProtocolos.forEach((proto) => {
       const proc = processoByProtocolo[proto.id];
