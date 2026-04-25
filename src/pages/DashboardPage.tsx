@@ -226,12 +226,6 @@ export default function DashboardPage() {
           icon={LayoutDashboard}
         />
         <KpiCard
-          title="Evento Único"
-          value={stats.eventoUnicoCount}
-          icon={TrendingUp}
-          color="bg-cyan-100 text-cyan-700"
-        />
-        <KpiCard
           title="Aguardando Vistoria"
           value={stats.aguardando}
           icon={Clock}
@@ -266,6 +260,12 @@ export default function DashboardPage() {
           value={stats.pendentes}
           icon={AlertTriangle}
           color="bg-status-pending/15"
+        />
+        <KpiCard
+          title="Evento Único"
+          value={stats.eventoUnicoCount}
+          icon={TrendingUp}
+          color="bg-cyan-100 text-cyan-700"
         />
         <KpiCard
           title="Cancelados"
