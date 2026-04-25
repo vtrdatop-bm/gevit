@@ -136,7 +136,7 @@ export default function DashboardPage() {
     // Corrigir contagem de evento único para considerar apenas protocolos com evento_unico true
     let eventoUnicoCount = 0;
     filteredProtocolos.forEach((proto) => {
-      if (proto.evento_unico || proto.protocolos?.evento_unico) eventoUnicoCount++;
+      if (proto.evento_unico === true || proto.protocolos?.evento_unico === true) eventoUnicoCount++;
       const proc = processoByProtocolo[proto.id];
       if (!proc) {
         byStatus.regional = (byStatus.regional || 0) + 1;
