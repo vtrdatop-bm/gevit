@@ -134,8 +134,10 @@ export default function DashboardPage() {
     const total = filteredProtocolos.length;
     const byStatus: Record<string, number> = {};
     console.log('DashboardPage filteredProtocolos:', filteredProtocolos);
-	// Corrigir contagem de evento único para considerar apenas protocolos onde evento_unico === true
-    const eventoUnicoCount = filteredProtocolos.filter((proto) => proto.evento_unico === true).length;
+  // Corrigir contagem de evento único para considerar apenas protocolos onde evento_unico === true
+  const unicos = filteredProtocolos.filter((proto) => proto.evento_unico === true);
+  console.log('PROTOCOLOS COM EVENTO ÚNICO === TRUE:', unicos.map(p => ({ id: p.id, evento_unico: p.evento_unico })));
+  const eventoUnicoCount = unicos.length;
     filteredProtocolos.forEach((proto) => {
       const proc = processoByProtocolo[proto.id];
       if (!proc) {
