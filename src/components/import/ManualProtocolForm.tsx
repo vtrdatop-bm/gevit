@@ -51,11 +51,13 @@ function Field({ label, required, children }: { label: string; required?: boolea
 export default function ManualProtocolForm() {
   const DUPLICATE_PROTOCOL_MESSAGE = "Este protocolo já existe.";
   const navigate = useNavigate();
+
+  // Corrigido: handleEventoUnicoChange agora está no escopo do componente
+  const handleEventoUnicoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, evento_unico: e.target.checked }));
+  };
+
   const [form, setForm] = useState<FormData>(() => {
-      // Evento Único
-      const handleEventoUnicoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setForm((prev) => ({ ...prev, evento_unico: e.target.checked }));
-      };
     const saved = sessionStorage.getItem("manual_protocol_form");
     return saved ? JSON.parse(saved) : {};
   });
