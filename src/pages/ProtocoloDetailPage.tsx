@@ -654,7 +654,33 @@ export default function ProtocoloDetailPage() {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl overflow-hidden">
       <div className="flex flex-wrap items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-muted transition-colors" title="Voltar">
+        <button
+          onClick={() => {
+            if (processo && protocolo?.latitude && protocolo?.longitude) {
+              navigate("/mapa", {
+                replace: true,
+                state: {
+                  focusProcessoId: processo.id,
+                  focusCoords: [Number(protocolo.latitude), Number(protocolo.longitude)],
+                  lastOpenedProtocoloId: processo.id,
+                  lastOpenedCoords: [Number(protocolo.latitude), Number(protocolo.longitude)]
+                }
+              });
+            } else if (processo) {
+              navigate("/mapa", {
+                replace: true,
+                state: {
+                  focusProcessoId: processo.id,
+                  lastOpenedProtocoloId: processo.id
+                }
+              });
+            } else {
+              navigate("/mapa", { replace: true });
+            }
+          }}
+          className="p-2 rounded-lg hover:bg-muted transition-colors"
+          title="Voltar"
+        >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1">
