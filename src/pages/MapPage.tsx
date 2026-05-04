@@ -49,6 +49,7 @@ export default function MapPage() {
   const location = useLocation();
   const focusProcessoId = location.state?.focusProcessoId as string | undefined;
   const focusCoords = location.state?.focusCoords as [number, number] | undefined;
+  const lastOpenedProtocoloId = location.state?.lastOpenedProtocoloId as string | undefined;
   const restoredFilters = (location.state as {
     mapBackFilters?: {
       filterStatus?: (DisplayStatus | "minhas")[];
@@ -450,7 +451,10 @@ export default function MapPage() {
           maxWidth: 300
         });
 
-        if (focusProcessoId && groupProcesses.some(p => p.id === focusProcessoId)) {
+        if (lastOpenedProtocoloId && groupProcesses.some((p) => p.protocolo.id === lastOpenedProtocoloId)) {
+          focusMarker = marker;
+          targetCoords = [lat, lng];
+        } else if (focusProcessoId && groupProcesses.some((p) => p.id === focusProcessoId)) {
           focusMarker = marker;
           targetCoords = [lat, lng];
         }
@@ -482,7 +486,7 @@ export default function MapPage() {
       }
       (map as any)._customZoomCleanup = updateRadii;
     });
-  }, [filteredProcesses, mapReady, focusProcessoId, focusCoords]);
+  }, [filteredProcesses, mapReady, focusProcessoId, focusCoords, lastOpenedProtocoloId]);
 
   useEffect(() => {
     const handleOpenProtocolo = (e: any) => {
