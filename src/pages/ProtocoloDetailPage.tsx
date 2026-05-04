@@ -1,7 +1,7 @@
 // Novo: status cancelado
 // (declarar dentro do componente)
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Building2, MapPin, FileText, Pencil, X, Save, LocateFixed, Loader2, Plus, Search, Trash2, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -22,6 +22,7 @@ import { DETAIL_MOCK_DATA } from "@/mocks/mockData";
 export default function ProtocoloDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isDev, activeRole } = useAuth();
   const isVistoriador = activeRole === "vistoriador";
   const [protocolo, setProtocolo] = useState<ProtocoloData | null>(null);
@@ -632,6 +633,15 @@ export default function ProtocoloDetailPage() {
 
   const inputClass = "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+  const handleBackNavigation = () => {
+    if (location.key !== "default") {
+      navigate(-1);
+      return;
+    }
+
+    navigate("/protocolos");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -655,29 +665,7 @@ export default function ProtocoloDetailPage() {
     <div className="p-4 md:p-6 space-y-6 max-w-5xl overflow-hidden">
       <div className="flex flex-wrap items-center gap-3">
         <button
-          onClick={() => {
-            if (processo && protocolo?.latitude && protocolo?.longitude) {
-              navigate("/mapa", {
-                replace: true,
-                state: {
-                  focusProcessoId: processo.id,
-                  focusCoords: [Number(protocolo.latitude), Number(protocolo.longitude)],
-                  lastOpenedProtocoloId: processo.id,
-                  lastOpenedCoords: [Number(protocolo.latitude), Number(protocolo.longitude)]
-                }
-              });
-            } else if (processo) {
-              navigate("/mapa", {
-                replace: true,
-                state: {
-                  focusProcessoId: processo.id,
-                  lastOpenedProtocoloId: processo.id
-                }
-              });
-            } else {
-              navigate("/mapa", { replace: true });
-            }
-          }}
+          onClick={handleBackNavigation}
           className="p-2 rounded-lg hover:bg-muted transition-colors"
           title="Voltar"
         >
