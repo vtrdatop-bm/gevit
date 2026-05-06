@@ -417,7 +417,7 @@ export default function KanbanPage() {
                                       </span>
                                     )}
                                     {process.protocolos.ligar_antes && (
-                                      <span className="font-bold text-xs bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded">
+                                      <span className="font-bold text-xs bg-violet-100 text-violet-700 border border-violet-300 px-2 py-0.5 rounded">
                                         Ligar antes
                                       </span>
                                     )}
