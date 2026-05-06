@@ -249,11 +249,13 @@ export type Database = {
           endereco: string
           id: string
           latitude: number | null
+          ligar_antes: boolean | null
           longitude: number | null
           municipio: string
           nome_fantasia: string | null
           numero: string
           razao_social: string
+          telefone_contato: string | null
 
 
           updated_at: string
@@ -268,11 +270,13 @@ export type Database = {
           endereco: string
           id?: string
           latitude?: number | null
+          ligar_antes?: boolean | null
           longitude?: number | null
           municipio: string
           nome_fantasia?: string | null
           numero: string
           razao_social: string
+          telefone_contato?: string | null
 
 
           updated_at?: string
@@ -287,11 +291,13 @@ export type Database = {
           endereco?: string
           id?: string
           latitude?: number | null
+          ligar_antes?: boolean | null
           longitude?: number | null
           municipio?: string
           nome_fantasia?: string | null
           numero?: string
           razao_social?: string
+          telefone_contato?: string | null
 
 
           updated_at?: string

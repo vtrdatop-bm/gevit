@@ -57,6 +57,10 @@ export default function ManualProtocolForm() {
     setForm((prev) => ({ ...prev, evento_unico: e.target.checked }));
   };
 
+  const handleLigarAntesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, ligar_antes: e.target.checked }));
+  };
+
   const [form, setForm] = useState<FormData>(() => {
     const saved = sessionStorage.getItem("manual_protocol_form");
     return saved ? JSON.parse(saved) : {};
@@ -444,6 +448,8 @@ export default function ManualProtocolForm() {
       longitude: form.longitude ? parseFloat(form.longitude) : null,
       evento_unico: !!form.evento_unico,
       data_evento: form.data_evento || null,
+      ligar_antes: !!form.ligar_antes,
+      telefone_contato: form.telefone_contato?.trim() || null,
     }).select().maybeSingle();
 
     if (error) {
@@ -480,15 +486,27 @@ export default function ManualProtocolForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Checkbox Evento Único + Data do Evento */}
           <div className="flex flex-col gap-2 md:col-span-2">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="evento_unico"
-                checked={!!form.evento_unico}
-                onChange={handleEventoUnicoChange}
-                className="accent-primary w-4 h-4"
-              />
-              <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="evento_unico"
+                  checked={!!form.evento_unico}
+                  onChange={handleEventoUnicoChange}
+                  className="accent-primary w-4 h-4"
+                />
+                <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="ligar_antes"
+                  checked={!!form.ligar_antes}
+                  onChange={handleLigarAntesChange}
+                  className="accent-primary w-4 h-4"
+                />
+                <label htmlFor="ligar_antes" className="text-sm font-medium select-none cursor-pointer">Ligar antes</label>
+              </div>
             </div>
             {form.evento_unico && (
               <div className="flex items-center gap-2 mt-1">
@@ -500,6 +518,18 @@ export default function ManualProtocolForm() {
                   onChange={e => handleChange("data_evento", e.target.value)}
                   className="h-9 rounded border border-input px-2 text-sm"
                   required={!!form.evento_unico}
+                />
+              </div>
+            )}
+            {form.ligar_antes && (
+              <div className="max-w-md mt-1">
+                <input
+                  type="tel"
+                  id="telefone_contato"
+                  value={form.telefone_contato || ""}
+                  onChange={(e) => handleChange("telefone_contato", e.target.value)}
+                  placeholder="Número do telefone para contato"
+                  className={inputClass}
                 />
               </div>
             )}
