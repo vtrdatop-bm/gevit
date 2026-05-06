@@ -225,6 +225,7 @@ export default function ProtocoloDetailPage() {
         latitude: truncateCoordinate(protocolo.latitude?.toString() || ""),
         longitude: truncateCoordinate(protocolo.longitude?.toString() || ""),
         evento_unico: protocolo.evento_unico || false,
+        ligar_antes: protocolo.ligar_antes || false,
         data_evento: protocolo.data_evento || "",
       });
     }
@@ -279,6 +280,7 @@ export default function ProtocoloDetailPage() {
       latitude: editForm.latitude ? parseFloat(String(editForm.latitude).replace(",", ".")) : null,
       longitude: editForm.longitude ? parseFloat(String(editForm.longitude).replace(",", ".")) : null,
       evento_unico: !!editForm.evento_unico,
+      ligar_antes: !!editForm.ligar_antes,
       data_evento: editForm.data_evento || null,
     }).eq("id", protocolo.id).select();
 
@@ -732,16 +734,29 @@ export default function ProtocoloDetailPage() {
             <div className="space-y-4">
                             {/* Checkbox Evento Único + Data do Evento */}
                             <div className="flex flex-col gap-2">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  id="evento_unico"
-                                  checked={!!editForm.evento_unico}
-                                  onChange={e => handleEditChange("evento_unico", e.target.checked)}
-                                  className="accent-primary w-4 h-4"
-                                  disabled={isCancelado}
-                                />
-                                <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
+                              <div className="flex flex-wrap items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    id="evento_unico"
+                                    checked={!!editForm.evento_unico}
+                                    onChange={e => handleEditChange("evento_unico", e.target.checked)}
+                                    className="accent-primary w-4 h-4"
+                                    disabled={isCancelado}
+                                  />
+                                  <label htmlFor="evento_unico" className="text-sm font-medium select-none cursor-pointer">Evento Único</label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    id="ligar_antes"
+                                    checked={!!editForm.ligar_antes}
+                                    onChange={e => handleEditChange("ligar_antes", e.target.checked)}
+                                    className="accent-primary w-4 h-4"
+                                    disabled={isCancelado}
+                                  />
+                                  <label htmlFor="ligar_antes" className="text-sm font-medium select-none cursor-pointer">Ligar antes</label>
+                                </div>
                               </div>
                               {editForm.evento_unico && (
                                 <div className="flex items-center gap-2 mt-1">
