@@ -24,6 +24,7 @@ interface ProcessoComProtocolo {
   vistoriador_id: string | null;
   status: string;
   protocolo: {
+    numero: string;
     nome_fantasia: string | null;
     razao_social: string;
     endereco: string;
@@ -31,6 +32,9 @@ interface ProcessoComProtocolo {
     municipio: string;
     latitude: number | null;
     longitude: number | null;
+    evento_unico?: boolean;
+    ligar_antes?: boolean;
+    telefone_contato?: string | null;
   };
   datasAtribuicao: string[];
 }
@@ -94,7 +98,7 @@ export default function RoutesPage() {
       const [{ data: procsData }, { data: vistoriasData }] = await Promise.all([
         supabase
           .from("processos")
-          .select("id, protocolo_id, vistoriador_id, status, protocolos(nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude)")
+          .select("id, protocolo_id, vistoriador_id, status, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, evento_unico, ligar_antes, telefone_contato)")
           .neq("status", "certificado"),
         supabase
           .from("vistorias")
@@ -511,9 +515,26 @@ export default function RoutesPage() {
                   <span className="text-xs font-bold text-primary-foreground">{index + 1}</span>
                 </div>
                 <div className="flex-1 min-w-0">
+                  <p className="text-xs font-mono text-muted-foreground mb-1">
+                    {process.protocolo.numero}
+                  </p>
                   <p className="text-sm font-medium text-foreground">
                     {process.protocolo.nome_fantasia || process.protocolo.razao_social}
                   </p>
+                  {(process.protocolo.evento_unico || process.protocolo.ligar_antes) && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {process.protocolo.evento_unico && (
+                        <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-cyan-100 text-cyan-700 border border-cyan-400">
+                          Evento Unico
+                        </span>
+                      )}
+                      {process.protocolo.ligar_antes && (
+                        <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-violet-100 text-violet-700 border border-violet-300">
+                          Ligar antes{process.protocolo.telefone_contato ? `: ${process.protocolo.telefone_contato}` : ""}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground truncate">
                     {process.protocolo.endereco}, {process.protocolo.bairro}
                   </p>
@@ -576,9 +597,26 @@ export default function RoutesPage() {
                         className="w-4 h-4 rounded border-input accent-primary flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
+                        <p className="text-xs font-mono text-muted-foreground mb-1">
+                          {process.protocolo.numero}
+                        </p>
                         <p className="text-sm font-medium text-foreground">
                           {process.protocolo.nome_fantasia || process.protocolo.razao_social}
                         </p>
+                        {(process.protocolo.evento_unico || process.protocolo.ligar_antes) && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {process.protocolo.evento_unico && (
+                              <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-cyan-100 text-cyan-700 border border-cyan-400">
+                                Evento Unico
+                              </span>
+                            )}
+                            {process.protocolo.ligar_antes && (
+                              <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-violet-100 text-violet-700 border border-violet-300">
+                                Ligar antes{process.protocolo.telefone_contato ? `: ${process.protocolo.telefone_contato}` : ""}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <p className="text-xs text-muted-foreground truncate">
                           {process.protocolo.endereco}, {process.protocolo.bairro}
                         </p>
