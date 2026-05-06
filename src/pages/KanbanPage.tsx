@@ -57,6 +57,7 @@ interface ProcessoWithProtocolo {
     area: number | null;
     data_solicitacao: string;
     evento_unico?: boolean;
+    ligar_antes?: boolean;
     data_evento?: string | null;
   };
   regional_nome?: string;
@@ -98,7 +99,7 @@ export default function KanbanPage() {
       ] = await Promise.all([
         supabase
           .from("processos")
-          .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, data_evento)"),
+          .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento)"),
         supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao"),
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
@@ -409,11 +410,18 @@ export default function KanbanPage() {
                                   <span className="text-xs font-mono text-muted-foreground shrink-0">
                                     {process.protocolos.numero}
                                   </span>
-                                  {process.protocolos.evento_unico && (
-                                    <span className="ml-2 font-bold text-xs bg-cyan-100 text-cyan-700 border border-cyan-400 px-2 py-0.5 rounded">
-                                      Evento Único
-                                    </span>
-                                  )}
+                                  <div className="ml-2 flex flex-wrap justify-end gap-1">
+                                    {process.protocolos.evento_unico && (
+                                      <span className="font-bold text-xs bg-cyan-100 text-cyan-700 border border-cyan-400 px-2 py-0.5 rounded">
+                                        Evento Único
+                                      </span>
+                                    )}
+                                    {process.protocolos.ligar_antes && (
+                                      <span className="font-bold text-xs bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded">
+                                        Ligar antes
+                                      </span>
+                                    )}
+                                  </div>
                                   {/* Data do evento NÃO é etiqueta, exibir como texto abaixo do título */}
                                   {!process.protocolos.evento_unico && process.stage >= 1 && (
                                     <span className="ml-auto font-medium text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground">

@@ -226,6 +226,7 @@ export default function ProtocoloDetailPage() {
         longitude: truncateCoordinate(protocolo.longitude?.toString() || ""),
         evento_unico: protocolo.evento_unico || false,
         ligar_antes: protocolo.ligar_antes || false,
+        telefone_contato: protocolo.telefone_contato || "",
         data_evento: protocolo.data_evento || "",
       });
     }
@@ -281,6 +282,7 @@ export default function ProtocoloDetailPage() {
       longitude: editForm.longitude ? parseFloat(String(editForm.longitude).replace(",", ".")) : null,
       evento_unico: !!editForm.evento_unico,
       ligar_antes: !!editForm.ligar_antes,
+      telefone_contato: editForm.telefone_contato?.trim() || null,
       data_evento: editForm.data_evento || null,
     }).eq("id", protocolo.id).select();
 
@@ -768,6 +770,19 @@ export default function ProtocoloDetailPage() {
                                     onChange={e => handleEditChange("data_evento", e.target.value)}
                                     className="h-9 rounded border border-input px-2 text-sm"
                                     required={!!editForm.evento_unico}
+                                    disabled={isCancelado}
+                                  />
+                                </div>
+                              )}
+                              {editForm.ligar_antes && (
+                                <div className="max-w-md mt-1">
+                                  <input
+                                    type="tel"
+                                    id="telefone_contato"
+                                    value={editForm.telefone_contato || ""}
+                                    onChange={e => handleEditChange("telefone_contato", e.target.value)}
+                                    placeholder="Numero do telefone para contato"
+                                    className={inputClass}
                                     disabled={isCancelado}
                                   />
                                 </div>
