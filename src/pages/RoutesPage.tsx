@@ -339,11 +339,6 @@ export default function RoutesPage() {
     window.open(buildGoogleMapsUrl(), "_blank");
   };
 
-  useEffect(() => {
-    setSelectedIds(new Set());
-    setRouteGenerated(false);
-    setOptimizedOrder([]);
-  }, [dataLimite, selectedVistoriadores, routePriority]);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
