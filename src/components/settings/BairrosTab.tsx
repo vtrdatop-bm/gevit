@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, X, Check } from "lucide-react";
+import { Plus, Pencil, X, Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -22,7 +22,6 @@ interface Municipio {
   nome: string;
 }
 
-export default function BairrosTab() {
   const [items, setItems] = useState<Bairro[]>([]);
   const [regionais, setRegionais] = useState<Regional[]>([]);
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
@@ -31,6 +30,19 @@ export default function BairrosTab() {
   const [form, setForm] = useState({ nome: "", municipio: "", regional_id: "" });
   const [showNew, setShowNew] = useState(false);
   const [newForm, setNewForm] = useState({ nome: "", municipio: "", regional_id: "" });
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir este bairro?")) return;
+    setDeleting(id);
+    const { error } = await supabase.from("bairros").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir bairro: " + error.message);
+    } else {
+      toast.success("Bairro excluído com sucesso!");
+      fetchData();
+    }
+    setDeleting(null);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -192,8 +204,20 @@ export default function BairrosTab() {
                       <td className="py-2 px-3 font-medium">{b.nome}</td>
                       <td className="py-2 px-3 text-muted-foreground">{b.municipio}</td>
                       <td className="py-2 px-3 text-muted-foreground">{regionalName(b.regional_id)}</td>
-                      <td className="py-2 px-3 text-right">
-                        <button onClick={() => startEdit(b)} className="p-1 hover:bg-accent rounded"><Pencil className="w-4 h-4 text-muted-foreground" /></button>
+                      <td className="py-2 px-3 text-right flex gap-1 justify-end">
+                        <button onClick={() => startEdit(b)} className="p-1 hover:bg-accent rounded" title="Editar"><Pencil className="w-4 h-4 text-muted-foreground" /></button>
+                        <button
+                          onClick={() => handleDelete(b.id)}
+                          className="p-1 hover:bg-destructive/20 rounded"
+                          title="Excluir"
+                          disabled={deleting === b.id}
+                        >
+                          {deleting === b.id ? (
+                            <span className="w-4 h-4 animate-spin border-2 border-destructive border-t-transparent rounded-full inline-block" />
+                          ) : (
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          )}
+                        </button>
                       </td>
                     </>
                   )}
