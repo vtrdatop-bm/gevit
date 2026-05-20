@@ -1,3 +1,4 @@
+// Alteração forçada para commit - GitHub/Vercel
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Pencil, X, Check, Trash2 } from "lucide-react";
