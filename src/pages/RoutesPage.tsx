@@ -1,3 +1,4 @@
+const LOCAL_KEY = "gevit_routes_state_v1";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,18 +52,64 @@ const START_COORDS: [number, number] = [-9.966142405683366, -67.80275437311697];
 export default function RoutesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [dataLimite, setDataLimite] = useState("");
-  const [selectedVistoriadores, setSelectedVistoriadores] = useState<Set<string>>(new Set());
-  const [routePriority, setRoutePriority] = useState<"coord" | "date">("coord");
-  const [routeGenerated, setRouteGenerated] = useState(false);
+  // Estado persistente
+  const [dataLimite, setDataLimite] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_KEY);
+      return saved ? JSON.parse(saved).dataLimite || "" : "";
+    } catch { return ""; }
+  });
+  const [selectedVistoriadores, setSelectedVistoriadores] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_KEY);
+      return saved && JSON.parse(saved).selectedVistoriadores ? new Set(JSON.parse(saved).selectedVistoriadores) : new Set();
+    } catch { return new Set(); }
+  });
+  const [routePriority, setRoutePriority] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_KEY);
+      return saved ? JSON.parse(saved).routePriority || "coord" : "coord";
+    } catch { return "coord"; }
+  });
+  const [routeGenerated, setRouteGenerated] = useState(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_KEY);
+      return saved ? !!JSON.parse(saved).routeGenerated : false;
+    } catch { return false; }
+  });
+  const [optimizedOrder, setOptimizedOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_KEY);
+      return saved && JSON.parse(saved).optimizedOrder ? JSON.parse(saved).optimizedOrder : [];
+    } catch { return []; }
+  });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_KEY);
+      return saved && JSON.parse(saved).selectedIds ? new Set(JSON.parse(saved).selectedIds) : new Set();
+    } catch { return new Set(); }
+  });
+  // Estado não persistente
   const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
   const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);
   const [vistorias, setVistorias] = useState<VistoriaRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [canChangeVistoriador, setCanChangeVistoriador] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  // Salvar estado persistente sempre que mudar
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify({
+        dataLimite,
+        selectedVistoriadores: Array.from(selectedVistoriadores),
+        routePriority,
+        routeGenerated,
+        optimizedOrder,
+        selectedIds: Array.from(selectedIds),
+      }));
+    } catch {}
+  }, [dataLimite, selectedVistoriadores, routePriority, routeGenerated, optimizedOrder, selectedIds]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
