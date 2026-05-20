@@ -23,6 +23,7 @@ interface Municipio {
   nome: string;
 }
 
+export default function BairrosTab() {
   const [items, setItems] = useState<Bairro[]>([]);
   const [regionais, setRegionais] = useState<Regional[]>([]);
   const [municipios, setMunicipios] = useState<Municipio[]>([]);
@@ -32,6 +33,7 @@ interface Municipio {
   const [showNew, setShowNew] = useState(false);
   const [newForm, setNewForm] = useState({ nome: "", municipio: "", regional_id: "" });
   const [deleting, setDeleting] = useState<string | null>(null);
+
   const handleDelete = async (id: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este bairro?")) return;
     setDeleting(id);
