@@ -220,9 +220,6 @@ export default function RoutesPage() {
 
   const selectedProcesses = filteredProcesses.filter((p) => selectedIds.has(p.id));
 
-  // Optimized order after route generation (nearest-neighbor) grouped by date
-  // the array holds process IDs in exact route order across all dates
-  const [optimizedOrder, setOptimizedOrder] = useState<string[]>([]);
 
   const orderedProcesses = useMemo(() => {
     if (!routeGenerated || optimizedOrder.length === 0) return selectedProcesses;
