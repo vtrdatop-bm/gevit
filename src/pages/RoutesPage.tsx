@@ -71,24 +71,9 @@ export default function RoutesPage() {
       return saved ? JSON.parse(saved).routePriority || "coord" : "coord";
     } catch { return "coord"; }
   });
-  const [routeGenerated, setRouteGenerated] = useState(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_KEY);
-      return saved ? !!JSON.parse(saved).routeGenerated : false;
-    } catch { return false; }
-  });
-  const [optimizedOrder, setOptimizedOrder] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_KEY);
-      return saved && JSON.parse(saved).optimizedOrder ? JSON.parse(saved).optimizedOrder : [];
-    } catch { return []; }
-  });
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_KEY);
-      return saved && JSON.parse(saved).selectedIds ? new Set(JSON.parse(saved).selectedIds) : new Set();
-    } catch { return new Set(); }
-  });
+  const [routeGenerated, setRouteGenerated] = useState(false);
+  const [optimizedOrder, setOptimizedOrder] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // Estado não persistente
   const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
   const [vistoriadores, setVistoriadores] = useState<Vistoriador[]>([]);
@@ -104,12 +89,9 @@ export default function RoutesPage() {
         dataLimite,
         selectedVistoriadores: Array.from(selectedVistoriadores),
         routePriority,
-        routeGenerated,
-        optimizedOrder,
-        selectedIds: Array.from(selectedIds),
       }));
     } catch {}
-  }, [dataLimite, selectedVistoriadores, routePriority, routeGenerated, optimizedOrder, selectedIds]);
+  }, [dataLimite, selectedVistoriadores, routePriority]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -420,7 +402,10 @@ export default function RoutesPage() {
             <input
               type="date"
               value={dataLimite}
-              onChange={(e) => setDataLimite(e.target.value)}
+              onChange={(e) => {
+                setDataLimite(e.target.value);
+                setRouteGenerated(false);
+              }}
               className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
             />
           </div>
@@ -457,6 +442,7 @@ export default function RoutesPage() {
                           else next.delete(v.user_id);
                           return next;
                         });
+                        setRouteGenerated(false);
                       }}
                       className="w-4 h-4 rounded border-input accent-primary flex-shrink-0"
                     />
@@ -476,7 +462,10 @@ export default function RoutesPage() {
             <label className="text-xs font-medium text-muted-foreground block mb-1.5">Prioridade da Rota</label>
             <select
               value={routePriority}
-              onChange={(e) => setRoutePriority(e.target.value as "coord" | "date")}
+              onChange={(e) => {
+                setRoutePriority(e.target.value as "coord" | "date");
+                setRouteGenerated(false);
+              }}
               className="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
             >
               <option value="date">Por Data de Atribuição</option>
