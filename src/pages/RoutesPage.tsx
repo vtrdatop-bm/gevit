@@ -7,7 +7,7 @@ import { Navigation, ExternalLink, Copy, ArrowLeft, ChevronDown } from "lucide-r
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import RouteMap from "@/components/routes/RouteMap";
-import { sortVistoriadores } from "@/lib/vistoriaStatus";
+import { sortVistoriadores, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
 
 interface VistoriaRow {
   processo_id: string;
@@ -149,23 +149,31 @@ export default function RoutesPage() {
           .neq("status", "certificado"),
         supabase
           .from("vistorias")
-          .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria"),
+          .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       ]);
 
       setCanChangeVistoriador(true); // Permitir múltipla seleção para todos os perfis
       setVistoriadores(sortVistoriadores(onlyVistoriadores));
 
       if (procsData) {
+        const vistoriasMap = new Map();
+        if (vistoriasData) {
+          vistoriasData.forEach(v => vistoriasMap.set(v.processo_id, v));
+        }
+
         const mapped = procsData
           .filter((p) => p.protocolos)
-          .map((p) => ({
-            id: p.id,
-            protocolo_id: p.protocolo_id,
-            vistoriador_id: p.vistoriador_id,
-            status: p.status,
-            protocolo: p.protocolos,
-            datasAtribuicao: [] as string[],
-          }));
+          .map((p) => {
+            const vist = vistoriasMap.get(p.id);
+            return {
+              id: p.id,
+              protocolo_id: p.protocolo_id,
+              vistoriador_id: getCurrentVistoriadorId(p.vistoriador_id, vist),
+              status: p.status,
+              protocolo: p.protocolos,
+              datasAtribuicao: [] as string[],
+            };
+          });
         setProcessos(mapped);
       }
 
@@ -191,9 +199,9 @@ export default function RoutesPage() {
     const map: Record<string, string[]> = {};
     vistorias.forEach((v) => {
       const dates: string[] = [];
-      if (v.data_1_atribuicao && !v.status_1_vistoria) dates.push(v.data_1_atribuicao);
-      if (v.data_2_atribuicao && !v.status_2_vistoria) dates.push(v.data_2_atribuicao);
-      if (v.data_3_atribuicao && !v.status_3_vistoria) dates.push(v.data_3_atribuicao);
+      if (v.data_1_atribuicao && !v.status_1_vistoria) dates.push(v.data_1_atribuicao.substring(0, 10));
+      if (v.data_2_atribuicao && !v.status_2_vistoria) dates.push(v.data_2_atribuicao.substring(0, 10));
+      if (v.data_3_atribuicao && !v.status_3_vistoria) dates.push(v.data_3_atribuicao.substring(0, 10));
       if (dates.length) map[v.processo_id] = dates;
     });
     return map;
