@@ -48,6 +48,22 @@ interface TimelineSnapshot {
 type SortKey = "numero" | "data_solicitacao" | "razao_social" | "municipio" | "bairro" | "status";
 type StatusFilterValue = DisplayStatus | "termo_vencido";
 
+function getDisplayedRequestDate(
+  protocolo: Protocolo,
+  displayStatus: DisplayStatus | undefined,
+  processoByProtocolo: Record<string, Processo>,
+  vistoriaMap: Record<string, VistoriaData>
+): string {
+  if (displayStatus !== "aguardando_retorno") {
+    return protocolo.data_solicitacao;
+  }
+
+  const processo = processoByProtocolo[protocolo.id];
+  const vistoria = processo ? vistoriaMap[processo.id] : null;
+
+  return vistoria?.data_2_retorno || vistoria?.data_1_retorno || protocolo.data_solicitacao;
+}
+
 export default function ProtocolosPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -395,6 +411,9 @@ export default function ProtocolosPage() {
       if (sortKey === "status") {
         va = getEffectiveDisplayInfo(a.id)?.status || "zzz";
         vb = getEffectiveDisplayInfo(b.id)?.status || "zzz";
+      } else if (sortKey === "data_solicitacao") {
+        va = getDisplayedRequestDate(a, getEffectiveDisplayInfo(a.id)?.status, processoByProtocolo, vistoriaMap);
+        vb = getDisplayedRequestDate(b, getEffectiveDisplayInfo(b.id)?.status, processoByProtocolo, vistoriaMap);
       } else {
         va = (a[sortKey] || "") as string;
         vb = (b[sortKey] || "") as string;
@@ -408,7 +427,7 @@ export default function ProtocolosPage() {
 
       return sortAsc ? cmp : -cmp;
     });
-  }, [protocolosComProcesso, search, statusFilter, municipioFilter, vistoriadorFilter, hasPeriodFilter, periodSnapshotByProtocolo, sortKey, sortAsc, processoByProtocolo, pausasByProcesso, termosMap]);
+  }, [protocolosComProcesso, search, statusFilter, municipioFilter, vistoriadorFilter, hasPeriodFilter, periodSnapshotByProtocolo, sortKey, sortAsc, processoByProtocolo, vistoriaMap, pausasByProcesso, termosMap]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -640,7 +659,7 @@ export default function ProtocolosPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                        {new Date(p.data_solicitacao + "T00:00:00").toLocaleDateString("pt-BR")}
+                        {new Date(getDisplayedRequestDate(p, info?.status, processoByProtocolo, vistoriaMap) + "T00:00:00").toLocaleDateString("pt-BR")}
                       </td>
                       <td className="px-4 py-3 text-foreground max-w-[240px] truncate" title={p.razao_social}>
                         <div>{p.nome_fantasia || p.razao_social}</div>
