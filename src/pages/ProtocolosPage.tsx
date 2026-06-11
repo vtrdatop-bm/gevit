@@ -53,17 +53,20 @@ function getDisplayedRequestDateInfo(
   displayStatus: DisplayStatus | undefined,
   processoByProtocolo: Record<string, Processo>,
   vistoriaMap: Record<string, VistoriaData>
-): { prefix: "S" | "R"; date: string } {
+): { prefix: "S" | "1R" | "2R"; date: string } {
   if (displayStatus !== "aguardando_retorno") {
     return { prefix: "S", date: protocolo.data_solicitacao };
   }
 
   const processo = processoByProtocolo[protocolo.id];
   const vistoria = processo ? vistoriaMap[processo.id] : null;
-  const returnDate = vistoria?.data_2_retorno || vistoria?.data_1_retorno;
 
-  if (returnDate) {
-    return { prefix: "R", date: returnDate };
+  if (vistoria?.data_2_retorno) {
+    return { prefix: "2R", date: vistoria.data_2_retorno };
+  }
+
+  if (vistoria?.data_1_retorno) {
+    return { prefix: "1R", date: vistoria.data_1_retorno };
   }
 
   return { prefix: "S", date: protocolo.data_solicitacao };
@@ -666,7 +669,20 @@ export default function ProtocolosPage() {
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                         {(() => {
                           const displayedDate = getDisplayedRequestDateInfo(p, info?.status, processoByProtocolo, vistoriaMap);
-                          return `${displayedDate.prefix} ${new Date(displayedDate.date + "T00:00:00").toLocaleDateString("pt-BR")}`;
+                          const prefixClass = displayedDate.prefix === "S"
+                            ? "bg-sky-100 text-sky-700 border border-sky-200"
+                            : displayedDate.prefix === "1R"
+                              ? "bg-orange-100 text-orange-700 border border-orange-200"
+                              : "bg-rose-100 text-rose-600 border border-rose-200";
+
+                          return (
+                            <div className="inline-flex items-center gap-2">
+                              <span className={cn("inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-[11px] font-semibold", prefixClass)}>
+                                {displayedDate.prefix}
+                              </span>
+                              <span>{new Date(displayedDate.date + "T00:00:00").toLocaleDateString("pt-BR")}</span>
+                            </div>
+                          );
                         })()}
                       </td>
                       <td className="px-4 py-3 text-foreground max-w-[240px] truncate" title={p.razao_social}>
