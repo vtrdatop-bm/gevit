@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, MapPin, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -120,6 +120,10 @@ function getLatestDate(values: Array<string | null>) {
 export default function VistoriantesPage() {
   const navigate = useNavigate();
   const { activeRole } = useAuth();
+  const topScrollRef = useRef<HTMLDivElement | null>(null);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const tableRef = useRef<HTMLTableElement | null>(null);
+  const syncingScrollRef = useRef<"top" | "bottom" | null>(null);
   const [loading, setLoading] = useState(true);
   const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
   const [vistoriaMap, setVistoriaMap] = useState<Record<string, RawVistoria>>({});
@@ -129,6 +133,7 @@ export default function VistoriantesPage() {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [topScrollbarWidth, setTopScrollbarWidth] = useState(0);
 
   useEffect(() => {
     async function loadData() {
@@ -345,6 +350,54 @@ export default function VistoriantesPage() {
     return counts;
   }, [endDate, inspectionRows, search, selectedVistoriador, startDate]);
 
+  useEffect(() => {
+    const updateScrollbarWidth = () => {
+      setTopScrollbarWidth(tableRef.current?.scrollWidth || 0);
+    };
+
+    updateScrollbarWidth();
+
+    if (!tableRef.current) return;
+
+    const observer = new ResizeObserver(() => {
+      updateScrollbarWidth();
+    });
+
+    observer.observe(tableRef.current);
+    window.addEventListener("resize", updateScrollbarWidth);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateScrollbarWidth);
+    };
+  }, [filteredRows, selectedStatus]);
+
+  const handleTopScroll = () => {
+    if (!topScrollRef.current) return;
+    if (syncingScrollRef.current === "bottom") {
+      syncingScrollRef.current = null;
+      return;
+    }
+
+    syncingScrollRef.current = "top";
+    if (tableScrollRef.current) {
+      tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleBottomScroll = () => {
+    if (!tableScrollRef.current) return;
+    if (syncingScrollRef.current === "top") {
+      syncingScrollRef.current = null;
+      return;
+    }
+
+    syncingScrollRef.current = "bottom";
+    if (topScrollRef.current) {
+      topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+    }
+  };
+
   if (activeRole === "vistoriador") {
     return <Navigate to="/vistorias" replace />;
   }
@@ -367,8 +420,8 @@ export default function VistoriantesPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-        <div className="space-y-1.5 xl:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2.2fr)_minmax(220px,1fr)_minmax(180px,0.8fr)_minmax(180px,0.8fr)] gap-3 items-end">
+        <div className="space-y-1.5 min-w-0">
           <label className="text-sm font-medium text-foreground">Busca</label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -384,7 +437,7 @@ export default function VistoriantesPage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">Vistoriador</label>
           <Select value={selectedVistoriador} onValueChange={setSelectedVistoriador}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecione um vistoriador" />
             </SelectTrigger>
             <SelectContent>
@@ -449,8 +502,15 @@ export default function VistoriantesPage() {
               </div>
             ) : (
               <div className="rounded-xl border border-border bg-card overflow-hidden" style={{ boxShadow: "var(--shadow-sm)" }}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                <div
+                  ref={topScrollRef}
+                  onScroll={handleTopScroll}
+                  className="overflow-x-auto overflow-y-hidden border-b border-border"
+                >
+                  <div style={{ width: `${topScrollbarWidth}px`, height: "1px" }} />
+                </div>
+                <div ref={tableScrollRef} onScroll={handleBottomScroll} className="overflow-x-auto">
+                  <table ref={tableRef} className="w-full text-sm">
                     <thead className="bg-muted/50 border-b border-border">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Nº Protocolo</th>
