@@ -9,6 +9,7 @@ import {
   FileText,
   Route,
   ClipboardList,
+  Users,
   Bell,
   Settings,
   Menu,
@@ -32,6 +33,7 @@ import NotificationDaemon from "@/components/layout/NotificationDaemon";
 const allNavItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "distribuidor"] },
   { path: "/protocolos", label: "Protocolos", icon: FileText, roles: ["admin", "distribuidor"] },
+  { path: "/vistoriantes", label: "Vistoriantes", icon: Users, roles: ["admin", "distribuidor"] },
   { path: "/kanban", label: "Gerenciamento", icon: Columns3, roles: ["admin", "distribuidor"] },
   { path: "/vistorias", label: "Minhas Vistorias", icon: ClipboardList, roles: ["admin", "distribuidor", "vistoriador"] },
   { path: "/mapa", label: "Mapa", icon: Map, roles: ["admin", "distribuidor", "vistoriador"] },

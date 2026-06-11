@@ -16,6 +16,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import CadastroProtocoloPage from "@/pages/CadastroProtocoloPage";
 import ProtocolosPage from "@/pages/ProtocolosPage";
 import ProtocoloDetailPage from "@/pages/ProtocoloDetailPage";
+import VistoriantesPage from "@/pages/VistoriantesPage";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 
@@ -49,6 +50,7 @@ function ProtectedRoutes() {
         {!isVistoriador && <Route path="/kanban" element={<KanbanPage />} />}
         <Route path="/mapa" element={<MapPage />} />
         {!isVistoriador && <Route path="/protocolos" element={<ProtocolosPage />} />}
+        {!isVistoriador && <Route path="/vistoriantes" element={<VistoriantesPage />} />}
         {!isVistoriador && <Route path="/cadastro-protocolo" element={<CadastroProtocoloPage />} />}
         <Route path="/protocolo/:id" element={<ProtocoloDetailPage />} />
 
