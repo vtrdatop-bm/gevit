@@ -48,20 +48,25 @@ interface TimelineSnapshot {
 type SortKey = "numero" | "data_solicitacao" | "razao_social" | "municipio" | "bairro" | "status";
 type StatusFilterValue = DisplayStatus | "termo_vencido";
 
-function getDisplayedRequestDate(
+function getDisplayedRequestDateInfo(
   protocolo: Protocolo,
   displayStatus: DisplayStatus | undefined,
   processoByProtocolo: Record<string, Processo>,
   vistoriaMap: Record<string, VistoriaData>
-): string {
+): { prefix: "S" | "R"; date: string } {
   if (displayStatus !== "aguardando_retorno") {
-    return protocolo.data_solicitacao;
+    return { prefix: "S", date: protocolo.data_solicitacao };
   }
 
   const processo = processoByProtocolo[protocolo.id];
   const vistoria = processo ? vistoriaMap[processo.id] : null;
+  const returnDate = vistoria?.data_2_retorno || vistoria?.data_1_retorno;
 
-  return vistoria?.data_2_retorno || vistoria?.data_1_retorno || protocolo.data_solicitacao;
+  if (returnDate) {
+    return { prefix: "R", date: returnDate };
+  }
+
+  return { prefix: "S", date: protocolo.data_solicitacao };
 }
 
 export default function ProtocolosPage() {
@@ -412,8 +417,8 @@ export default function ProtocolosPage() {
         va = getEffectiveDisplayInfo(a.id)?.status || "zzz";
         vb = getEffectiveDisplayInfo(b.id)?.status || "zzz";
       } else if (sortKey === "data_solicitacao") {
-        va = getDisplayedRequestDate(a, getEffectiveDisplayInfo(a.id)?.status, processoByProtocolo, vistoriaMap);
-        vb = getDisplayedRequestDate(b, getEffectiveDisplayInfo(b.id)?.status, processoByProtocolo, vistoriaMap);
+        va = getDisplayedRequestDateInfo(a, getEffectiveDisplayInfo(a.id)?.status, processoByProtocolo, vistoriaMap).date;
+        vb = getDisplayedRequestDateInfo(b, getEffectiveDisplayInfo(b.id)?.status, processoByProtocolo, vistoriaMap).date;
       } else {
         va = (a[sortKey] || "") as string;
         vb = (b[sortKey] || "") as string;
@@ -621,7 +626,7 @@ export default function ProtocolosPage() {
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <SortHeader label="Nº Protocolo" field="numero" />
-                  <SortHeader label="Data Solicit." field="data_solicitacao" />
+                  <SortHeader label="Data Sol./Ret." field="data_solicitacao" />
                   <SortHeader label="Razão Social" field="razao_social" />
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">CPF/CNPJ</th>
                   <SortHeader label="Município" field="municipio" />
@@ -659,7 +664,10 @@ export default function ProtocolosPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                        {new Date(getDisplayedRequestDate(p, info?.status, processoByProtocolo, vistoriaMap) + "T00:00:00").toLocaleDateString("pt-BR")}
+                        {(() => {
+                          const displayedDate = getDisplayedRequestDateInfo(p, info?.status, processoByProtocolo, vistoriaMap);
+                          return `${displayedDate.prefix} ${new Date(displayedDate.date + "T00:00:00").toLocaleDateString("pt-BR")}`;
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-foreground max-w-[240px] truncate" title={p.razao_social}>
                         <div>{p.nome_fantasia || p.razao_social}</div>
