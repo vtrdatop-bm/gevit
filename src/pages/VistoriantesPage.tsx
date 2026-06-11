@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, ClipboardList, MapPin, Search } from "lucide-react";
+import { ArrowLeft, CheckCircle2, MapPin, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
-  type DisplayStatus,
   type VistoriaData,
-  computeDisplayStatus,
   displayStatusBadgeClass,
   displayStatusLabels,
   sortVistoriadores,
@@ -47,16 +45,17 @@ interface Profile {
   nome_guerra: string | null;
 }
 
-type InspectionStatus =
-  | "atribuida"
-  | "agendada"
-  | "realizada"
-  | "aguardando_retorno"
-  | "pendencia"
-  | "aprovada"
-  | "reprovada";
+type ProcessStatus = "atribuido" | "pendencias" | "certificado" | "certificado_termo";
+type ProcessStatusFilter = "all" | ProcessStatus;
 
-type InspectionStatusFilter = "all" | InspectionStatus;
+interface StageStatus {
+  etapa: 1 | 2 | 3;
+  vistoriadorId: string | null;
+  vistoriadorNome: string | null;
+  status: ProcessStatus | null;
+  dataAtribuicao: string | null;
+  dataVistoria: string | null;
+}
 
 interface InspectionRow {
   id: string;
@@ -68,62 +67,54 @@ interface InspectionRow {
   municipio: string;
   bairro: string;
   dataSolicitacao: string;
-  etapa: 1 | 2 | 3;
-  vistoriadorId: string;
-  vistoriadorNome: string;
-  status: InspectionStatus;
-  dataAtribuicao: string | null;
-  dataVistoria: string | null;
-  dataRetorno: string | null;
+  vistoriadores: string[];
+  stageStatuses: StageStatus[];
   effectiveDate: string;
-  currentProcessStatus: DisplayStatus;
+  currentProcessStatus: ProcessStatus;
 }
 
-const STATUS_OPTIONS: { value: InspectionStatusFilter; label: string }[] = [
+const STATUS_OPTIONS: { value: ProcessStatusFilter; label: string }[] = [
   { value: "all", label: "Todos os status" },
-  { value: "atribuida", label: "Atribuída" },
-  { value: "agendada", label: "Agendada" },
-  { value: "realizada", label: "Realizada" },
-  { value: "aguardando_retorno", label: "Aguardando retorno" },
-  { value: "pendencia", label: "Com pendência" },
-  { value: "aprovada", label: "Aprovada" },
-  { value: "reprovada", label: "Reprovada" },
+  { value: "atribuido", label: "Atribuído" },
+  { value: "pendencias", label: "Com pendência" },
+  { value: "certificado_termo", label: "Certificado provisório" },
+  { value: "certificado", label: "Certificado" },
 ];
-
-const inspectionStatusMeta: Record<InspectionStatus, { label: string; className: string }> = {
-  atribuida: { label: "Atribuída", className: "bg-[hsl(var(--status-assigned))]/10 text-[hsl(var(--status-assigned))] border-[hsl(var(--status-assigned))]/20" },
-  agendada: { label: "Agendada", className: "bg-primary/10 text-primary border-primary/20" },
-  realizada: { label: "Realizada", className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" },
-  aguardando_retorno: { label: "Aguardando retorno", className: "bg-[hsl(var(--status-retorno))]/10 text-[hsl(var(--status-retorno))] border-[hsl(var(--status-retorno))]/20" },
-  pendencia: { label: "Com pendência", className: "bg-[hsl(var(--status-pending))]/10 text-[hsl(var(--status-pending))] border-[hsl(var(--status-pending))]/20" },
-  aprovada: { label: "Aprovada", className: "bg-[hsl(var(--status-certified-term))]/10 text-[hsl(var(--status-certified-term))] border-[hsl(var(--status-certified-term))]/20" },
-  reprovada: { label: "Reprovada", className: "bg-[hsl(var(--status-certified))]/10 text-[hsl(var(--status-certified))] border-[hsl(var(--status-certified))]/20" },
-};
 
 function formatProfileName(profile: Profile) {
   return [profile.patente, profile.nome_guerra].filter(Boolean).join(" ") || "Sem nome";
 }
 
-function getInspectionStatus(
-  dataVistoria: string | null,
-  dataRetorno: string | null,
-  resultado: string | null
-): InspectionStatus {
-  if (resultado === "pendencia") return "pendencia";
-  if (resultado === "aprovado") return "aprovada";
-  if (resultado === "reprovado") return "reprovada";
-  if (dataRetorno) return "aguardando_retorno";
-  if (dataVistoria) {
-    const today = new Date();
-    const inspectionDate = new Date(`${dataVistoria}T00:00:00`);
-    today.setHours(0, 0, 0, 0);
-    return inspectionDate >= today ? "agendada" : "realizada";
+function getStageProcessStatus(
+  dataAtribuicao: string | null,
+  resultado: string | null,
+  hasVistoriador: boolean
+): ProcessStatus | null {
+  if (resultado === "pendencia") return "pendencias";
+  if (resultado === "aprovado") return "certificado_termo";
+  if (resultado === "reprovado") return "certificado";
+  if (dataAtribuicao || hasVistoriador) return "atribuido";
+  return null;
+}
+
+function getCurrentProcessStatus(stageStatuses: StageStatus[]): ProcessStatus | null {
+  for (let index = stageStatuses.length - 1; index >= 0; index -= 1) {
+    if (stageStatuses[index].status) {
+      return stageStatuses[index].status;
+    }
   }
-  return "atribuida";
+
+  return null;
 }
 
 function formatDate(date: string | null) {
   return date ? new Date(`${date}T00:00:00`).toLocaleDateString("pt-BR") : "-";
+}
+
+function getLatestDate(values: Array<string | null>) {
+  const dates = values.filter((value): value is string => Boolean(value));
+  if (dates.length === 0) return "";
+  return dates.sort((a, b) => b.localeCompare(a))[0];
 }
 
 export default function VistoriantesPage() {
@@ -134,7 +125,7 @@ export default function VistoriantesPage() {
   const [vistoriaMap, setVistoriaMap] = useState<Record<string, RawVistoria>>({});
   const [vistoriadores, setVistoriadores] = useState<Profile[]>([]);
   const [selectedVistoriador, setSelectedVistoriador] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<InspectionStatusFilter>("all");
+  const [selectedStatus, setSelectedStatus] = useState<ProcessStatusFilter>("all");
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -189,9 +180,8 @@ export default function VistoriantesPage() {
       if (!protocolo) return;
 
       const vistoria = vistoriaMap[processo.id] || null;
-      const currentProcessStatus = computeDisplayStatus(processo.status, vistoria, protocolo.data_solicitacao);
 
-      ([1, 2, 3] as const).forEach((etapa) => {
+      const stageStatuses: StageStatus[] = ([1, 2, 3] as const).map((etapa) => {
         const vistoriadorId = etapa === 1
           ? vistoria?.vistoriador_1_id || processo.vistoriador_id
           : etapa === 2
@@ -216,36 +206,47 @@ export default function VistoriantesPage() {
             ? vistoria?.status_2_vistoria || null
             : vistoria?.status_3_vistoria || null;
 
-        const dataRetorno = etapa === 1
-          ? vistoria?.data_1_retorno || null
-          : etapa === 2
-            ? vistoria?.data_2_retorno || null
-            : null;
-
-        if (!vistoriadorId) return;
-
-        const effectiveDate = dataVistoria || dataAtribuicao || protocolo.data_solicitacao;
-
-        rows.push({
-          id: `${processo.id}-${etapa}`,
-          processoId: processo.id,
-          protocoloId: processo.protocolo_id,
-          protocoloNumero: protocolo.numero,
-          empresa: protocolo.nome_fantasia || protocolo.razao_social,
-          razaoSocial: protocolo.razao_social,
-          municipio: protocolo.municipio,
-          bairro: protocolo.bairro,
-          dataSolicitacao: protocolo.data_solicitacao,
+        return {
           etapa,
           vistoriadorId,
-          vistoriadorNome: vistoriadorNameMap[vistoriadorId] || "Vistoriador não identificado",
-          status: getInspectionStatus(dataVistoria, dataRetorno, resultado),
+          vistoriadorNome: vistoriadorId ? (vistoriadorNameMap[vistoriadorId] || "Vistoriador não identificado") : null,
+          status: getStageProcessStatus(dataAtribuicao, resultado, Boolean(vistoriadorId)),
           dataAtribuicao,
           dataVistoria,
-          dataRetorno,
-          effectiveDate,
-          currentProcessStatus,
-        });
+        };
+      });
+
+      const involvedStages = stageStatuses.filter((stage) => stage.vistoriadorId || stage.status);
+      if (involvedStages.length === 0) return;
+
+      const currentProcessStatus = getCurrentProcessStatus(stageStatuses);
+      if (!currentProcessStatus) return;
+
+      const effectiveDate = getLatestDate([
+        ...stageStatuses.flatMap((stage) => [stage.dataVistoria, stage.dataAtribuicao]),
+        protocolo.data_solicitacao,
+      ]);
+
+      const vistoriadoresDaLinha = Array.from(new Set(
+        involvedStages
+          .map((stage) => stage.vistoriadorNome)
+          .filter((name): name is string => Boolean(name))
+      ));
+
+      rows.push({
+        id: processo.id,
+        processoId: processo.id,
+        protocoloId: processo.protocolo_id,
+        protocoloNumero: protocolo.numero,
+        empresa: protocolo.nome_fantasia || protocolo.razao_social,
+        razaoSocial: protocolo.razao_social,
+        municipio: protocolo.municipio,
+        bairro: protocolo.bairro,
+        dataSolicitacao: protocolo.data_solicitacao,
+        vistoriadores: vistoriadoresDaLinha,
+        stageStatuses,
+        effectiveDate,
+        currentProcessStatus,
       });
     });
 
@@ -258,11 +259,14 @@ export default function VistoriantesPage() {
     const query = search.trim().toLowerCase();
 
     return inspectionRows.filter((row) => {
-      if (selectedVistoriador !== "all" && row.vistoriadorId !== selectedVistoriador) {
+      if (
+        selectedVistoriador !== "all" &&
+        !row.stageStatuses.some((stage) => stage.vistoriadorId === selectedVistoriador)
+      ) {
         return false;
       }
 
-      if (selectedStatus !== "all" && row.status !== selectedStatus) {
+      if (selectedStatus !== "all" && row.currentProcessStatus !== selectedStatus) {
         return false;
       }
 
@@ -279,7 +283,7 @@ export default function VistoriantesPage() {
           row.protocoloNumero,
           row.empresa,
           row.razaoSocial,
-          row.vistoriadorNome,
+          row.vistoriadores.join(" "),
           row.municipio,
           row.bairro,
         ].join(" ").toLowerCase();
@@ -294,19 +298,19 @@ export default function VistoriantesPage() {
   }, [endDate, inspectionRows, search, selectedStatus, selectedVistoriador, startDate]);
 
   const statusCounts = useMemo(() => {
-    const counts: Record<InspectionStatusFilter, number> = {
+    const counts: Record<ProcessStatusFilter, number> = {
       all: 0,
-      atribuida: 0,
-      agendada: 0,
-      realizada: 0,
-      aguardando_retorno: 0,
-      pendencia: 0,
-      aprovada: 0,
-      reprovada: 0,
+      atribuido: 0,
+      pendencias: 0,
+      certificado_termo: 0,
+      certificado: 0,
     };
 
     inspectionRows.forEach((row) => {
-      if (selectedVistoriador !== "all" && row.vistoriadorId !== selectedVistoriador) {
+      if (
+        selectedVistoriador !== "all" &&
+        !row.stageStatuses.some((stage) => stage.vistoriadorId === selectedVistoriador)
+      ) {
         return;
       }
 
@@ -324,7 +328,7 @@ export default function VistoriantesPage() {
           row.protocoloNumero,
           row.empresa,
           row.razaoSocial,
-          row.vistoriadorNome,
+          row.vistoriadores.join(" "),
           row.municipio,
           row.bairro,
         ].join(" ").toLowerCase();
@@ -335,7 +339,7 @@ export default function VistoriantesPage() {
       }
 
       counts.all += 1;
-      counts[row.status] += 1;
+      counts[row.currentProcessStatus] += 1;
     });
 
     return counts;
@@ -415,7 +419,7 @@ export default function VistoriantesPage() {
         </div>
       </div>
 
-      <Tabs value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as InspectionStatusFilter)} className="space-y-4">
+      <Tabs value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as ProcessStatusFilter)} className="space-y-4">
         <TabsList className="h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
           {STATUS_OPTIONS.map((status) => (
             <TabsTrigger
@@ -451,10 +455,12 @@ export default function VistoriantesPage() {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Nº Protocolo</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Empresa</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Vistoriador</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Etapa</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Data vistoria</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Vistoriador(es)</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">1ª vistoria</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">2ª vistoria</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">3ª vistoria</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Status atual</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Última data</th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Local</th>
                       </tr>
                     </thead>
@@ -474,28 +480,36 @@ export default function VistoriantesPage() {
                               <div className="text-xs text-muted-foreground truncate">{row.razaoSocial}</div>
                             )}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                            {row.vistoriadorNome}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-2 text-foreground">
-                              <ClipboardList className="w-3.5 h-3.5 text-muted-foreground" />
-                              {row.etapa}ª vistoria
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex flex-col items-start gap-1.5">
-                              <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", inspectionStatusMeta[row.status].className)}>
-                                {inspectionStatusMeta[row.status].label}
-                              </span>
-                              <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", displayStatusBadgeClass[row.currentProcessStatus])}>
-                                {displayStatusLabels[row.currentProcessStatus]}
-                              </span>
+                          <td className="px-4 py-3 min-w-[220px] text-muted-foreground">
+                            <div className="space-y-1">
+                              {row.vistoriadores.map((vistoriador) => (
+                                <div key={vistoriador} className="truncate">{vistoriador}</div>
+                              ))}
                             </div>
                           </td>
+                          {row.stageStatuses.map((stage) => (
+                            <td key={stage.etapa} className="px-4 py-3 whitespace-nowrap">
+                              {stage.status ? (
+                                <div className="flex flex-col items-start gap-1.5">
+                                  <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", displayStatusBadgeClass[stage.status])}>
+                                    {stage.status === "pendencias" ? "Com pendência" : displayStatusLabels[stage.status]}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {stage.dataVistoria ? `Vist.: ${formatDate(stage.dataVistoria)}` : `Atrib.: ${formatDate(stage.dataAtribuicao)}`}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
+                            </td>
+                          ))}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", displayStatusBadgeClass[row.currentProcessStatus])}>
+                              {row.currentProcessStatus === "pendencias" ? "Com pendência" : displayStatusLabels[row.currentProcessStatus]}
+                            </span>
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                            <div>{formatDate(row.dataVistoria)}</div>
-                            <div className="text-xs text-muted-foreground/80">Atrib.: {formatDate(row.dataAtribuicao)}</div>
+                            {formatDate(row.effectiveDate || null)}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
                             <div className="inline-flex items-center gap-1.5">
