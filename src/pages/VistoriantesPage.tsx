@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 interface ProcessoComProtocolo {
   id: string;
@@ -129,11 +129,23 @@ export default function VistoriantesPage() {
   const [vistoriaMap, setVistoriaMap] = useState<Record<string, RawVistoria>>({});
   const [vistoriadores, setVistoriadores] = useState<Profile[]>([]);
   const [selectedVistoriador, setSelectedVistoriador] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<ProcessStatusFilter>("all");
+  const [selectedStatuses, setSelectedStatuses] = useState<ProcessStatus[]>([]);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [topScrollbarWidth, setTopScrollbarWidth] = useState(0);
+
+  const handleStatusClick = (statusValue: ProcessStatusFilter) => {
+    if (statusValue === "all") {
+      setSelectedStatuses([]);
+    } else {
+      setSelectedStatuses((prev) =>
+        prev.includes(statusValue as ProcessStatus)
+          ? prev.filter((s) => s !== statusValue)
+          : [...prev, statusValue as ProcessStatus]
+      );
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -271,7 +283,7 @@ export default function VistoriantesPage() {
         return false;
       }
 
-      if (selectedStatus !== "all" && row.currentProcessStatus !== selectedStatus) {
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(row.currentProcessStatus)) {
         return false;
       }
 
@@ -300,7 +312,7 @@ export default function VistoriantesPage() {
 
       return true;
     });
-  }, [endDate, inspectionRows, search, selectedStatus, selectedVistoriador, startDate]);
+  }, [endDate, inspectionRows, search, selectedStatuses, selectedVistoriador, startDate]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<ProcessStatusFilter, number> = {
@@ -370,7 +382,7 @@ export default function VistoriantesPage() {
       observer.disconnect();
       window.removeEventListener("resize", updateScrollbarWidth);
     };
-  }, [filteredRows, selectedStatus]);
+  }, [filteredRows, selectedStatuses]);
 
   const handleTopScroll = () => {
     if (!topScrollRef.current) return;
@@ -472,121 +484,129 @@ export default function VistoriantesPage() {
         </div>
       </div>
 
-      <Tabs value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as ProcessStatusFilter)} className="space-y-4">
-        <TabsList className="h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
-          {STATUS_OPTIONS.map((status) => (
-            <TabsTrigger
-              key={status.value}
-              value={status.value}
-              className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              {status.label} ({statusCounts[status.value]})
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      <div className="space-y-4">
+        <div className="flex flex-wrap justify-start gap-2">
+          {STATUS_OPTIONS.map((status) => {
+            const isActive = status.value === "all"
+              ? selectedStatuses.length === 0
+              : selectedStatuses.includes(status.value as ProcessStatus);
+            return (
+              <button
+                key={status.value}
+                onClick={() => handleStatusClick(status.value)}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                  isActive
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                )}
+              >
+                {status.label} ({statusCounts[status.value]})
+              </button>
+            );
+          })}
+        </div>
 
-        {STATUS_OPTIONS.map((status) => (
-          <TabsContent key={status.value} value={status.value} className="mt-0">
-            <div className="text-sm text-muted-foreground mb-3">
-              {filteredRows.length} vistoria{filteredRows.length !== 1 ? "s" : ""} encontrada{filteredRows.length !== 1 ? "s" : ""}
+        <div className="mt-0">
+          <div className="text-sm text-muted-foreground mb-3">
+            {filteredRows.length} vistoria{filteredRows.length !== 1 ? "s" : ""} encontrada{filteredRows.length !== 1 ? "s" : ""}
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
-
-            {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          ) : filteredRows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <CheckCircle2 className="w-10 h-10 mb-3 opacity-40" />
+              <p className="text-sm font-medium">Nenhuma vistoria encontrada com os filtros selecionados</p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border bg-card overflow-hidden" style={{ boxShadow: "var(--shadow-sm)" }}>
+              <div
+                ref={topScrollRef}
+                onScroll={handleTopScroll}
+                className="overflow-x-auto overflow-y-hidden border-b border-border"
+              >
+                <div style={{ width: `${topScrollbarWidth}px`, height: "1px" }} />
               </div>
-            ) : filteredRows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <CheckCircle2 className="w-10 h-10 mb-3 opacity-40" />
-                <p className="text-sm font-medium">Nenhuma vistoria encontrada com os filtros selecionados</p>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-border bg-card overflow-hidden" style={{ boxShadow: "var(--shadow-sm)" }}>
-                <div
-                  ref={topScrollRef}
-                  onScroll={handleTopScroll}
-                  className="overflow-x-auto overflow-y-hidden border-b border-border"
-                >
-                  <div style={{ width: `${topScrollbarWidth}px`, height: "1px" }} />
-                </div>
-                <div ref={tableScrollRef} onScroll={handleBottomScroll} className="overflow-x-auto">
-                  <table ref={tableRef} className="w-full text-sm">
-                    <thead className="bg-muted/50 border-b border-border">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Nº Protocolo</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Empresa</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Vistoriador(es)</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">1ª vistoria</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">2ª vistoria</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">3ª vistoria</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Status atual</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Última data</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Local</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {filteredRows.map((row) => (
-                        <tr
-                          key={row.id}
-                          onClick={() => navigate(`/protocolo/${row.protocoloId}`)}
-                          className="hover:bg-muted/30 cursor-pointer transition-colors"
-                        >
-                          <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-muted-foreground">
-                            {row.protocoloNumero}
-                          </td>
-                          <td className="px-4 py-3 min-w-[240px]">
-                            <div className="font-medium text-foreground">{row.empresa}</div>
-                            {row.empresa !== row.razaoSocial && (
-                              <div className="text-xs text-muted-foreground truncate">{row.razaoSocial}</div>
+              <div ref={tableScrollRef} onScroll={handleBottomScroll} className="overflow-x-auto">
+                <table ref={tableRef} className="w-full text-sm">
+                  <thead className="bg-muted/50 border-b border-border">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Nº Protocolo</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Empresa</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Vistoriador(es)</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">1ª vistoria</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">2ª vistoria</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">3ª vistoria</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Status atual</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Última data</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground tracking-wider">Local</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredRows.map((row) => (
+                      <tr
+                        key={row.id}
+                        onClick={() => navigate(`/protocolo/${row.protocoloId}`)}
+                        className="hover:bg-muted/30 cursor-pointer transition-colors"
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                          {row.protocoloNumero}
+                        </td>
+                        <td className="px-4 py-3 min-w-[240px]">
+                          <div className="font-medium text-foreground">{row.empresa}</div>
+                          {row.empresa !== row.razaoSocial && (
+                            <div className="text-xs text-muted-foreground truncate">{row.razaoSocial}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 min-w-[220px] text-muted-foreground">
+                          <div className="space-y-1">
+                            {row.vistoriadores.map((vistoriador) => (
+                              <div key={vistoriador} className="truncate">{vistoriador}</div>
+                            ))}
+                          </div>
+                        </td>
+                        {row.stageStatuses.map((stage) => (
+                          <td key={stage.etapa} className="px-4 py-3 whitespace-nowrap">
+                            {stage.status ? (
+                              <div className="flex flex-col items-start gap-1.5">
+                                <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", displayStatusBadgeClass[stage.status])}>
+                                  {stage.status === "pendencias" ? "Com pendência" : displayStatusLabels[stage.status]}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {stage.dataVistoria ? `Vist.: ${formatDate(stage.dataVistoria)}` : `Atrib.: ${formatDate(stage.dataAtribuicao)}`}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 min-w-[220px] text-muted-foreground">
-                            <div className="space-y-1">
-                              {row.vistoriadores.map((vistoriador) => (
-                                <div key={vistoriador} className="truncate">{vistoriador}</div>
-                              ))}
-                            </div>
-                          </td>
-                          {row.stageStatuses.map((stage) => (
-                            <td key={stage.etapa} className="px-4 py-3 whitespace-nowrap">
-                              {stage.status ? (
-                                <div className="flex flex-col items-start gap-1.5">
-                                  <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", displayStatusBadgeClass[stage.status])}>
-                                    {stage.status === "pendencias" ? "Com pendência" : displayStatusLabels[stage.status]}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {stage.dataVistoria ? `Vist.: ${formatDate(stage.dataVistoria)}` : `Atrib.: ${formatDate(stage.dataAtribuicao)}`}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">-</span>
-                              )}
-                            </td>
-                          ))}
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", displayStatusBadgeClass[row.currentProcessStatus])}>
-                              {row.currentProcessStatus === "pendencias" ? "Com pendência" : displayStatusLabels[row.currentProcessStatus]}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                            {formatDate(row.effectiveDate || null)}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                            <div className="inline-flex items-center gap-1.5">
-                              <MapPin className="w-3.5 h-3.5" />
-                              {row.bairro}, {row.municipio}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                        ))}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border", displayStatusBadgeClass[row.currentProcessStatus])}>
+                            {row.currentProcessStatus === "pendencias" ? "Com pendência" : displayStatusLabels[row.currentProcessStatus]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                          {formatDate(row.effectiveDate || null)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                          <div className="inline-flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5" />
+                            {row.bairro}, {row.municipio}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
