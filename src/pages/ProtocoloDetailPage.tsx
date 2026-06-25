@@ -228,6 +228,8 @@ export default function ProtocoloDetailPage() {
         ligar_antes: protocolo.ligar_antes || false,
         telefone_contato: protocolo.telefone_contato || "",
         data_evento: protocolo.data_evento || "",
+        urgente: protocolo.urgente || false,
+        motivo_urgencia: protocolo.motivo_urgencia || "",
       });
     }
   }, [protocolo, editing]);
@@ -284,6 +286,8 @@ export default function ProtocoloDetailPage() {
       ligar_antes: !!editForm.ligar_antes,
       telefone_contato: editForm.telefone_contato?.trim() || null,
       data_evento: editForm.data_evento || null,
+      urgente: !!editForm.urgente,
+      motivo_urgencia: editForm.motivo_urgencia?.trim() || null,
     }).eq("id", protocolo.id).select();
 
     if (error) {
@@ -759,6 +763,17 @@ export default function ProtocoloDetailPage() {
                                   />
                                   <label htmlFor="ligar_antes" className="text-sm font-medium select-none cursor-pointer">Ligar antes</label>
                                 </div>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    id="urgente"
+                                    checked={!!editForm.urgente}
+                                    onChange={e => handleEditChange("urgente", e.target.checked)}
+                                    className="accent-primary w-4 h-4"
+                                    disabled={isCancelado}
+                                  />
+                                  <label htmlFor="urgente" className="text-sm font-medium select-none cursor-pointer">Urgente</label>
+                                </div>
                               </div>
                               {editForm.evento_unico && (
                                 <div className="flex items-center gap-2 mt-1">
@@ -784,6 +799,20 @@ export default function ProtocoloDetailPage() {
                                     placeholder="Numero do telefone para contato"
                                     className={inputClass}
                                     disabled={isCancelado}
+                                  />
+                                </div>
+                              )}
+                              {editForm.urgente && (
+                                <div className="max-w-md mt-1">
+                                  <input
+                                    type="text"
+                                    id="motivo_urgencia"
+                                    value={editForm.motivo_urgencia || ""}
+                                    onChange={e => handleEditChange("motivo_urgencia", e.target.value)}
+                                    placeholder="Motivo da urgência"
+                                    className={inputClass}
+                                    disabled={isCancelado}
+                                    required={!!editForm.urgente}
                                   />
                                 </div>
                               )}

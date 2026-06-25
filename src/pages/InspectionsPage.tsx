@@ -28,19 +28,26 @@ interface ProcessoComProtocolo {
     municipio: string;
     area: number | null;
     data_solicitacao: string;
+    evento_unico?: boolean;
+    ligar_antes?: boolean;
+    telefone_contato?: string | null;
+    urgente?: boolean;
+    motivo_urgencia?: string | null;
   };
 }
 
 type FilterStatus = "all" | "regional" | "aguardando_retorno" | "atribuido" | "pendencias" | "certificado_termo" | "certificado" | "cancelado";
 
 export default function InspectionsPage() {
-  const { user } = useAuth();
+  const { user, activeRole } = useAuth();
   const navigate = useNavigate();
   const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
   const [vistoriaMap, setVistoriaMap] = useState<Record<string, VistoriaData>>({});
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [search, setSearch] = useState("");
+
+  const effectiveFilterStatus = activeRole === "vistoriador" ? "atribuido" : filterStatus;
 
   useEffect(() => {
     if (!user) return;
@@ -76,7 +83,7 @@ export default function InspectionsPage() {
     Promise.all([
       supabase
         .from("processos")
-        .select("id, protocolo_id, status, data_prevista, vistoriador_id, protocolos(id, numero, razao_social, nome_fantasia, bairro, municipio, area, data_solicitacao)")
+        .select("id, protocolo_id, status, data_prevista, vistoriador_id, protocolos(id, numero, razao_social, nome_fantasia, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, telefone_contato, urgente, motivo_urgencia)")
         .eq("vistoriador_id", user.id),
       supabase
         .from("vistorias")
@@ -97,10 +104,10 @@ export default function InspectionsPage() {
       if (!proto) return false;
 
       // Status filter
-      if (filterStatus !== "all") {
+      if (effectiveFilterStatus !== "all") {
         const vistoria = vistoriaMap[p.id] || null;
         const displayStatus = computeDisplayStatus(p.status, vistoria);
-        if (displayStatus !== filterStatus) return false;
+        if (displayStatus !== effectiveFilterStatus) return false;
       }
 
       // Search filter
@@ -115,18 +122,22 @@ export default function InspectionsPage() {
       }
       return true;
     });
-  }, [processos, search, filterStatus, vistoriaMap]);
+  }, [processos, search, effectiveFilterStatus, vistoriaMap]);
 
-  const filterOptions: { value: FilterStatus; label: string }[] = [
-    { value: "all", label: "Todos" },
-    { value: "regional", label: "Aguardando Vistoria" },
-    { value: "aguardando_retorno", label: "Aguardando Retorno" },
-    { value: "atribuido", label: "Atribuído" },
-    { value: "pendencias", label: "Com Pendência" },
-    { value: "certificado_termo", label: "Cert. Provisório" },
-    { value: "certificado", label: "Certificado" },
-    { value: "cancelado", label: "Cancelado" },
-  ];
+  const filterOptions: { value: FilterStatus; label: string }[] = activeRole === "vistoriador"
+    ? [
+        { value: "atribuido", label: "Atribuído" }
+      ]
+    : [
+        { value: "all", label: "Todos" },
+        { value: "regional", label: "Aguardando Vistoria" },
+        { value: "aguardando_retorno", label: "Aguardando Retorno" },
+        { value: "atribuido", label: "Atribuído" },
+        { value: "pendencias", label: "Com Pendência" },
+        { value: "certificado_termo", label: "Cert. Provisório" },
+        { value: "certificado", label: "Certificado" },
+        { value: "cancelado", label: "Cancelado" },
+      ];
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl">
@@ -164,7 +175,7 @@ export default function InspectionsPage() {
               key={opt.value}
               onClick={() => setFilterStatus(opt.value)}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                filterStatus === opt.value
+                effectiveFilterStatus === opt.value
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-card text-muted-foreground border-border hover:border-primary/30"
               }`}
@@ -216,6 +227,25 @@ export default function InspectionsPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {proto.razao_social}
                     </p>
+                  )}
+                  {(proto.evento_unico || proto.ligar_antes || proto.urgente) && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {proto.urgente && (
+                        <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-red-100 text-red-700 border border-red-300">
+                          Urgente{proto.motivo_urgencia ? `: ${proto.motivo_urgencia}` : ""}
+                        </span>
+                      )}
+                      {proto.evento_unico && (
+                        <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-cyan-100 text-cyan-700 border border-cyan-400">
+                          Evento Unico
+                        </span>
+                      )}
+                      {proto.ligar_antes && (
+                        <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-violet-100 text-violet-700 border border-violet-300">
+                          Ligar antes{proto.telefone_contato ? `: ${proto.telefone_contato}` : ""}
+                        </span>
+                      )}
+                    </div>
                   )}
                   <div className="flex items-center gap-4 mt-2 flex-wrap">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">

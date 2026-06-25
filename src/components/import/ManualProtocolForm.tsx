@@ -61,6 +61,10 @@ export default function ManualProtocolForm() {
     setForm((prev) => ({ ...prev, ligar_antes: e.target.checked }));
   };
 
+  const handleUrgenteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, urgente: e.target.checked }));
+  };
+
   const [form, setForm] = useState<FormData>(() => {
     const saved = sessionStorage.getItem("manual_protocol_form");
     return saved ? JSON.parse(saved) : {};
@@ -450,6 +454,8 @@ export default function ManualProtocolForm() {
       data_evento: form.data_evento || null,
       ligar_antes: !!form.ligar_antes,
       telefone_contato: form.telefone_contato?.trim() || null,
+      urgente: !!form.urgente,
+      motivo_urgencia: form.motivo_urgencia?.trim() || null,
     }).select().maybeSingle();
 
     if (error) {
@@ -507,6 +513,16 @@ export default function ManualProtocolForm() {
                 />
                 <label htmlFor="ligar_antes" className="text-sm font-medium select-none cursor-pointer">Ligar antes</label>
               </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="urgente"
+                  checked={!!form.urgente}
+                  onChange={handleUrgenteChange}
+                  className="accent-primary w-4 h-4"
+                />
+                <label htmlFor="urgente" className="text-sm font-medium select-none cursor-pointer">Urgente</label>
+              </div>
             </div>
             {form.evento_unico && (
               <div className="flex items-center gap-2 mt-1">
@@ -530,6 +546,19 @@ export default function ManualProtocolForm() {
                   onChange={(e) => handleChange("telefone_contato", e.target.value)}
                   placeholder="Número do telefone para contato"
                   className={inputClass}
+                />
+              </div>
+            )}
+            {form.urgente && (
+              <div className="max-w-md mt-1">
+                <input
+                  type="text"
+                  id="motivo_urgencia"
+                  value={form.motivo_urgencia || ""}
+                  onChange={(e) => handleChange("motivo_urgencia", e.target.value)}
+                  placeholder="Motivo da urgência"
+                  className={inputClass}
+                  required={!!form.urgente}
                 />
               </div>
             )}

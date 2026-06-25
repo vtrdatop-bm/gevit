@@ -32,6 +32,11 @@ interface ProcessoComProtocolo {
     bairro: string;
     municipio: string;
     data_solicitacao: string;
+    evento_unico?: boolean;
+    ligar_antes?: boolean;
+    telefone_contato?: string | null;
+    urgente?: boolean;
+    motivo_urgencia?: string | null;
   } | null;
 }
 
@@ -71,6 +76,11 @@ interface InspectionRow {
   stageStatuses: StageStatus[];
   effectiveDate: string;
   currentProcessStatus: ProcessStatus;
+  eventoUnico?: boolean;
+  ligarAntes?: boolean;
+  telefoneContato?: string | null;
+  urgente?: boolean;
+  motivoUrgencia?: string | null;
 }
 
 const STATUS_OPTIONS: { value: ProcessStatusFilter; label: string }[] = [
@@ -154,7 +164,7 @@ export default function VistoriantesPage() {
       const [{ data: procs }, { data: vists }, { data: profs }, { data: roleRows }] = await Promise.all([
         supabase
           .from("processos")
-          .select("id, protocolo_id, status, data_prevista, vistoriador_id, protocolos(numero, razao_social, nome_fantasia, bairro, municipio, data_solicitacao)"),
+          .select("id, protocolo_id, status, data_prevista, vistoriador_id, protocolos(numero, razao_social, nome_fantasia, bairro, municipio, data_solicitacao, evento_unico, ligar_antes, telefone_contato, urgente, motivo_urgencia)"),
         supabase
           .from("vistorias")
           .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
@@ -264,6 +274,11 @@ export default function VistoriantesPage() {
         stageStatuses,
         effectiveDate,
         currentProcessStatus,
+        eventoUnico: protocolo.evento_unico,
+        ligarAntes: protocolo.ligar_antes,
+        telefoneContato: protocolo.telefone_contato,
+        urgente: protocolo.urgente,
+        motivoUrgencia: protocolo.motivo_urgencia,
       });
     });
 
@@ -559,6 +574,25 @@ export default function VistoriantesPage() {
                           <div className="font-medium text-foreground">{row.empresa}</div>
                           {row.empresa !== row.razaoSocial && (
                             <div className="text-xs text-muted-foreground truncate">{row.razaoSocial}</div>
+                          )}
+                          {(row.eventoUnico || row.ligarAntes || row.urgente) && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {row.urgente && (
+                                <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-red-100 text-red-700 border border-red-300">
+                                  Urgente{row.motivoUrgencia ? `: ${row.motivoUrgencia}` : ""}
+                                </span>
+                              )}
+                              {row.eventoUnico && (
+                                <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-cyan-100 text-cyan-700 border border-cyan-400">
+                                  Evento Unico
+                                </span>
+                              )}
+                              {row.ligarAntes && (
+                                <span className="inline-flex py-0.5 px-2 rounded-full text-[10px] font-medium bg-violet-100 text-violet-700 border border-violet-300">
+                                  Ligar antes{row.telefoneContato ? `: ${row.telefoneContato}` : ""}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3 min-w-[220px] text-muted-foreground">

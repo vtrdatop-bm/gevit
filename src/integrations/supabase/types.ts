@@ -256,8 +256,10 @@ export type Database = {
           numero: string
           razao_social: string
           telefone_contato: string | null
-
-
+          evento_unico: boolean | null
+          data_evento: string | null
+          urgente: boolean | null
+          motivo_urgencia: string | null
           updated_at: string
         }
         Insert: {
@@ -277,8 +279,10 @@ export type Database = {
           numero: string
           razao_social: string
           telefone_contato?: string | null
-
-
+          evento_unico?: boolean | null
+          data_evento?: string | null
+          urgente?: boolean | null
+          motivo_urgencia?: string | null
           updated_at?: string
         }
         Update: {
@@ -298,8 +302,10 @@ export type Database = {
           numero?: string
           razao_social?: string
           telefone_contato?: string | null
-
-
+          evento_unico?: boolean | null
+          data_evento?: string | null
+          urgente?: boolean | null
+          motivo_urgencia?: string | null
           updated_at?: string
         }
         Relationships: []
