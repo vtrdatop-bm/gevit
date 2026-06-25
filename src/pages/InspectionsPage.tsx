@@ -99,7 +99,7 @@ export default function InspectionsPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return processos.filter((p) => {
+    const result = processos.filter((p) => {
       const proto = p.protocolos;
       if (!proto) return false;
 
@@ -121,6 +121,12 @@ export default function InspectionsPage() {
         );
       }
       return true;
+    });
+
+    return result.sort((a, b) => {
+      const aUrgente = a.protocolos?.urgente ? 1 : 0;
+      const bUrgente = b.protocolos?.urgente ? 1 : 0;
+      return bUrgente - aUrgente;
     });
   }, [processos, search, effectiveFilterStatus, vistoriaMap]);
 
