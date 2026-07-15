@@ -317,10 +317,10 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
     });
 
     const avgTempos = {
-      primeiraVistoria: avg(tempos1Vist),
-      retorno1: avg(temposRetorno1),
-      retorno2: avg(temposRetorno2),
-      certificacao: avg(temposCert),
+      primeiraVistoria: { value: avg(tempos1Vist), count: tempos1Vist.length },
+      retorno1: { value: avg(temposRetorno1), count: temposRetorno1.length },
+      retorno2: { value: avg(temposRetorno2), count: temposRetorno2.length },
+      certificacao: { value: avg(temposCert), count: temposCert.length },
     };
 
     // --- 5) By vistoriador (count + area sum from 1st inspection) ---
@@ -517,18 +517,22 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Até 1ª Vistoria", value: stats.avgTempos.primeiraVistoria, desc: "Solicitação → 1ª vistoria" },
-            { label: "1º Retorno", value: stats.avgTempos.retorno1, desc: "1º retorno → 2ª vistoria" },
-            { label: "2º Retorno", value: stats.avgTempos.retorno2, desc: "2º retorno → 3ª vistoria" },
-            { label: "Até Certificação", value: stats.avgTempos.certificacao, desc: "Solicitação → certificação" },
+            { label: "Até 1ª Vistoria", metric: stats.avgTempos.primeiraVistoria, desc: "Solicitação → 1ª vistoria" },
+            { label: "1º Retorno", metric: stats.avgTempos.retorno1, desc: "1º retorno → 2ª vistoria" },
+            { label: "2º Retorno", metric: stats.avgTempos.retorno2, desc: "2º retorno → 3ª vistoria" },
+            { label: "Até Certificação", metric: stats.avgTempos.certificacao, desc: "Solicitação → certificação" },
           ].map((t) => (
             <div key={t.label} className="text-center p-3 rounded-xl bg-accent/50 space-y-1">
-              <p className="text-2xl font-bold text-foreground">{t.value || "—"}</p>
+              <p className="text-2xl font-bold text-foreground">{t.metric.value || "—"}</p>
               <p className="text-xs font-semibold text-foreground">{t.label}</p>
               <p className="text-[10px] text-muted-foreground">{t.desc}</p>
+              <p className="text-[10px] text-muted-foreground">Base: {t.metric.count} processo{t.metric.count === 1 ? "" : "s"}</p>
             </div>
           ))}
         </div>
+        <p className="text-[10px] text-muted-foreground mt-2 text-center">
+          Cada média usa apenas os processos que chegaram a essa etapa. Os valores não devem ser somados entre si.
+        </p>
       </div>
 
       {/* ── Área total vistoriada ── */}
