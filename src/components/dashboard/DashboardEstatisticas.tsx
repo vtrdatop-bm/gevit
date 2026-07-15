@@ -80,6 +80,21 @@ function avg(nums: number[]): number {
   return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
 }
 
+function getCertificationDate(vistoria: RawVistoria | VistoriaData | undefined): string | null {
+  if (!vistoria) return null;
+
+  for (let i = 3; i >= 1; i--) {
+    const status = (vistoria as any)[`status_${i}_vistoria`] as string | null;
+    const date = (vistoria as any)[`data_${i}_vistoria`] as string | null;
+
+    if ((status === "aprovado" || status === "reprovado") && date) {
+      return date;
+    }
+  }
+
+  return null;
+}
+
 const STAGE_LABELS = ["1ª Vistoria", "2ª Vistoria", "3ª Vistoria"];
 
 const STATUS_LABELS_SHORT: Record<string, string> = {
@@ -292,32 +307,12 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       const r2 = daysBetween(v.data_2_retorno, v.data_3_vistoria);
       if (r2 !== null) temposRetorno2.push(r2);
 
-      // Time to certification
-      const ds = computeDisplayStatus(p.status, v as VistoriaData, sol);
-      if (ds === "certificado") {
-        // Find the date of the inspection that resulted in "reprovado" = certificado
-        let certDate: string | null = null;
-        for (let i = 3; i >= 1; i--) {
-          const st = (v as any)[`status_${i}_vistoria`] as string | null;
-          const dt = (v as any)[`data_${i}_vistoria`] as string | null;
-          if (st === "reprovado" && dt) { certDate = dt; break; }
-        }
-        if (certDate) {
-          const dc = daysBetween(sol, certDate);
-          if (dc !== null) temposCert.push(dc);
-        }
-      }
-      if (ds === "certificado_termo") {
-        let certDate: string | null = null;
-        for (let i = 3; i >= 1; i--) {
-          const st = (v as any)[`status_${i}_vistoria`] as string | null;
-          const dt = (v as any)[`data_${i}_vistoria`] as string | null;
-          if (st === "aprovado" && dt) { certDate = dt; break; }
-        }
-        if (certDate) {
-          const dc = daysBetween(sol, certDate);
-          if (dc !== null) temposCert.push(dc);
-        }
+      // Time to certification should use the historical certification milestone,
+      // even if the current display status later became "expirado".
+      const certDate = getCertificationDate(v);
+      if (certDate) {
+        const dc = daysBetween(sol, certDate);
+        if (dc !== null) temposCert.push(dc);
       }
     });
 
