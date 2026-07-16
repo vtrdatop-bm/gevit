@@ -106,7 +106,7 @@ export default function MapPage() {
     const bairroRegionalMap: Record<string, string> = {};
     (bairrosData || []).forEach((b) => {
       if (b.regional_id) {
-        bairroRegionalMap[`${b.nome}|${b.municipio}`] = b.regional_id;
+        bairroRegionalMap[`${b.nome.toUpperCase()}|${b.municipio.toUpperCase()}`] = b.regional_id;
       }
     });
 
@@ -164,7 +164,7 @@ export default function MapPage() {
 
       let resolvedRegionalId = p.regional_id;
       if (!resolvedRegionalId && p.protocolos) {
-        resolvedRegionalId = bairroRegionalMap[`${p.protocolos.bairro}|${p.protocolos.municipio}`] || null;
+        resolvedRegionalId = bairroRegionalMap[`${(p.protocolos.bairro || "").toUpperCase()}|${(p.protocolos.municipio || "").toUpperCase()}`] || null;
       }
 
       return {
@@ -189,7 +189,7 @@ export default function MapPage() {
         const finalStatus = deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration"
           ? "expirado"
           : dStatus;
-        const resolvedRegionalId = bairroRegionalMap[`${proto.bairro}|${proto.municipio}`] || null;
+        const resolvedRegionalId = bairroRegionalMap[`${(proto.bairro || "").toUpperCase()}|${(proto.municipio || "").toUpperCase()}`] || null;
 
         return {
           id: `proto-${proto.id}`,

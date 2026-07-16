@@ -118,7 +118,7 @@ export default function KanbanPage() {
       const bairroRegionalMap: Record<string, string> = {};
       (bairrosData || []).forEach((b) => {
         if (b.regional_id) {
-          bairroRegionalMap[`${b.nome}|${b.municipio}`] = b.regional_id;
+          bairroRegionalMap[`${b.nome.toUpperCase()}|${b.municipio.toUpperCase()}`] = b.regional_id;
         }
       });
 
@@ -139,7 +139,7 @@ export default function KanbanPage() {
       const mapped: ProcessoWithProtocolo[] = (procs || []).map((p: any) => {
         let resolvedRegionalId = p.regional_id;
         if (!resolvedRegionalId && p.protocolos) {
-          resolvedRegionalId = bairroRegionalMap[`${p.protocolos.bairro}|${p.protocolos.municipio}`] || null;
+          resolvedRegionalId = bairroRegionalMap[`${(p.protocolos.bairro || "").toUpperCase()}|${(p.protocolos.municipio || "").toUpperCase()}`] || null;
         }
         const vistoria = vistoriaMap[p.id] || null;
         const dStatus = computeDisplayStatus(p.status, vistoria, p.protocolos?.data_solicitacao);
@@ -178,7 +178,7 @@ export default function KanbanPage() {
       const orfaos: ProcessoWithProtocolo[] = (protocolosData || [])
         .filter((proto: any) => !protocoloIdsComProcesso.has(proto.id))
         .map((proto: any) => {
-          const resolvedRegionalId = bairroRegionalMap[`${proto.bairro}|${proto.municipio}`] || null;
+          const resolvedRegionalId = bairroRegionalMap[`${(proto.bairro || "").toUpperCase()}|${(proto.municipio || "").toUpperCase()}`] || null;
           const dStatus = computeDisplayStatus("regional", null, proto.data_solicitacao);
           const deadlineResult = computeDeadline(null, [], dStatus, null);
           const finalStatus = deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration"
@@ -230,12 +230,12 @@ export default function KanbanPage() {
     const q = search.toLowerCase().trim();
     if (!q) return processos;
     return processos.filter((p) => 
-      p.protocolos?.numero.toLowerCase().includes(q) ||
-      p.protocolos?.razao_social.toLowerCase().includes(q) ||
-      (p.protocolos?.nome_fantasia || "").toLowerCase().includes(q) ||
-      p.protocolos?.cnpj.includes(q) ||
-      p.protocolos?.municipio.toLowerCase().includes(q) ||
-      p.protocolos?.bairro.toLowerCase().includes(q)
+      (p.protocolos?.numero?.toLowerCase() ?? "").includes(q) ||
+      (p.protocolos?.razao_social?.toLowerCase() ?? "").includes(q) ||
+      (p.protocolos?.nome_fantasia?.toLowerCase() ?? "").includes(q) ||
+      (p.protocolos?.cnpj ?? "").includes(q) ||
+      (p.protocolos?.municipio?.toLowerCase() ?? "").includes(q) ||
+      (p.protocolos?.bairro?.toLowerCase() ?? "").includes(q)
     );
   }, [processos, search]);
 
@@ -394,7 +394,7 @@ export default function KanbanPage() {
                                   key={process.id}
                                   className={cn(
                                     "kanban-card cursor-pointer",
-                                    process.protocolos.evento_unico && "!bg-cyan-100 !border-cyan-400",
+                                    process.protocolos?.evento_unico && "!bg-cyan-100 !border-cyan-400",
                                     process.stage === 2 && "!bg-amber-100/50 !border-amber-200",
                                     process.stage === 3 && "!bg-rose-100/60 !border-rose-300",
                                     selectedProcess === process.id && "ring-2 ring-primary ring-offset-1"
