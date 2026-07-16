@@ -100,7 +100,7 @@ export default function KanbanPage() {
         supabase
           .from("processos")
           .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento)"),
-        supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao"),
+        supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento"),
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("bairros").select("nome, municipio, regional_id"),
@@ -142,13 +142,24 @@ export default function KanbanPage() {
       const termosMap: Record<string, string> = {};
       (termosData || []).forEach((t: any) => { termosMap[t.processo_id] = t.data_validade; });
 
-      const mapped: ProcessoWithProtocolo[] = (procs || []).map((p: any) => {
+      const protocoloById: Record<string, any> = {};
+      (protocolosData || []).forEach((proto: any) => {
+        protocoloById[proto.id] = proto;
+      });
+
+      const mapped: ProcessoWithProtocolo[] = (procs || [])
+        .map((p: any) => {
+        const protocolo = p.protocolos || protocoloById[p.protocolo_id] || null;
+        if (!protocolo) {
+          return null;
+        }
+
         let resolvedRegionalId = p.regional_id;
-        if (!resolvedRegionalId && p.protocolos) {
-          resolvedRegionalId = bairroRegionalMap[`${(p.protocolos.bairro || "").toUpperCase()}|${(p.protocolos.municipio || "").toUpperCase()}`] || null;
+        if (!resolvedRegionalId) {
+          resolvedRegionalId = bairroRegionalMap[`${(protocolo.bairro || "").toUpperCase()}|${(protocolo.municipio || "").toUpperCase()}`] || null;
         }
         const vistoria = vistoriaMap[p.id] || null;
-        const dStatus = computeDisplayStatus(p.status, vistoria, p.protocolos?.data_solicitacao);
+        const dStatus = computeDisplayStatus(p.status, vistoria, protocolo?.data_solicitacao);
         const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vistoria);
         const deadlineResult = computeDeadline(vistoria, pausasByProcesso[p.id] || [], dStatus, termosMap[p.id] || null);
         
@@ -164,10 +175,10 @@ export default function KanbanPage() {
           displayStatus: finalStatus as DisplayStatus,
           stage: computeStage(vistoria),
           data_prevista: p.data_prevista,
-          data_solicitacao: p.protocolos?.data_solicitacao || "",
+          data_solicitacao: protocolo?.data_solicitacao || "",
           vistoriador_id: activeVistoriadorId,
           regional_id: resolvedRegionalId,
-          protocolos: p.protocolos,
+          protocolos: protocolo,
           regional_nome: regMap[resolvedRegionalId || ""] || "",
           vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
           dias_restantes: p.data_prevista
@@ -178,7 +189,8 @@ export default function KanbanPage() {
           data_2_retorno: vistoria?.data_2_retorno || null,
           vistoria_completa: vistoria,
         };
-      });
+      })
+        .filter((item): item is ProcessoWithProtocolo => item !== null);
 
       const protocoloIdsComProcesso = new Set((mapped || []).map((p) => p.protocolo_id));
       const orfaos: ProcessoWithProtocolo[] = (protocolosData || [])
