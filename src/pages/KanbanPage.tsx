@@ -217,6 +217,8 @@ export default function KanbanPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => fetchData())
       .on("postgres_changes", { event: "*", schema: "public", table: "protocolos" }, () => fetchData())
       .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
       .subscribe();
 
     return () => {
