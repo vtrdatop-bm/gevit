@@ -162,7 +162,13 @@ export default function ProtocoloDetailPage() {
       setProcesso(proc);
 
       const [vistRes, termoRes, pausasRes] = await Promise.all([
-        supabase.from("vistorias").select("*").eq("processo_id", proc.id).maybeSingle(),
+        supabase
+          .from("vistorias")
+          .select("*")
+          .eq("processo_id", proc.id)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
         supabase.from("termos_compromisso").select("*").eq("processo_id", proc.id).maybeSingle(),
         supabase.from("pausas").select("*").eq("processo_id", proc.id).order("data_inicio"),
       ]);

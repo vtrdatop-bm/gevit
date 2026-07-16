@@ -104,7 +104,10 @@ export default function KanbanPage() {
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("bairros").select("nome, municipio, regional_id"),
-        supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
+        supabase
+          .from("vistorias")
+          .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id")
+          .order("updated_at", { ascending: false }),
         supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
         supabase.from("termos_compromisso").select("processo_id, data_validade"),
       ]);
@@ -124,7 +127,10 @@ export default function KanbanPage() {
 
       const vistoriaMap: Record<string, VistoriaData> = {};
       (vistoriasData || []).forEach((v: any) => {
-        vistoriaMap[v.processo_id] = v;
+        // Keep the most recently updated record when duplicated rows exist for the same processo.
+        if (!vistoriaMap[v.processo_id]) {
+          vistoriaMap[v.processo_id] = v;
+        }
       });
 
       const pausasByProcesso: Record<string, DeadlinePausaData[]> = {};
