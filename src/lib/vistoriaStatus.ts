@@ -79,8 +79,10 @@ export function computeDisplayStatus(
     }
   }
 
-  // 2. Apply 1-year override if NOT certificado
-  if (status !== "certificado" && dataSolicitacao) {
+  // 2. Apply 1-year override ONLY to processes still in "regional" (no vistoria activity).
+  // Processes that have progressed (atribuido, pendencias, aguardando_retorno, certificado_termo, etc.)
+  // are governed by the 120-day deadline rule or termo validity — not by the request date.
+  if (status === "regional" && dataSolicitacao) {
     const solDate = new Date(dataSolicitacao + "T00:00:00");
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
