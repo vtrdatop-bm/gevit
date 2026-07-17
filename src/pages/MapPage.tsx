@@ -14,7 +14,7 @@ import { MAP_MOCK_PROCESSOS } from "@/mocks/mockData";
 import { ProtocoloData, VistoriaData, ProcessStatus } from "@/types/database";
 import { Vistoriador } from "@/types/user";
 import { cn } from "@/lib/utils";
-import { resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
+import { resolveConsistentDisplayStatus, fetchAllRows } from "@/lib/processoConsistency";
 
 interface MapProcess {
   id: string;

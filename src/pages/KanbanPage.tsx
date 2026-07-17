@@ -22,7 +22,7 @@ import {
 } from "@/lib/constants";
 import { KANBAN_MOCK_PROCESSOS } from "@/mocks/mockData";
 import { ProcessoData, VistoriaData } from "@/types/database";
-import { pickLatestProcessByProtocolo, resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
+import { pickLatestProcessByProtocolo, resolveConsistentDisplayStatus, fetchAllRows } from "@/lib/processoConsistency";
 
 const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] = [
   { key: "regional", label: STATUS_LABELS.regional, dotColor: "bg-[hsl(var(--status-risk))]" },
@@ -290,6 +290,7 @@ export default function KanbanPage() {
         });
 
       setProcessos([...(mapped || []), ...orfaos]);
+      setRegionaisMap(regMap);
       } catch (err) {
         console.error(err);
       }

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DisplayStatus, displayStatusLabels, VistoriaData } from "@/lib/vistoriaStatus";
 import { PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
-import { pickLatestProcessByProtocolo, resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
+import { pickLatestProcessByProtocolo, resolveConsistentDisplayStatus, fetchAllRows } from "@/lib/processoConsistency";
 import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,

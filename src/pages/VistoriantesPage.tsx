@@ -12,7 +12,7 @@ import {
   sortVistoriadores,
 } from "@/lib/vistoriaStatus";
 import { type PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
-import { resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
+import { resolveConsistentDisplayStatus, fetchAllRows } from "@/lib/processoConsistency";
 import {
   Select,
   SelectContent,
