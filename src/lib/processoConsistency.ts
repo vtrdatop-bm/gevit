@@ -58,3 +58,33 @@ export function resolveConsistentDisplayStatus({
 
   return baseStatus;
 }
+
+export async function fetchAllRows<T = any>(
+  fetchFn: (from: number, to: number) => Promise<{ data: any; error: any }>,
+  pageSize: number = 1000
+): Promise<T[]> {
+  let allData: T[] = [];
+  let from = 0;
+  let to = pageSize - 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await fetchFn(from, to);
+    if (error) {
+      throw error;
+    }
+    if (data && data.length > 0) {
+      allData = allData.concat(data);
+      if (data.length < pageSize) {
+        hasMore = false;
+      } else {
+        from += pageSize;
+        to += pageSize;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allData;
+}

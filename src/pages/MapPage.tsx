@@ -88,19 +88,54 @@ export default function MapPage() {
       return;
     }
 
-    const [{ data: procs }, { data: protocolosData }, { data: profilesData }, { data: vistorias }, { data: roles }, { data: regionaisData }, { data: bairrosData }, { data: pausasData }, { data: termosData }] = await Promise.all([
-      supabase
-        .from("processos")
-        .select("id, status, data_prevista, vistoriador_id, regional_id, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao, evento_unico, data_evento)"),
-      supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao, evento_unico, data_evento"),
-      supabase.from("profiles").select("user_id, patente, nome_guerra"),
-      supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
-      supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
-      supabase.from("regionais").select("id, nome").order("nome"),
-      supabase.from("bairros").select("nome, municipio, regional_id"),
-      supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
-      supabase.from("termos_compromisso").select("processo_id, data_validade"),
-    ]);
+    setLoading(true);
+    try {
+      const [
+        procs,
+        protocolosData,
+        profilesData,
+        vistorias,
+        roles,
+        regionaisData,
+        bairrosData,
+        pausasData,
+        termosData
+      ] = await Promise.all([
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("processos")
+            .select("id, status, data_prevista, vistoriador_id, regional_id, updated_at, created_at, protocolos(id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao, evento_unico, data_evento)")
+            .range(from, to)
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("protocolos")
+            .select("id, numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, data_solicitacao, evento_unico, data_evento")
+            .range(from, to)
+        ),
+        supabase.from("profiles").select("user_id, patente, nome_guerra").then(res => res.data),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("vistorias")
+            .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id")
+            .range(from, to)
+        ),
+        supabase.from("user_roles").select("user_id").eq("role", "vistoriador").then(res => res.data),
+        supabase.from("regionais").select("id, nome").order("nome").then(res => res.data),
+        supabase.from("bairros").select("nome, municipio, regional_id").then(res => res.data),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("pausas")
+            .select("processo_id, data_inicio, data_fim, etapa")
+            .range(from, to)
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("termos_compromisso")
+            .select("processo_id, data_validade")
+            .range(from, to)
+        ),
+      ]);
 
     if (regionaisData) setRegionais(regionaisData);
 
@@ -154,34 +189,36 @@ export default function MapPage() {
       termosMap[t.processo_id] = t.data_validade;
     });
 
-    const mapped: MapProcess[] = (procs || []).map((p: any) => {
-      const vist = vistoriaMap[p.id] || null;
-      const finalStatus = resolveConsistentDisplayStatus({
-        dbStatus: p.status,
-        vistoria: vist,
-        dataSolicitacao: p.protocolos?.data_solicitacao,
-        pausas: pausasByProcesso[p.id] || [],
-        termoValidade: termosMap[p.id] || null,
+    const mapped: MapProcess[] = (procs || [])
+      .filter((p: any) => p != null)
+      .map((p: any) => {
+        const vist = vistoriaMap[p.id] || null;
+        const finalStatus = resolveConsistentDisplayStatus({
+          dbStatus: p.status,
+          vistoria: vist,
+          dataSolicitacao: p.protocolos?.data_solicitacao,
+          pausas: pausasByProcesso[p.id] || [],
+          termoValidade: termosMap[p.id] || null,
+        });
+        const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vist);
+
+        let resolvedRegionalId = p.regional_id;
+        if (!resolvedRegionalId && p.protocolos) {
+          resolvedRegionalId = bairroRegionalMap[`${(p.protocolos.bairro || "").toUpperCase()}|${(p.protocolos.municipio || "").toUpperCase()}`] || null;
+        }
+
+        return {
+          id: p.id,
+          vistoriador_id: activeVistoriadorId,
+          status: p.status,
+          displayStatus: finalStatus,
+          data_prevista: p.data_prevista,
+          vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
+          vistoria: vist,
+          protocolo: p.protocolos,
+          regional_id: resolvedRegionalId,
+        };
       });
-      const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vist);
-
-      let resolvedRegionalId = p.regional_id;
-      if (!resolvedRegionalId && p.protocolos) {
-        resolvedRegionalId = bairroRegionalMap[`${(p.protocolos.bairro || "").toUpperCase()}|${(p.protocolos.municipio || "").toUpperCase()}`] || null;
-      }
-
-      return {
-        id: p.id,
-        vistoriador_id: activeVistoriadorId,
-        status: p.status,
-        displayStatus: finalStatus,
-        data_prevista: p.data_prevista,
-        vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
-        vistoria: vist,
-        protocolo: p.protocolos,
-        regional_id: resolvedRegionalId,
-      };
-    });
 
     const protocoloIdsComProcesso = new Set((mapped || []).map((p) => p.protocolo?.id).filter(Boolean));
     const orfaos: MapProcess[] = (protocolosData || [])
@@ -210,19 +247,22 @@ export default function MapPage() {
       });
 
     setProcessos([...(mapped || []), ...orfaos]);
+    } catch (err) {
+      console.error(err);
+    }
     setLoading(false);
   }, [user, isDev]);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
 
     const channel = supabase
       .channel("map-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "protocolos" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => { void fetchData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "protocolos" }, () => { void fetchData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => { void fetchData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => { void fetchData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => { void fetchData(); })
       .subscribe();
 
     return () => {

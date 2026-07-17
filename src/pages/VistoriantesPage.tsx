@@ -158,35 +158,34 @@ export default function VistoriantesPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-
-      const [pRes, profsRes, roleRowsRes] = await Promise.all([
-        supabase
-          .from("protocolos")
-          .select(`
-            id, numero, razao_social, nome_fantasia, bairro, municipio, data_solicitacao, evento_unico, ligar_antes, telefone_contato, urgente, motivo_urgencia,
-            processos(
-              id,
-              protocolo_id,
-              status,
-              data_prevista,
-              vistoriador_id,
-              created_at,
-              updated_at,
-              vistorias(
-                processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id
-              ),
-              pausas(processo_id, data_inicio, data_fim, etapa),
-              termos_compromisso(processo_id, data_validade)
-            )
-          `)
-          .order("created_at", { ascending: false }),
-        supabase.from("profiles").select("user_id, patente, nome_guerra"),
-        supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
-      ]);
-
-      const p = pRes.data;
-      const profs = profsRes.data;
-      const roleRows = roleRowsRes.data;
+      try {
+        const [p, profs, roleRows] = await Promise.all([
+          fetchAllRows<any>((from, to) =>
+            supabase
+              .from("protocolos")
+              .select(`
+                id, numero, razao_social, nome_fantasia, bairro, municipio, data_solicitacao, evento_unico, ligar_antes, telefone_contato, urgente, motivo_urgencia,
+                processos(
+                  id,
+                  protocolo_id,
+                  status,
+                  data_prevista,
+                  vistoriador_id,
+                  created_at,
+                  updated_at,
+                  vistorias(
+                    processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id
+                  ),
+                  pausas(processo_id, data_inicio, data_fim, etapa),
+                  termos_compromisso(processo_id, data_validade)
+                )
+              `)
+              .order("created_at", { ascending: false })
+              .range(from, to)
+          ),
+          supabase.from("profiles").select("user_id, patente, nome_guerra").then(res => res.data),
+          supabase.from("user_roles").select("user_id").eq("role", "vistoriador").then(res => res.data),
+        ]);
 
       const flatProcessos: any[] = [];
       const flatVistorias: any[] = [];
@@ -265,6 +264,9 @@ export default function VistoriantesPage() {
         (((profs as Profile[]) || []).filter((profile) => vistoriadorIds.has(profile.user_id)))
       );
       setVistoriadores(nextProfiles);
+      } catch (err) {
+        console.error(err);
+      }
       setLoading(false);
     };
 

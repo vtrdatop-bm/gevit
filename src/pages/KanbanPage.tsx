@@ -87,47 +87,47 @@ export default function KanbanPage() {
         setLoading(false);
         return;
       }
-      const [
-        pRes,
-        regionaisRes,
-        profilesRes,
-        bairrosRes
-      ] = await Promise.all([
-        supabase
-          .from("protocolos")
-          .select(`
-            id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento,
-            processos(
-              id,
-              protocolo_id,
-              status,
-              regional_id,
-              data_prevista,
-              vistoriador_id,
-              created_at,
-              updated_at,
-              vistorias(
-                processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id
-              ),
-              pausas(processo_id, data_inicio, data_fim, etapa),
-              termos_compromisso(processo_id, data_validade)
-            )
-          `)
-          .order("created_at", { ascending: false }),
-        supabase.from("regionais").select("id, nome").order("nome"),
-        supabase.from("profiles").select("user_id, patente, nome_guerra"),
-        supabase.from("bairros").select("nome, municipio, regional_id"),
-      ]);
+      setLoading(true);
+      try {
+        const [
+          p,
+          regionais,
+          profiles,
+          bairrosData
+        ] = await Promise.all([
+          fetchAllRows<any>((from, to) =>
+            supabase
+              .from("protocolos")
+              .select(`
+                id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento,
+                processos(
+                  id,
+                  protocolo_id,
+                  status,
+                  regional_id,
+                  data_prevista,
+                  vistoriador_id,
+                  created_at,
+                  updated_at,
+                  vistorias(
+                    processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id
+                  ),
+                  pausas(processo_id, data_inicio, data_fim, etapa),
+                  termos_compromisso(processo_id, data_validade)
+                )
+              `)
+              .order("created_at", { ascending: false })
+              .range(from, to)
+          ),
+          supabase.from("regionais").select("id, nome").order("nome").then(res => res.data),
+          supabase.from("profiles").select("user_id, patente, nome_guerra").then(res => res.data),
+          supabase.from("bairros").select("nome, municipio, regional_id").then(res => res.data),
+        ]);
 
-      const p = pRes.data;
-      const regionais = regionaisRes.data;
-      const profiles = profilesRes.data;
-      const bairrosData = bairrosRes.data;
-
-      const protocolosData = (p || []).map((proto: any) => {
-        const { processos, ...rest } = proto;
-        return rest;
-      });
+        const protocolosData = (p || []).map((proto: any) => {
+          const { processos, ...rest } = proto;
+          return rest;
+        });
 
       const procs: any[] = [];
       const vistoriasData: any[] = [];
@@ -290,7 +290,9 @@ export default function KanbanPage() {
         });
 
       setProcessos([...(mapped || []), ...orfaos]);
-      setRegionaisMap(regMap);
+      } catch (err) {
+        console.error(err);
+      }
       setLoading(false);
     };
     fetchData();

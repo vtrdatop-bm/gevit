@@ -72,38 +72,39 @@ export default function DashboardPage() {
       }
 
       setLoading(true);
-      const [pRes, profilesRes] = await Promise.all([
-        supabase
-          .from("protocolos")
-          .select(`
-            id, data_solicitacao, created_at, evento_unico, data_evento,
-            processos(
-              id,
-              protocolo_id,
-              status,
-              regional_id,
-              data_prevista,
-              vistoriador_id,
-              created_at,
-              updated_at,
-              vistorias(
-                processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno
-              ),
-              pausas(processo_id, data_inicio, data_fim, etapa),
-              termos_compromisso(processo_id, data_validade)
-            )
-          `)
-          .order("created_at", { ascending: false }),
-        supabase.from("profiles").select("user_id, nome_guerra, ativo"),
-      ]);
+      try {
+        const [p, profs] = await Promise.all([
+          fetchAllRows<any>((from, to) =>
+            supabase
+              .from("protocolos")
+              .select(`
+                id, data_solicitacao, created_at, evento_unico, data_evento,
+                processos(
+                  id,
+                  protocolo_id,
+                  status,
+                  regional_id,
+                  data_prevista,
+                  vistoriador_id,
+                  created_at,
+                  updated_at,
+                  vistorias(
+                    processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno
+                  ),
+                  pausas(processo_id, data_inicio, data_fim, etapa),
+                  termos_compromisso(processo_id, data_validade)
+                )
+              `)
+              .order("created_at", { ascending: false })
+              .range(from, to)
+          ),
+          supabase.from("profiles").select("user_id, nome_guerra, ativo").then(res => res.data),
+        ]);
 
-      const p = pRes.data;
-      const profs = profilesRes.data;
-
-      const prots = (p || []).map((proto: any) => {
-        const { processos, ...rest } = proto;
-        return rest;
-      });
+        const prots = (p || []).map((proto: any) => {
+          const { processos, ...rest } = proto;
+          return rest;
+        });
 
       const procs: any[] = [];
       const vists: any[] = [];
@@ -165,6 +166,10 @@ export default function DashboardPage() {
         tMap[t.processo_id] = t.data_validade;
       });
       setTermosMap(tMap);
+
+      } catch (err) {
+        console.error(err);
+      }
 
       setLoading(false);
   }, [isDev]);

@@ -14,7 +14,7 @@ import {
   getCurrentVistoriadorId,
 } from "@/lib/vistoriaStatus";
 import { computeDeadline, deadlineColorClass, DeadlineResult, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
-import { pickLatestProcessByProtocolo, resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
+import { pickLatestProcessByProtocolo, resolveConsistentDisplayStatus, fetchAllRows } from "@/lib/processoConsistency";
 
 interface Protocolo {
   id: string;
@@ -151,123 +151,127 @@ export default function ProtocolosPage() {
     }
 
     setLoading(true);
-    const [pRes, profilesRes] = await Promise.all([
-      supabase
-        .from("protocolos")
-        .select(`
-          *,
-          processos(
-            id,
-            protocolo_id,
-            status,
-            regional_id,
-            data_prevista,
-            vistoriador_id,
-            created_at,
-            updated_at,
-            vistorias(
-              processo_id,
-              data_1_atribuicao,
-              data_2_atribuicao,
-              data_3_atribuicao,
-              data_1_vistoria,
-              data_2_vistoria,
-              data_3_vistoria,
-              status_1_vistoria,
-              status_2_vistoria,
-              status_3_vistoria,
-              data_1_retorno,
-              data_2_retorno,
-              vistoriador_1_id,
-              vistoriador_2_id,
-              vistoriador_3_id
-            ),
-            pausas(
-              processo_id,
-              data_inicio,
-              data_fim,
-              etapa
-            ),
-            termos_compromisso(
-              processo_id,
-              data_validade
-            )
-          )
-        `)
-        .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("user_id, patente, nome_guerra"),
-    ]);
+    try {
+      const [p, profiles] = await Promise.all([
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("protocolos")
+            .select(`
+              *,
+              processos(
+                id,
+                protocolo_id,
+                status,
+                regional_id,
+                data_prevista,
+                vistoriador_id,
+                created_at,
+                updated_at,
+                vistorias(
+                  processo_id,
+                  data_1_atribuicao,
+                  data_2_atribuicao,
+                  data_3_atribuicao,
+                  data_1_vistoria,
+                  data_2_vistoria,
+                  data_3_vistoria,
+                  status_1_vistoria,
+                  status_2_vistoria,
+                  status_3_vistoria,
+                  data_1_retorno,
+                  data_2_retorno,
+                  vistoriador_1_id,
+                  vistoriador_2_id,
+                  vistoriador_3_id
+                ),
+                pausas(
+                  processo_id,
+                  data_inicio,
+                  data_fim,
+                  etapa
+                ),
+                termos_compromisso(
+                  processo_id,
+                  data_validade
+                )
+              )
+            `)
+            .order("created_at", { ascending: false })
+            .range(from, to)
+        ),
+        supabase.from("profiles").select("user_id, patente, nome_guerra").then(res => res.data),
+      ]);
 
-    const p = pRes.data;
-    const profiles = profilesRes.data;
-
-    // Unpack nested data to preserve identical flat patterns and maps
-    const protocolsData = (p || []).map((proto: any) => {
-      const { processos, ...rest } = proto;
-      return rest;
-    });
-
-    const flatProcessos: any[] = [];
-    const flatVistorias: any[] = [];
-    const flatPausas: any[] = [];
-    const flatTermos: any[] = [];
-
-    (p || []).forEach((proto: any) => {
-      const procs = proto.processos || [];
-      procs.forEach((procItem: any) => {
-        const { vistorias, pausas, termos_compromisso, ...procRest } = procItem;
-        flatProcessos.push(procRest);
-
-        if (vistorias) {
-          if (Array.isArray(vistorias)) {
-            flatVistorias.push(...vistorias);
-          } else {
-            flatVistorias.push(vistorias);
-          }
-        }
-        if (pausas) {
-          if (Array.isArray(pausas)) {
-            flatPausas.push(...pausas);
-          } else {
-            flatPausas.push(pausas);
-          }
-        }
-        if (termos_compromisso) {
-          if (Array.isArray(termos_compromisso)) {
-            flatTermos.push(...termos_compromisso);
-          } else {
-            flatTermos.push(termos_compromisso);
-          }
-        }
+      // Unpack nested data to preserve identical flat patterns and maps
+      const protocolsData = (p || []).map((proto: any) => {
+        const { processos, ...rest } = proto;
+        return rest;
       });
-    });
 
-    setProtocolos(protocolsData || []);
-    const vm: Record<string, VistoriaData> = {};
-    flatVistorias.forEach((v: any) => { vm[v.processo_id] = v; });
-    setVistoriaMap(vm);
-    const pm: Record<string, string> = {};
-    (profiles || []).forEach((pr: any) => { pm[pr.user_id] = [pr.patente, pr.nome_guerra].filter(Boolean).join(" "); });
-    setProfileMap(pm);
-    const pMap: Record<string, DeadlinePausaData[]> = {};
-    flatPausas.forEach((pa: any) => {
-      if (!pMap[pa.processo_id]) pMap[pa.processo_id] = [];
-      pMap[pa.processo_id].push(pa);
-    });
-    setPausasByProcesso(pMap);
-    const tMap: Record<string, string> = {};
-    flatTermos.forEach((t: any) => { tMap[t.processo_id] = t.data_validade; });
-    setTermosMap(tMap);
+      const flatProcessos: any[] = [];
+      const flatVistorias: any[] = [];
+      const flatPausas: any[] = [];
+      const flatTermos: any[] = [];
 
-    // Keep inspector information aligned with the most recent stage in vistorias.
-    const updatedProcessos = flatProcessos.map(p => {
-      const v = vm[p.id];
-      if (v) {
-        return { ...p, vistoriador_id: getCurrentVistoriadorId(p.vistoriador_id, v) };
-      }
-      return p;
-    });
-    setProcessos(updatedProcessos as Processo[]);
+      (p || []).forEach((proto: any) => {
+        const procs = proto.processos || [];
+        procs.forEach((procItem: any) => {
+          const { vistorias, pausas: pItems, termos_compromisso, ...procRest } = procItem;
+          flatProcessos.push(procRest);
+
+          if (vistorias) {
+            if (Array.isArray(vistorias)) {
+              flatVistorias.push(...vistorias);
+            } else {
+              flatVistorias.push(vistorias);
+            }
+          }
+          if (pItems) {
+            if (Array.isArray(pItems)) {
+              flatPausas.push(...pItems);
+            } else {
+              flatPausas.push(pItems);
+            }
+          }
+          if (termos_compromisso) {
+            if (Array.isArray(termos_compromisso)) {
+              flatTermos.push(...termos_compromisso);
+            } else {
+              flatTermos.push(termos_compromisso);
+            }
+          }
+        });
+      });
+
+      setProtocolos(protocolsData || []);
+      const vm: Record<string, VistoriaData> = {};
+      flatVistorias.forEach((v: any) => { vm[v.processo_id] = v; });
+      setVistoriaMap(vm);
+      const pm: Record<string, string> = {};
+      (profiles || []).forEach((pr: any) => { pm[pr.user_id] = [pr.patente, pr.nome_guerra].filter(Boolean).join(" "); });
+      setProfileMap(pm);
+      const pMap: Record<string, DeadlinePausaData[]> = {};
+      flatPausas.forEach((pa: any) => {
+        if (!pMap[pa.processo_id]) pMap[pa.processo_id] = [];
+        pMap[pa.processo_id].push(pa);
+      });
+      setPausasByProcesso(pMap);
+      const tMap: Record<string, string> = {};
+      flatTermos.forEach((t: any) => { tMap[t.processo_id] = t.data_validade; });
+      setTermosMap(tMap);
+
+      // Keep inspector information aligned with the most recent stage in vistorias.
+      const updatedProcessos = flatProcessos.map(p => {
+        const v = vm[p.id];
+        if (v) {
+          return { ...p, vistoriador_id: getCurrentVistoriadorId(p.vistoriador_id, v) };
+        }
+        return p;
+      });
+      setProcessos(updatedProcessos as Processo[]);
+    } catch (err) {
+      console.error(err);
+    }
 
     setLoading(false);
   }, [isDev]);
