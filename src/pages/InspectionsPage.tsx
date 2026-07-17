@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -7,11 +7,12 @@ import { cn, formatArea } from "@/lib/utils";
 import {
   DisplayStatus,
   VistoriaData,
-  computeDisplayStatus,
   computeStage,
   displayStatusLabels,
   displayStatusBadgeClass,
 } from "@/lib/vistoriaStatus";
+import { PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
+import { resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
 
 interface ProcessoComProtocolo {
   id: string;
@@ -43,13 +44,15 @@ export default function InspectionsPage() {
   const navigate = useNavigate();
   const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
   const [vistoriaMap, setVistoriaMap] = useState<Record<string, VistoriaData>>({});
+  const [pausasByProcesso, setPausasByProcesso] = useState<Record<string, DeadlinePausaData[]>>({});
+  const [termosMap, setTermosMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [search, setSearch] = useState("");
 
   const effectiveFilterStatus = activeRole === "vistoriador" ? "atribuido" : filterStatus;
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
 
     if (user.id === "00000000-0000-0000-0000-000000000000") {
@@ -76,11 +79,14 @@ export default function InspectionsPage() {
       setVistoriaMap({
         "proc1": { processo_id: "proc1", data_1_atribuicao: "2024-03-22" } as any
       });
+      setPausasByProcesso({});
+      setTermosMap({});
       setLoading(false);
       return;
     }
 
-    Promise.all([
+    setLoading(true);
+    const [{ data: procs }, { data: vist }, { data: pausas }, { data: termos }] = await Promise.all([
       supabase
         .from("processos")
         .select("id, protocolo_id, status, data_prevista, vistoriador_id, protocolos(id, numero, razao_social, nome_fantasia, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, telefone_contato, urgente, motivo_urgencia)")
@@ -88,14 +94,52 @@ export default function InspectionsPage() {
       supabase
         .from("vistorias")
         .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
-    ]).then(([{ data: procs }, { data: vist }]) => {
-      setProcessos((procs as any) || []);
-      const vm: Record<string, VistoriaData> = {};
-      (vist || []).forEach((v: any) => { vm[v.processo_id] = v; });
-      setVistoriaMap(vm);
-      setLoading(false);
+      supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
+      supabase.from("termos_compromisso").select("processo_id, data_validade"),
+    ]);
+
+    setProcessos((procs as any) || []);
+    const vm: Record<string, VistoriaData> = {};
+    (vist || []).forEach((v: any) => { vm[v.processo_id] = v; });
+    setVistoriaMap(vm);
+
+    const pausasMap: Record<string, DeadlinePausaData[]> = {};
+    (pausas || []).forEach((p: any) => {
+      if (!pausasMap[p.processo_id]) pausasMap[p.processo_id] = [];
+      pausasMap[p.processo_id].push(p);
     });
+    setPausasByProcesso(pausasMap);
+
+    const tMap: Record<string, string> = {};
+    (termos || []).forEach((t: any) => {
+      tMap[t.processo_id] = t.data_validade;
+    });
+    setTermosMap(tMap);
+
+    setLoading(false);
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetchData();
+
+    if (user.id === "00000000-0000-0000-0000-000000000000") {
+      return;
+    }
+
+    const channel = supabase
+      .channel("inspections-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchData]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -106,7 +150,13 @@ export default function InspectionsPage() {
       // Status filter
       if (effectiveFilterStatus !== "all") {
         const vistoria = vistoriaMap[p.id] || null;
-        const displayStatus = computeDisplayStatus(p.status, vistoria);
+        const displayStatus = resolveConsistentDisplayStatus({
+          dbStatus: p.status,
+          vistoria,
+          dataSolicitacao: proto.data_solicitacao,
+          pausas: pausasByProcesso[p.id] || [],
+          termoValidade: termosMap[p.id] || null,
+        });
         if (displayStatus !== effectiveFilterStatus) return false;
       }
 
@@ -128,7 +178,7 @@ export default function InspectionsPage() {
       const bUrgente = b.protocolos?.urgente ? 1 : 0;
       return bUrgente - aUrgente;
     });
-  }, [processos, search, effectiveFilterStatus, vistoriaMap]);
+  }, [processos, search, effectiveFilterStatus, vistoriaMap, pausasByProcesso, termosMap]);
 
   const filterOptions: { value: FilterStatus; label: string }[] = activeRole === "vistoriador"
     ? [
@@ -202,7 +252,13 @@ export default function InspectionsPage() {
           {filtered.map((process) => {
             const proto = process.protocolos;
             const vistoria = vistoriaMap[process.id] || null;
-            const displayStatus = computeDisplayStatus(process.status, vistoria);
+            const displayStatus = resolveConsistentDisplayStatus({
+              dbStatus: process.status,
+              vistoria,
+              dataSolicitacao: proto.data_solicitacao,
+              pausas: pausasByProcesso[process.id] || [],
+              termoValidade: termosMap[process.id] || null,
+            });
             const stage = computeStage(vistoria);
 
             return (

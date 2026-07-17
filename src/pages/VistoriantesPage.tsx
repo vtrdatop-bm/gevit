@@ -5,11 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
+  type DisplayStatus,
   type VistoriaData,
   displayStatusBadgeClass,
   displayStatusLabels,
   sortVistoriadores,
 } from "@/lib/vistoriaStatus";
+import { type PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
+import { resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
 import {
   Select,
   SelectContent,
@@ -50,14 +53,13 @@ interface Profile {
   nome_guerra: string | null;
 }
 
-type ProcessStatus = "atribuido" | "pendencias" | "certificado" | "certificado_termo";
-type ProcessStatusFilter = "all" | ProcessStatus;
+type ProcessStatusFilter = "all" | DisplayStatus;
 
 interface StageStatus {
   etapa: 1 | 2 | 3;
   vistoriadorId: string | null;
   vistoriadorNome: string | null;
-  status: ProcessStatus | null;
+  status: DisplayStatus | null;
   dataAtribuicao: string | null;
   dataVistoria: string | null;
 }
@@ -75,7 +77,7 @@ interface InspectionRow {
   vistoriadores: string[];
   stageStatuses: StageStatus[];
   effectiveDate: string;
-  currentProcessStatus: ProcessStatus;
+  currentProcessStatus: DisplayStatus;
   eventoUnico?: boolean;
   ligarAntes?: boolean;
   telefoneContato?: string | null;
@@ -85,10 +87,14 @@ interface InspectionRow {
 
 const STATUS_OPTIONS: { value: ProcessStatusFilter; label: string }[] = [
   { value: "all", label: "Todos os status" },
+  { value: "regional", label: "Aguardando vistoria" },
+  { value: "aguardando_retorno", label: "Aguardando retorno" },
   { value: "atribuido", label: "Atribuído" },
   { value: "pendencias", label: "Com pendência" },
   { value: "certificado_termo", label: "Certificado provisório" },
   { value: "certificado", label: "Certificado" },
+  { value: "expirado", label: "Expirados" },
+  { value: "cancelado", label: "Cancelado" },
 ];
 
 function formatProfileName(profile: Profile) {
@@ -99,21 +105,11 @@ function getStageProcessStatus(
   dataAtribuicao: string | null,
   resultado: string | null,
   hasVistoriador: boolean
-): ProcessStatus | null {
+): DisplayStatus | null {
   if (resultado === "pendencia") return "pendencias";
   if (resultado === "aprovado") return "certificado_termo";
   if (resultado === "reprovado") return "certificado";
   if (dataAtribuicao || hasVistoriador) return "atribuido";
-  return null;
-}
-
-function getCurrentProcessStatus(stageStatuses: StageStatus[]): ProcessStatus | null {
-  for (let index = stageStatuses.length - 1; index >= 0; index -= 1) {
-    if (stageStatuses[index].status) {
-      return stageStatuses[index].status;
-    }
-  }
-
   return null;
 }
 
@@ -137,9 +133,11 @@ export default function VistoriantesPage() {
   const [loading, setLoading] = useState(true);
   const [processos, setProcessos] = useState<ProcessoComProtocolo[]>([]);
   const [vistoriaMap, setVistoriaMap] = useState<Record<string, RawVistoria>>({});
+  const [pausasByProcesso, setPausasByProcesso] = useState<Record<string, DeadlinePausaData[]>>({});
+  const [termosMap, setTermosMap] = useState<Record<string, string>>({});
   const [vistoriadores, setVistoriadores] = useState<Profile[]>([]);
   const [selectedVistoriador, setSelectedVistoriador] = useState<string>("all");
-  const [selectedStatuses, setSelectedStatuses] = useState<ProcessStatus[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<DisplayStatus[]>([]);
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -150,18 +148,18 @@ export default function VistoriantesPage() {
       setSelectedStatuses([]);
     } else {
       setSelectedStatuses((prev) =>
-        prev.includes(statusValue as ProcessStatus)
+        prev.includes(statusValue as DisplayStatus)
           ? prev.filter((s) => s !== statusValue)
-          : [...prev, statusValue as ProcessStatus]
+          : [...prev, statusValue as DisplayStatus]
       );
     }
   };
 
   useEffect(() => {
-    async function loadData() {
+    const loadData = async () => {
       setLoading(true);
 
-      const [{ data: procs }, { data: vists }, { data: profs }, { data: roleRows }] = await Promise.all([
+      const [{ data: procs }, { data: vists }, { data: profs }, { data: roleRows }, { data: pausas }, { data: termos }] = await Promise.all([
         supabase
           .from("processos")
           .select("id, protocolo_id, status, data_prevista, vistoriador_id, protocolos(numero, razao_social, nome_fantasia, bairro, municipio, data_solicitacao, evento_unico, ligar_antes, telefone_contato, urgente, motivo_urgencia)"),
@@ -170,6 +168,8 @@ export default function VistoriantesPage() {
           .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("user_roles").select("user_id").eq("role", "vistoriador"),
+        supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
+        supabase.from("termos_compromisso").select("processo_id, data_validade"),
       ]);
 
       setProcessos(((procs as unknown as ProcessoComProtocolo[]) || []).filter((processo) => !!processo.protocolos));
@@ -180,15 +180,42 @@ export default function VistoriantesPage() {
       });
       setVistoriaMap(nextVistoriaMap);
 
+      const nextPausasByProcesso: Record<string, DeadlinePausaData[]> = {};
+      ((pausas as Array<any>) || []).forEach((pausa) => {
+        if (!nextPausasByProcesso[pausa.processo_id]) nextPausasByProcesso[pausa.processo_id] = [];
+        nextPausasByProcesso[pausa.processo_id].push(pausa);
+      });
+      setPausasByProcesso(nextPausasByProcesso);
+
+      const nextTermosMap: Record<string, string> = {};
+      ((termos as Array<any>) || []).forEach((termo) => {
+        nextTermosMap[termo.processo_id] = termo.data_validade;
+      });
+      setTermosMap(nextTermosMap);
+
       const vistoriadorIds = new Set(((roleRows as { user_id: string }[]) || []).map((row) => row.user_id));
       const nextProfiles = sortVistoriadores(
         (((profs as Profile[]) || []).filter((profile) => vistoriadorIds.has(profile.user_id)))
       );
       setVistoriadores(nextProfiles);
       setLoading(false);
-    }
+    };
 
     void loadData();
+
+    const channel = supabase
+      .channel("vistoriantes-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => { void loadData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => { void loadData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => { void loadData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => { void loadData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => { void loadData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => { void loadData(); })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const vistoriadorNameMap = useMemo(() => {
@@ -246,8 +273,13 @@ export default function VistoriantesPage() {
       const involvedStages = stageStatuses.filter((stage) => stage.vistoriadorId || stage.status);
       if (involvedStages.length === 0) return;
 
-      const currentProcessStatus = getCurrentProcessStatus(stageStatuses);
-      if (!currentProcessStatus) return;
+      const currentProcessStatus = resolveConsistentDisplayStatus({
+        dbStatus: processo.status,
+        vistoria,
+        dataSolicitacao: protocolo.data_solicitacao,
+        pausas: pausasByProcesso[processo.id] || [],
+        termoValidade: termosMap[processo.id] || null,
+      });
 
       const effectiveDate = getLatestDate([
         ...stageStatuses.flatMap((stage) => [stage.dataVistoria, stage.dataAtribuicao]),
@@ -285,7 +317,7 @@ export default function VistoriantesPage() {
     return rows.sort((a, b) => {
       return b.effectiveDate.localeCompare(a.effectiveDate);
     });
-  }, [processos, vistoriaMap, vistoriadorNameMap]);
+  }, [processos, vistoriaMap, vistoriadorNameMap, pausasByProcesso, termosMap]);
 
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -332,10 +364,14 @@ export default function VistoriantesPage() {
   const statusCounts = useMemo(() => {
     const counts: Record<ProcessStatusFilter, number> = {
       all: 0,
+      regional: 0,
+      aguardando_retorno: 0,
       atribuido: 0,
       pendencias: 0,
       certificado_termo: 0,
       certificado: 0,
+      expirado: 0,
+      cancelado: 0,
     };
 
     inspectionRows.forEach((row) => {
@@ -504,7 +540,7 @@ export default function VistoriantesPage() {
           {STATUS_OPTIONS.map((status) => {
             const isActive = status.value === "all"
               ? selectedStatuses.length === 0
-              : selectedStatuses.includes(status.value as ProcessStatus);
+              : selectedStatuses.includes(status.value as DisplayStatus);
             return (
               <button
                 key={status.value}

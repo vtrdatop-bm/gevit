@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { computeDisplayStatus, DisplayStatus, displayStatusLabels, VistoriaData } from "@/lib/vistoriaStatus";
-import { computeDeadline, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
+import { DisplayStatus, displayStatusLabels, VistoriaData } from "@/lib/vistoriaStatus";
+import { PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
+import { pickLatestProcessByProtocolo, resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
 import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
@@ -54,12 +55,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
 
-  useEffect(() => {
-    async function fetch() {
+  const fetchData = useCallback(async () => {
       if (isDev) {
         setProcessos([
-          { id: "1", protocolo_id: "1", status: "regional", created_at: new Date().toISOString() },
-          { id: "2", protocolo_id: "2", status: "certificado", created_at: new Date().toISOString() },
+          { id: "1", protocolo_id: "1", status: "regional", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: "2", protocolo_id: "2", status: "certificado", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         ]);
         setVistorias([
           { processo_id: "1", status_1_vistoria: "pendencia" }
@@ -71,9 +71,10 @@ export default function DashboardPage() {
         return;
       }
 
+      setLoading(true);
       const [{ data: prots }, { data: procs }, { data: vists }, { data: profs }, { data: pausas }, { data: termos }] = await Promise.all([
         supabase.from("protocolos").select("id, data_solicitacao, created_at, evento_unico, data_evento"),
-        supabase.from("processos").select("id, protocolo_id, status, data_prevista, vistoriador_id, created_at, protocolos(data_solicitacao, evento_unico, data_evento)"),
+        supabase.from("processos").select("id, protocolo_id, status, data_prevista, vistoriador_id, created_at, updated_at, protocolos(data_solicitacao, evento_unico, data_evento)"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
         supabase.from("profiles").select("user_id, nome_guerra, ativo"),
         supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
@@ -98,16 +99,32 @@ export default function DashboardPage() {
       setTermosMap(tMap);
 
       setLoading(false);
-    }
-    fetch();
   }, [isDev]);
 
+  useEffect(() => {
+    fetchData();
+
+    if (isDev) {
+      return;
+    }
+
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "protocolos" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData, isDev]);
+
   const processoByProtocolo = useMemo(() => {
-    const map: Record<string, any> = {};
-    processos.forEach((p: any) => {
-      map[p.protocolo_id] = p;
-    });
-    return map;
+    return pickLatestProcessByProtocolo(processos as any);
   }, [processos]);
 
   const filteredProtocolos = useMemo(() => {
@@ -145,20 +162,13 @@ export default function DashboardPage() {
         return;
       }
 
-      const baseStatus = computeDisplayStatus(
-        proc.status,
-        vistoriaMap[proc.id] || null,
-        proto.data_solicitacao || null
-      );
-      const deadline = computeDeadline(
-        vistoriaMap[proc.id] || null,
-        pausasByProcesso[proc.id] || [],
-        baseStatus,
-        termosMap[proc.id] || null
-      );
-      const finalStatus = deadline.active && deadline.remaining <= 0 && deadline.type === "expiration"
-        ? "expirado"
-        : baseStatus;
+      const finalStatus = resolveConsistentDisplayStatus({
+        dbStatus: proc.status,
+        vistoria: vistoriaMap[proc.id] || null,
+        dataSolicitacao: proto.data_solicitacao || null,
+        pausas: pausasByProcesso[proc.id] || [],
+        termoValidade: termosMap[proc.id] || null,
+      });
 
       byStatus[finalStatus] = (byStatus[finalStatus] || 0) + 1;
     });

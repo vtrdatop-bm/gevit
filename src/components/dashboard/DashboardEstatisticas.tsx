@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { computeDisplayStatus, DisplayStatus, displayStatusLabels, VistoriaData, computeStage, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
+import { DisplayStatus, displayStatusLabels, VistoriaData, computeStage, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
+import { type PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
+import { resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
 import { DateRange } from "./DateRangeFilter";
 import {
   BarChart,
@@ -134,6 +136,8 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
   const [processos, setProcessos] = useState<RawProcesso[]>([]);
   const [vistorias, setVistorias] = useState<RawVistoria[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [pausasByProcesso, setPausasByProcesso] = useState<Record<string, DeadlinePausaData[]>>({});
+  const [termosMap, setTermosMap] = useState<Record<string, string>>({});
   const [regionaisMap, setRegionaisMap] = useState<Record<string, string>>({});
   const [bairroRegionalMap, setBairroRegionalMap] = useState<Record<string, string>>({});
 
@@ -154,12 +158,14 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
         return;
       }
 
-      const [{ data: procs }, { data: vists }, { data: profs }, { data: regionais }, { data: bairros }] = await Promise.all([
+      const [{ data: procs }, { data: vists }, { data: profs }, { data: regionais }, { data: bairros }, { data: pausas }, { data: termos }] = await Promise.all([
         supabase.from("processos").select("id, status, vistoriador_id, regional_id, created_at, protocolos(data_solicitacao, bairro, municipio, area, evento_unico, data_evento)"),
         supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("bairros").select("nome, municipio, regional_id"),
+        supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
+        supabase.from("termos_compromisso").select("processo_id, data_validade"),
       ]);
 
       setProcessos((procs || []) as unknown as RawProcesso[]);
@@ -176,9 +182,41 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       });
       setBairroRegionalMap(brm);
 
+      const pMap: Record<string, DeadlinePausaData[]> = {};
+      (pausas || []).forEach((p: any) => {
+        if (!pMap[p.processo_id]) pMap[p.processo_id] = [];
+        pMap[p.processo_id].push(p);
+      });
+      setPausasByProcesso(pMap);
+
+      const tMap: Record<string, string> = {};
+      (termos || []).forEach((t: any) => {
+        tMap[t.processo_id] = t.data_validade;
+      });
+      setTermosMap(tMap);
+
       setLoading(false);
     }
     fetchData();
+
+    if (isDev) {
+      return;
+    }
+
+    const channel = supabase
+      .channel("dashboard-estatisticas-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "regionais" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "bairros" }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [isDev]);
 
   /* ── Filtering ──────────────────────────────────────────────────────────────────── */
@@ -239,7 +277,13 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
     }
     filtered.forEach((p) => {
       const v = vistoriaMap[p.id] as VistoriaData | undefined;
-      const ds = computeDisplayStatus(p.status, v || null, p.protocolos?.data_solicitacao);
+      const ds = resolveConsistentDisplayStatus({
+        dbStatus: p.status,
+        vistoria: v || null,
+        dataSolicitacao: p.protocolos?.data_solicitacao,
+        pausas: pausasByProcesso[p.id] || [],
+        termoValidade: termosMap[p.id] || null,
+      });
       byStatus[ds] = (byStatus[ds] || 0) + 1;
     });
 
@@ -373,7 +417,7 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       byStatus,
       totalAreaVistoriada,
     };
-  }, [filtered, vistoriaMap, profileMap, regionaisMap, bairroRegionalMap, totalProtocolosFiltrados]);
+  }, [filtered, vistoriaMap, profileMap, regionaisMap, bairroRegionalMap, totalProtocolosFiltrados, pausasByProcesso, termosMap]);
 
   /* ── Render ─────────────────────────────────────────────────────────────────────── */
 

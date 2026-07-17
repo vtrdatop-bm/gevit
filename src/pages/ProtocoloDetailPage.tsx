@@ -11,7 +11,8 @@ import ExpirationWarning from "@/components/protocolo/ExpirationWarning";
 import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber, formatAreaOnBlur, formatCpfCnpj, getCpfCnpjLabel, formatCep, truncateCoordinate } from "@/lib/utils";
 import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { computeDisplayStatus, computeStage, sortVistoriadores } from "@/lib/vistoriaStatus";
+import { computeStage, sortVistoriadores } from "@/lib/vistoriaStatus";
+import { resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
 import { Vistoriador } from "@/types/user";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -110,9 +111,16 @@ export default function ProtocoloDetailPage() {
       return;
     }
 
-    const [{ data: prot }, { data: procs }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
+    const [{ data: prot }, { data: proc }, { data: muns }, { data: bairs }, { data: regs }, { data: regMuns }] = await Promise.all([
       supabase.from("protocolos").select("*").eq("id", id).maybeSingle(),
-      supabase.from("processos").select("*").eq("protocolo_id", id),
+      supabase
+        .from("processos")
+        .select("*")
+        .eq("protocolo_id", id)
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
       supabase.from("municipios").select("id, nome").order("nome"),
       supabase.from("bairros").select("id, nome, municipio").order("nome"),
       supabase.from("regionais").select("id, nome").order("nome"),
@@ -157,8 +165,7 @@ export default function ProtocoloDetailPage() {
       console.error("Erro ao carregar papéis de vistoriadores:", rolesErr.message);
     }
 
-    if (procs && procs.length > 0) {
-      const proc = procs[0];
+    if (proc) {
       setProcesso(proc);
 
       const [vistRes, termoRes, pausasRes] = await Promise.all([
@@ -191,8 +198,14 @@ export default function ProtocoloDetailPage() {
   }, [id, isDev]);
 
   const dStatus = useMemo(() => {
-    return computeDisplayStatus(processo?.status || "regional", vistoria, protocolo?.data_solicitacao);
-  }, [processo?.status, vistoria, protocolo?.data_solicitacao]);
+    return resolveConsistentDisplayStatus({
+      dbStatus: processo?.status || "regional",
+      vistoria,
+      dataSolicitacao: protocolo?.data_solicitacao,
+      pausas,
+      termoValidade: termo?.data_validade || null,
+    });
+  }, [processo?.status, vistoria, protocolo?.data_solicitacao, pausas, termo?.data_validade]);
 
   const stage = useMemo(() => {
     return computeStage(vistoria);

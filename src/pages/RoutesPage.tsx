@@ -1,5 +1,5 @@
 const LOCAL_KEY = "gevit_routes_state_v1";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -103,8 +103,7 @@ export default function RoutesPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    async function fetchData() {
+  const fetchData = useCallback(async () => {
       setLoading(true);
 
 
@@ -161,9 +160,24 @@ export default function RoutesPage() {
 
       if (vistoriasData) setVistorias(vistoriasData);
       setLoading(false);
-    }
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    void fetchData();
+
+    const channel = supabase
+      .channel("routes-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => { void fetchData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "protocolos" }, () => { void fetchData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => { void fetchData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => { void fetchData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => { void fetchData(); })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
 
   // Sempre manter o usuário logado selecionado
   useEffect(() => {

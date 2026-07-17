@@ -10,7 +10,6 @@ import { computeDeadline, deadlineColorClass, deadlineLabel, DeadlineResult, Pau
 import {
   DisplayStatus,
   VistoriaStage,
-  computeDisplayStatus,
   computeStage,
   getDisplayStatusLabel,
   getCurrentVistoriadorId,
@@ -23,6 +22,7 @@ import {
 } from "@/lib/constants";
 import { KANBAN_MOCK_PROCESSOS } from "@/mocks/mockData";
 import { ProcessoData, VistoriaData } from "@/types/database";
+import { pickLatestProcessByProtocolo, resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
 
 const statusColumns: { key: DisplayStatus; label: string; dotColor: string }[] = [
   { key: "regional", label: STATUS_LABELS.regional, dotColor: "bg-[hsl(var(--status-risk))]" },
@@ -99,7 +99,7 @@ export default function KanbanPage() {
       ] = await Promise.all([
         supabase
           .from("processos")
-          .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento)"),
+          .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, created_at, updated_at, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento)"),
         supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento"),
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
@@ -147,7 +147,9 @@ export default function KanbanPage() {
         protocoloById[proto.id] = proto;
       });
 
-      const mapped: ProcessoWithProtocolo[] = (procs || [])
+      const canonicalProcesses = Object.values(pickLatestProcessByProtocolo((procs || []) as any));
+
+      const mapped: ProcessoWithProtocolo[] = canonicalProcesses
         .map((p: any) => {
         const protocolo = p.protocolos || protocoloById[p.protocolo_id] || null;
         if (!protocolo) {
@@ -159,14 +161,15 @@ export default function KanbanPage() {
           resolvedRegionalId = bairroRegionalMap[`${(protocolo.bairro || "").toUpperCase()}|${(protocolo.municipio || "").toUpperCase()}`] || null;
         }
         const vistoria = vistoriaMap[p.id] || null;
-        const dStatus = computeDisplayStatus(p.status, vistoria, protocolo?.data_solicitacao);
         const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vistoria);
-        const deadlineResult = computeDeadline(vistoria, pausasByProcesso[p.id] || [], dStatus, termosMap[p.id] || null);
-        
-        let finalStatus = dStatus;
-        if (deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration") {
-          finalStatus = "expirado";
-        }
+        const finalStatus = resolveConsistentDisplayStatus({
+          dbStatus: p.status,
+          vistoria,
+          dataSolicitacao: protocolo?.data_solicitacao,
+          pausas: pausasByProcesso[p.id] || [],
+          termoValidade: termosMap[p.id] || null,
+        });
+        const deadlineResult = computeDeadline(vistoria, pausasByProcesso[p.id] || [], finalStatus, termosMap[p.id] || null);
 
         return {
           id: p.id,
@@ -197,11 +200,14 @@ export default function KanbanPage() {
         .filter((proto: any) => !protocoloIdsComProcesso.has(proto.id))
         .map((proto: any) => {
           const resolvedRegionalId = bairroRegionalMap[`${(proto.bairro || "").toUpperCase()}|${(proto.municipio || "").toUpperCase()}`] || null;
-          const dStatus = computeDisplayStatus("regional", null, proto.data_solicitacao);
-          const deadlineResult = computeDeadline(null, [], dStatus, null);
-          const finalStatus = deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration"
-            ? "expirado"
-            : dStatus;
+          const finalStatus = resolveConsistentDisplayStatus({
+            dbStatus: "regional",
+            vistoria: null,
+            dataSolicitacao: proto.data_solicitacao,
+            pausas: [],
+            termoValidade: null,
+          });
+          const deadlineResult = computeDeadline(null, [], finalStatus, null);
 
           return {
             id: `proto-${proto.id}`,

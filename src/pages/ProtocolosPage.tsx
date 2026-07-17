@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Search, FileText, ChevronDown, ChevronUp, Plus, AlertTriangle, Clock, ArrowLeft } from "lucide-react";
@@ -8,13 +8,13 @@ import {
   DisplayStatus,
   VistoriaStage,
   VistoriaData,
-  computeDisplayStatus,
   computeStage,
   displayStatusLabels,
   displayStatusBadgeClass,
   getCurrentVistoriadorId,
 } from "@/lib/vistoriaStatus";
 import { computeDeadline, deadlineColorClass, DeadlineResult, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
+import { pickLatestProcessByProtocolo, resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
 
 interface Protocolo {
   id: string;
@@ -37,6 +37,8 @@ interface Processo {
   regional_id: string | null;
   data_prevista: string | null;
   vistoriador_id: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface TimelineSnapshot {
@@ -103,7 +105,7 @@ export default function ProtocolosPage() {
 
   const { isDev } = useAuth();
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (isDev) {
       const mockProt: Protocolo[] = [
         {
@@ -134,8 +136,8 @@ export default function ProtocolosPage() {
         }
       ];
       const mockProc: Processo[] = [
-        { id: "proc1", protocolo_id: "p1", status: "regional", regional_id: "r1", data_prevista: "2024-04-05", vistoriador_id: "v1" },
-        { id: "proc2", protocolo_id: "p2", status: "certificado", regional_id: "r2", data_prevista: "2024-03-25", vistoriador_id: "v1" }
+        { id: "proc1", protocolo_id: "p1", status: "regional", regional_id: "r1", data_prevista: "2024-04-05", vistoriador_id: "v1", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id: "proc2", protocolo_id: "p2", status: "certificado", regional_id: "r2", data_prevista: "2024-03-25", vistoriador_id: "v1", created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
       ];
       setProtocolos(mockProt);
       setProcessos(mockProc);
@@ -148,45 +150,67 @@ export default function ProtocolosPage() {
       return;
     }
 
-    Promise.all([
+    setLoading(true);
+    const [{ data: p }, { data: proc }, { data: vist }, { data: profiles }, { data: pausas }, { data: termos }] = await Promise.all([
       supabase.from("protocolos").select("*").order("created_at", { ascending: false }),
-      supabase.from("processos").select("id, protocolo_id, status, regional_id, data_prevista, vistoriador_id"),
+      supabase.from("processos").select("id, protocolo_id, status, regional_id, data_prevista, vistoriador_id, created_at, updated_at"),
       supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
       supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
       supabase.from("termos_compromisso").select("processo_id, data_validade"),
-    ]).then(([{ data: p }, { data: proc }, { data: vist }, { data: profiles }, { data: pausas }, { data: termos }]) => {
-      setProtocolos(p || []);
-      setProcessos(proc || []);
-      const vm: Record<string, VistoriaData> = {};
-      (vist || []).forEach((v: any) => { vm[v.processo_id] = v; });
-      setVistoriaMap(vm);
-      const pm: Record<string, string> = {};
-      (profiles || []).forEach((pr: any) => { pm[pr.user_id] = [pr.patente, pr.nome_guerra].filter(Boolean).join(" "); });
-      setProfileMap(pm);
-      const pMap: Record<string, DeadlinePausaData[]> = {};
-      (pausas || []).forEach((pa: any) => {
-        if (!pMap[pa.processo_id]) pMap[pa.processo_id] = [];
-        pMap[pa.processo_id].push(pa);
-      });
-      setPausasByProcesso(pMap);
-      const tMap: Record<string, string> = {};
-      (termos || []).forEach((t: any) => { tMap[t.processo_id] = t.data_validade; });
-      setTermosMap(tMap);
-      
-      // Update the processes with the correct vistoriador_id from vistorias if available
-      const updatedProcessos = (proc || []).map(p => {
-        const v = vm[p.id];
-        if (v) {
-          return { ...p, vistoriador_id: getCurrentVistoriadorId(p.vistoriador_id, v) };
-        }
-        return p;
-      });
-      setProcessos(updatedProcessos as Processo[]);
-      
-      setLoading(false);
+    ]);
+
+    setProtocolos(p || []);
+    const vm: Record<string, VistoriaData> = {};
+    (vist || []).forEach((v: any) => { vm[v.processo_id] = v; });
+    setVistoriaMap(vm);
+    const pm: Record<string, string> = {};
+    (profiles || []).forEach((pr: any) => { pm[pr.user_id] = [pr.patente, pr.nome_guerra].filter(Boolean).join(" "); });
+    setProfileMap(pm);
+    const pMap: Record<string, DeadlinePausaData[]> = {};
+    (pausas || []).forEach((pa: any) => {
+      if (!pMap[pa.processo_id]) pMap[pa.processo_id] = [];
+      pMap[pa.processo_id].push(pa);
     });
-  }, []);
+    setPausasByProcesso(pMap);
+    const tMap: Record<string, string> = {};
+    (termos || []).forEach((t: any) => { tMap[t.processo_id] = t.data_validade; });
+    setTermosMap(tMap);
+
+    // Keep inspector information aligned with the most recent stage in vistorias.
+    const updatedProcessos = (proc || []).map(p => {
+      const v = vm[p.id];
+      if (v) {
+        return { ...p, vistoriador_id: getCurrentVistoriadorId(p.vistoriador_id, v) };
+      }
+      return p;
+    });
+    setProcessos(updatedProcessos as Processo[]);
+
+    setLoading(false);
+  }, [isDev]);
+
+  useEffect(() => {
+    fetchData();
+
+    if (isDev) {
+      return;
+    }
+
+    const channel = supabase
+      .channel("protocolos-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "protocolos" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData, isDev]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -201,9 +225,7 @@ export default function ProtocolosPage() {
   }, []);
 
   const processoByProtocolo = useMemo(() => {
-    const map: Record<string, Processo> = {};
-    processos.forEach((p) => { map[p.protocolo_id] = p; });
-    return map;
+    return pickLatestProcessByProtocolo(processos);
   }, [processos]);
 
   const protocolosComProcesso = useMemo(() => {
@@ -224,16 +246,14 @@ export default function ProtocolosPage() {
     const vistoria = vistoriaMap[proc.id] || null;
     const proto = protocoloById[protocoloId];
     
-    const baseStatus = computeDisplayStatus(proc.status, vistoria, proto?.data_solicitacao);
+    const finalStatus = resolveConsistentDisplayStatus({
+      dbStatus: proc.status,
+      vistoria,
+      dataSolicitacao: proto?.data_solicitacao,
+      pausas: pausasByProcesso[proc.id] || [],
+      termoValidade: termosMap[proc.id] || null,
+    });
     const stage = computeStage(vistoria);
-    
-    // Check if it should be "expirado" based on deadline
-    const deadline = computeDeadline(vistoria, pausasByProcesso[proc.id] || [], baseStatus, termosMap[proc.id] || null);
-    
-    let finalStatus = baseStatus;
-    if (deadline.active && deadline.remaining <= 0 && deadline.type === "expiration") {
-      finalStatus = "expirado";
-    }
 
     return {
       status: finalStatus,

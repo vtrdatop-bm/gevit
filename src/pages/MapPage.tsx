@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { DisplayStatus, displayStatusLabels, computeDisplayStatus, getDisplayStatusLabel, getCurrentVistoriadorId, sortVistoriadores } from "@/lib/vistoriaStatus";
-import { computeDeadline, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
+import { DisplayStatus, displayStatusLabels, getDisplayStatusLabel, getCurrentVistoriadorId, sortVistoriadores } from "@/lib/vistoriaStatus";
+import { PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
 import { Filter, Layers, Navigation, MousePointerClick, MapPin, Search, Maximize2, Minimize2, ArrowLeft, ChevronDown } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
@@ -14,6 +14,7 @@ import { MAP_MOCK_PROCESSOS } from "@/mocks/mockData";
 import { ProtocoloData, VistoriaData, ProcessStatus } from "@/types/database";
 import { Vistoriador } from "@/types/user";
 import { cn } from "@/lib/utils";
+import { resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
 
 interface MapProcess {
   id: string;
@@ -155,11 +156,13 @@ export default function MapPage() {
 
     const mapped: MapProcess[] = (procs || []).map((p: any) => {
       const vist = vistoriaMap[p.id] || null;
-      const dStatus = computeDisplayStatus(p.status, vist, p.protocolos?.data_solicitacao);
-      const deadlineResult = computeDeadline(vist, pausasByProcesso[p.id] || [], dStatus, termosMap[p.id] || null);
-      const finalStatus = deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration"
-        ? "expirado"
-        : dStatus;
+      const finalStatus = resolveConsistentDisplayStatus({
+        dbStatus: p.status,
+        vistoria: vist,
+        dataSolicitacao: p.protocolos?.data_solicitacao,
+        pausas: pausasByProcesso[p.id] || [],
+        termoValidade: termosMap[p.id] || null,
+      });
       const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vist);
 
       let resolvedRegionalId = p.regional_id;
@@ -184,11 +187,13 @@ export default function MapPage() {
     const orfaos: MapProcess[] = (protocolosData || [])
       .filter((proto: any) => !protocoloIdsComProcesso.has(proto.id))
       .map((proto: any) => {
-        const dStatus = computeDisplayStatus("regional", null, proto.data_solicitacao);
-        const deadlineResult = computeDeadline(null, [], dStatus, null);
-        const finalStatus = deadlineResult.active && deadlineResult.remaining <= 0 && deadlineResult.type === "expiration"
-          ? "expirado"
-          : dStatus;
+        const finalStatus = resolveConsistentDisplayStatus({
+          dbStatus: "regional",
+          vistoria: null,
+          dataSolicitacao: proto.data_solicitacao,
+          pausas: [],
+          termoValidade: null,
+        });
         const resolvedRegionalId = bairroRegionalMap[`${(proto.bairro || "").toUpperCase()}|${(proto.municipio || "").toUpperCase()}`] || null;
 
         return {
@@ -216,6 +221,8 @@ export default function MapPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => fetchData())
       .on("postgres_changes", { event: "*", schema: "public", table: "protocolos" }, () => fetchData())
       .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
       .subscribe();
 
     return () => {
