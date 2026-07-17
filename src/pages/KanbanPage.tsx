@@ -88,29 +88,76 @@ export default function KanbanPage() {
         return;
       }
       const [
-        { data: procs },
-        { data: protocolosData },
-        { data: regionais },
-        { data: profiles },
-        { data: bairrosData },
-        { data: vistoriasData },
-        { data: pausasData },
-        { data: termosData }
+        pRes,
+        regionaisRes,
+        profilesRes,
+        bairrosRes
       ] = await Promise.all([
         supabase
-          .from("processos")
-          .select("id, protocolo_id, status, data_prevista, vistoriador_id, regional_id, created_at, updated_at, protocolos(numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento)"),
-        supabase.from("protocolos").select("id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento"),
+          .from("protocolos")
+          .select(`
+            id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento,
+            processos(
+              id,
+              protocolo_id,
+              status,
+              regional_id,
+              data_prevista,
+              vistoriador_id,
+              created_at,
+              updated_at,
+              vistorias(
+                processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id
+              ),
+              pausas(processo_id, data_inicio, data_fim, etapa),
+              termos_compromisso(processo_id, data_validade)
+            )
+          `)
+          .order("created_at", { ascending: false }),
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("profiles").select("user_id, patente, nome_guerra"),
         supabase.from("bairros").select("nome, municipio, regional_id"),
-        supabase
-          .from("vistorias")
-          .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id")
-          .order("updated_at", { ascending: false }),
-        supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
-        supabase.from("termos_compromisso").select("processo_id, data_validade"),
       ]);
+
+      const p = pRes.data;
+      const regionais = regionaisRes.data;
+      const profiles = profilesRes.data;
+      const bairrosData = bairrosRes.data;
+
+      const protocolosData = (p || []).map((proto: any) => {
+        const { processos, ...rest } = proto;
+        return rest;
+      });
+
+      const procs: any[] = [];
+      const vistoriasData: any[] = [];
+      const pausasData: any[] = [];
+      const termosData: any[] = [];
+
+      (p || []).forEach((proto: any) => {
+        const nestedProcs = proto.processos || [];
+        nestedProcs.forEach((procItem: any) => {
+          const { vistorias, pausas, termos_compromisso, ...procRest } = procItem;
+          const procObj = {
+            ...procRest,
+            protocolos: {
+              ...proto,
+              processos: undefined // Break circular ref
+            }
+          };
+          procs.push(procObj);
+
+          if (vistorias) {
+            vistoriasData.push(...vistorias);
+          }
+          if (pausas) {
+            pausasData.push(...pausas);
+          }
+          if (termos_compromisso) {
+            termosData.push(...termos_compromisso);
+          }
+        });
+      });
 
       const regMap: Record<string, string> = {};
       (regionais || []).forEach((r) => { regMap[r.id] = r.nome; });

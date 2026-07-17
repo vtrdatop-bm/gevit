@@ -72,28 +72,84 @@ export default function DashboardPage() {
       }
 
       setLoading(true);
-      const [{ data: prots }, { data: procs }, { data: vists }, { data: profs }, { data: pausas }, { data: termos }] = await Promise.all([
-        supabase.from("protocolos").select("id, data_solicitacao, created_at, evento_unico, data_evento"),
-        supabase.from("processos").select("id, protocolo_id, status, data_prevista, vistoriador_id, created_at, updated_at, protocolos(data_solicitacao, evento_unico, data_evento)"),
-        supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
+      const [pRes, profilesRes] = await Promise.all([
+        supabase
+          .from("protocolos")
+          .select(`
+            id, data_solicitacao, created_at, evento_unico, data_evento,
+            processos(
+              id,
+              protocolo_id,
+              status,
+              regional_id,
+              data_prevista,
+              vistoriador_id,
+              created_at,
+              updated_at,
+              vistorias(
+                processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno
+              ),
+              pausas(processo_id, data_inicio, data_fim, etapa),
+              termos_compromisso(processo_id, data_validade)
+            )
+          `)
+          .order("created_at", { ascending: false }),
         supabase.from("profiles").select("user_id, nome_guerra, ativo"),
-        supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
-        supabase.from("termos_compromisso").select("processo_id, data_validade"),
       ]);
+
+      const p = pRes.data;
+      const profs = profilesRes.data;
+
+      const prots = (p || []).map((proto: any) => {
+        const { processos, ...rest } = proto;
+        return rest;
+      });
+
+      const procs: any[] = [];
+      const vists: any[] = [];
+      const pausas: any[] = [];
+      const termos: any[] = [];
+
+      (p || []).forEach((proto: any) => {
+        const nestedProcs = proto.processos || [];
+        nestedProcs.forEach((procItem: any) => {
+          const { vistorias, pausas: nestedPausas, termos_compromisso, ...procRest } = procItem;
+          const procObj = {
+            ...procRest,
+            protocolos: {
+              data_solicitacao: proto.data_solicitacao,
+              evento_unico: proto.evento_unico,
+              data_evento: proto.data_evento || null
+            }
+          };
+          procs.push(procObj);
+
+          if (vistorias) {
+            vists.push(...vistorias);
+          }
+          if (nestedPausas) {
+            pausas.push(...nestedPausas);
+          }
+          if (termos_compromisso) {
+            termos.push(...termos_compromisso);
+          }
+        });
+      });
+
       setProtocolos(prots || []);
       setProcessos(procs || []);
       setVistorias(vists || []);
       setProfiles(profs || []);
 
       const pMap: Record<string, DeadlinePausaData[]> = {};
-      (pausas || []).forEach((p: any) => {
-        if (!pMap[p.processo_id]) pMap[p.processo_id] = [];
-        pMap[p.processo_id].push(p);
+      pausas.forEach((pItem: any) => {
+        if (!pMap[pItem.processo_id]) pMap[pItem.processo_id] = [];
+        pMap[pItem.processo_id].push(pItem);
       });
       setPausasByProcesso(pMap);
 
       const tMap: Record<string, string> = {};
-      (termos || []).forEach((t: any) => {
+      termos.forEach((t: any) => {
         tMap[t.processo_id] = t.data_validade;
       });
       setTermosMap(tMap);

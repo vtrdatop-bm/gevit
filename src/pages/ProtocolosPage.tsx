@@ -151,34 +151,104 @@ export default function ProtocolosPage() {
     }
 
     setLoading(true);
-    const [{ data: p }, { data: proc }, { data: vist }, { data: profiles }, { data: pausas }, { data: termos }] = await Promise.all([
-      supabase.from("protocolos").select("*").order("created_at", { ascending: false }),
-      supabase.from("processos").select("id, protocolo_id, status, regional_id, data_prevista, vistoriador_id, created_at, updated_at"),
-      supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
+    const [pRes, profilesRes] = await Promise.all([
+      supabase
+        .from("protocolos")
+        .select(`
+          *,
+          processos(
+            id,
+            protocolo_id,
+            status,
+            regional_id,
+            data_prevista,
+            vistoriador_id,
+            created_at,
+            updated_at,
+            vistorias(
+              processo_id,
+              data_1_atribuicao,
+              data_2_atribuicao,
+              data_3_atribuicao,
+              data_1_vistoria,
+              data_2_vistoria,
+              data_3_vistoria,
+              status_1_vistoria,
+              status_2_vistoria,
+              status_3_vistoria,
+              data_1_retorno,
+              data_2_retorno,
+              vistoriador_1_id,
+              vistoriador_2_id,
+              vistoriador_3_id
+            ),
+            pausas(
+              processo_id,
+              data_inicio,
+              data_fim,
+              etapa
+            ),
+            termos_compromisso(
+              processo_id,
+              data_validade
+            )
+          )
+        `)
+        .order("created_at", { ascending: false }),
       supabase.from("profiles").select("user_id, patente, nome_guerra"),
-      supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
-      supabase.from("termos_compromisso").select("processo_id, data_validade"),
     ]);
 
-    setProtocolos(p || []);
+    const p = pRes.data;
+    const profiles = profilesRes.data;
+
+    // Unpack nested data to preserve identical flat patterns and maps
+    const protocolsData = (p || []).map((proto: any) => {
+      const { processos, ...rest } = proto;
+      return rest;
+    });
+
+    const flatProcessos: any[] = [];
+    const flatVistorias: any[] = [];
+    const flatPausas: any[] = [];
+    const flatTermos: any[] = [];
+
+    (p || []).forEach((proto: any) => {
+      const procs = proto.processos || [];
+      procs.forEach((procItem: any) => {
+        const { vistorias, pausas, termos_compromisso, ...procRest } = procItem;
+        flatProcessos.push(procRest);
+
+        if (vistorias) {
+          flatVistorias.push(...vistorias);
+        }
+        if (pausas) {
+          flatPausas.push(...pausas);
+        }
+        if (termos_compromisso) {
+          flatTermos.push(...termos_compromisso);
+        }
+      });
+    });
+
+    setProtocolos(protocolsData || []);
     const vm: Record<string, VistoriaData> = {};
-    (vist || []).forEach((v: any) => { vm[v.processo_id] = v; });
+    flatVistorias.forEach((v: any) => { vm[v.processo_id] = v; });
     setVistoriaMap(vm);
     const pm: Record<string, string> = {};
     (profiles || []).forEach((pr: any) => { pm[pr.user_id] = [pr.patente, pr.nome_guerra].filter(Boolean).join(" "); });
     setProfileMap(pm);
     const pMap: Record<string, DeadlinePausaData[]> = {};
-    (pausas || []).forEach((pa: any) => {
+    flatPausas.forEach((pa: any) => {
       if (!pMap[pa.processo_id]) pMap[pa.processo_id] = [];
       pMap[pa.processo_id].push(pa);
     });
     setPausasByProcesso(pMap);
     const tMap: Record<string, string> = {};
-    (termos || []).forEach((t: any) => { tMap[t.processo_id] = t.data_validade; });
+    flatTermos.forEach((t: any) => { tMap[t.processo_id] = t.data_validade; });
     setTermosMap(tMap);
 
     // Keep inspector information aligned with the most recent stage in vistorias.
-    const updatedProcessos = (proc || []).map(p => {
+    const updatedProcessos = flatProcessos.map(p => {
       const v = vm[p.id];
       if (v) {
         return { ...p, vistoriador_id: getCurrentVistoriadorId(p.vistoriador_id, v) };
