@@ -515,39 +515,61 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
               </tr>
             </thead>
             <tbody>
-              {[
-                { key: "pendencias", label: "Pendência", color: "text-status-pending" },
-                { key: "certificado", label: "Certificado", color: "text-status-certified" },
-                { key: "certificado_termo", label: "Certificado Provisório", color: "text-primary" },
-              ].map((row) => {
-                const vals = stats.stageStatusGrid[row.key];
-                const total = vals[0] + vals[1] + vals[2];
-                return (
-                  <tr key={row.key} className="border-b border-border/50 last:border-0">
-                    <td className={cn("py-2.5 px-3 font-medium", row.color)}>{row.label}</td>
-                    {vals.map((v, i) => (
-                      <td key={i} className="text-center py-2.5 px-3 font-semibold text-foreground">{v}</td>
-                    ))}
-                    <td className="text-center py-2.5 px-3 font-bold text-foreground">{total}</td>
-                  </tr>
-                );
-              })}
-              {/* Linha Totais */}
-              {(() => {
-                const vals = [0, 1, 2].map(i =>
-                  ["pendencias", "certificado", "certificado_termo"].reduce((sum, key) => sum + (stats.stageStatusGrid[key]?.[i] || 0), 0)
-                );
-                const total = vals.reduce((a, b) => a + b, 0);
-                return (
-                  <tr className="border-t border-border font-bold bg-muted/40">
-                    <td className="py-2.5 px-3 text-foreground">Totais</td>
-                    {vals.map((v, i) => (
-                      <td key={i} className="text-center py-2.5 px-3 text-foreground">{v}</td>
-                    ))}
-                    <td className="text-center py-2.5 px-3 text-foreground">{total}</td>
-                  </tr>
-                );
-              })()}
+        {[
+          { key: "pendencias", label: "Pendência", color: "text-status-pending" },
+          { key: "certificado", label: "Certificado", color: "text-status-certified" },
+          { key: "certificado_termo", label: "Certificado Provisório", color: "text-primary" },
+        ].map((row) => {
+          const vals = stats.stageStatusGrid[row.key];
+          const total = vals[0] + vals[1] + vals[2];
+          const totalProcessos = stats.totalProcessos || 1;
+          const getPct = (v: number) => {
+            if (totalProcessos <= 1 || v === 0) return " (0%)";
+            return ` (${Math.round((v / totalProcessos) * 100)}%)`;
+          };
+          return (
+            <tr key={row.key} className="border-b border-border/50 last:border-0">
+              <td className={cn("py-2.5 px-3 font-medium", row.color)}>{row.label}</td>
+              {vals.map((v, i) => (
+                <td key={i} className="text-center py-2.5 px-3 font-semibold text-foreground">
+                  {v}
+                  <span className="text-[11px] text-muted-foreground font-normal block sm:inline">{getPct(v)}</span>
+                </td>
+              ))}
+              <td className="text-center py-2.5 px-3 font-bold text-foreground">
+                {total}
+                <span className="text-[11px] text-muted-foreground font-normal block sm:inline">{getPct(total)}</span>
+              </td>
+            </tr>
+          );
+        })}
+        {/* Linha Totais */}
+        {(() => {
+          const vals = [0, 1, 2].map(i =>
+            ["pendencias", "certificado", "certificado_termo"].reduce((sum, key) => sum + (stats.stageStatusGrid[key]?.[i] || 0), 0)
+          );
+          const total = vals.reduce((a, b) => a + b, 0);
+          const totalProcessos = stats.totalProcessos || 1;
+          const getPct = (v: number) => {
+            if (totalProcessos <= 1 || v === 0) return " (0%)";
+            return ` (${Math.round((v / totalProcessos) * 100)}%)`;
+          };
+          return (
+            <tr className="border-t border-border font-bold bg-muted/40">
+              <td className="py-2.5 px-3 text-foreground">Totais</td>
+              {vals.map((v, i) => (
+                <td key={i} className="text-center py-2.5 px-3 text-foreground">
+                  {v}
+                  <span className="text-[11px] font-normal text-muted-foreground block sm:inline">{getPct(v)}</span>
+                </td>
+              ))}
+              <td className="text-center py-2.5 px-3 text-foreground">
+                {total}
+                <span className="text-[11px] font-normal text-muted-foreground block sm:inline">{getPct(total)}</span>
+              </td>
+            </tr>
+          );
+        })()}
             </tbody>
           </table>
         </div>
