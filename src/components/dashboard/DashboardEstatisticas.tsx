@@ -674,7 +674,25 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={120} />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      const totalProcessos = stats.totalProcessos || 1;
+                      const pct = Math.round((data.value / totalProcessos) * 100);
+                      return (
+                        <div className="bg-popover border border-border rounded-lg p-2 shadow-sm text-xs">
+                          <p className="font-semibold text-foreground">{data.name}</p>
+                          <p className="text-muted-foreground mt-0.5">
+                            Processos: <span className="font-semibold text-foreground">{data.value}</span>
+                            <span className="ml-1 text-primary font-medium">({pct}%)</span>
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
                 <Bar dataKey="value" name="Processos" radius={[0, 6, 6, 0]}>
                   {stats.regionalData.map((_, i) => (
                     <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
