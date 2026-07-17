@@ -125,13 +125,25 @@ export default function DashboardPage() {
           procs.push(procObj);
 
           if (vistorias) {
-            vists.push(...vistorias);
+            if (Array.isArray(vistorias)) {
+              vists.push(...vistorias);
+            } else {
+              vists.push(vistorias);
+            }
           }
           if (nestedPausas) {
-            pausas.push(...nestedPausas);
+            if (Array.isArray(nestedPausas)) {
+              pausas.push(...nestedPausas);
+            } else {
+              pausas.push(nestedPausas);
+            }
           }
           if (termos_compromisso) {
-            termos.push(...termos_compromisso);
+            if (Array.isArray(termos_compromisso)) {
+              termos.push(...termos_compromisso);
+            } else {
+              termos.push(termos_compromisso);
+            }
           }
         });
       });

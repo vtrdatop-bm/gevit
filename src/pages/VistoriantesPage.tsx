@@ -216,13 +216,25 @@ export default function VistoriantesPage() {
           flatProcessos.push(procObj);
 
           if (vistorias) {
-            flatVistorias.push(...vistorias);
+            if (Array.isArray(vistorias)) {
+              flatVistorias.push(...vistorias);
+            } else {
+              flatVistorias.push(vistorias);
+            }
           }
           if (pausas) {
-            flatPausas.push(...pausas);
+            if (Array.isArray(pausas)) {
+              flatPausas.push(...pausas);
+            } else {
+              flatPausas.push(pausas);
+            }
           }
           if (termos_compromisso) {
-            flatTermos.push(...termos_compromisso);
+            if (Array.isArray(termos_compromisso)) {
+              flatTermos.push(...termos_compromisso);
+            } else {
+              flatTermos.push(termos_compromisso);
+            }
           }
         });
       });

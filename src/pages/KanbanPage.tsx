@@ -148,13 +148,25 @@ export default function KanbanPage() {
           procs.push(procObj);
 
           if (vistorias) {
-            vistoriasData.push(...vistorias);
+            if (Array.isArray(vistorias)) {
+              vistoriasData.push(...vistorias);
+            } else {
+              vistoriasData.push(vistorias);
+            }
           }
           if (pausas) {
-            pausasData.push(...pausas);
+            if (Array.isArray(pausas)) {
+              pausasData.push(...pausas);
+            } else {
+              pausasData.push(pausas);
+            }
           }
           if (termos_compromisso) {
-            termosData.push(...termos_compromisso);
+            if (Array.isArray(termos_compromisso)) {
+              termosData.push(...termos_compromisso);
+            } else {
+              termosData.push(termos_compromisso);
+            }
           }
         });
       });
