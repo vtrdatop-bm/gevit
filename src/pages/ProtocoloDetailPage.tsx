@@ -249,6 +249,8 @@ export default function ProtocoloDetailPage() {
         data_evento: protocolo.data_evento || "",
         urgente: protocolo.urgente || false,
         motivo_urgencia: protocolo.motivo_urgencia || "",
+        agendar: protocolo.agendar || false,
+        data_agendamento: protocolo.data_agendamento || "",
       });
     }
   }, [protocolo, editing]);
@@ -307,6 +309,8 @@ export default function ProtocoloDetailPage() {
       data_evento: editForm.data_evento || null,
       urgente: !!editForm.urgente,
       motivo_urgencia: editForm.motivo_urgencia?.trim() || null,
+      agendar: !!editForm.agendar,
+      data_agendamento: editForm.data_agendamento || null,
     }).eq("id", protocolo.id).select();
 
     if (error) {
@@ -793,6 +797,17 @@ export default function ProtocoloDetailPage() {
                                   />
                                   <label htmlFor="urgente" className="text-sm font-medium select-none cursor-pointer">Urgente</label>
                                 </div>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    id="agendar"
+                                    checked={!!editForm.agendar}
+                                    onChange={e => handleEditChange("agendar", e.target.checked)}
+                                    className="accent-primary w-4 h-4"
+                                    disabled={isCancelado}
+                                  />
+                                  <label htmlFor="agendar" className="text-sm font-medium select-none cursor-pointer">Agendar</label>
+                                </div>
                               </div>
                               {editForm.evento_unico && (
                                 <div className="flex items-center gap-2 mt-1">
@@ -832,6 +847,20 @@ export default function ProtocoloDetailPage() {
                                     className={inputClass}
                                     disabled={isCancelado}
                                     required={!!editForm.urgente}
+                                  />
+                                </div>
+                              )}
+                              {editForm.agendar && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <label htmlFor="data_agendamento" className="text-sm font-medium">Data do Agendamento</label>
+                                  <input
+                                    type="date"
+                                    id="data_agendamento"
+                                    value={editForm.data_agendamento || ""}
+                                    onChange={e => handleEditChange("data_agendamento", e.target.value)}
+                                    className="h-9 rounded border border-input px-2 text-sm"
+                                    required={!!editForm.agendar}
+                                    disabled={isCancelado}
                                   />
                                 </div>
                               )}
