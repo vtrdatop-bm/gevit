@@ -25,6 +25,7 @@ export default function CalendarioPage() {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [isWeekViewOpen, setIsWeekViewOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -84,7 +85,13 @@ export default function CalendarioPage() {
           </div>
         </div>
         
-        <div className="flex gap-1">
+        <div className="flex gap-1 items-center">
+          <button 
+            onClick={() => setIsWeekViewOpen(true)} 
+            className="px-4 py-1.5 text-sm font-semibold hover:bg-primary hover:text-primary-foreground bg-primary/10 text-primary rounded-md transition-colors mr-2"
+          >
+            Ver semana
+          </button>
           <button onClick={prevMonth} className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -134,10 +141,10 @@ export default function CalendarioPage() {
                 </div>
                 {dayAgendamentos.length > 0 && (
                   <div className="flex-1 flex flex-col items-center justify-center pb-2">
-                    <span className="text-4xl font-black text-green-600 leading-none">
+                    <span className="text-4xl font-bold text-primary leading-none">
                       {dayAgendamentos.length}
                     </span>
-                    <span className="text-xs font-semibold text-green-700 mt-1 uppercase tracking-wider">
+                    <span className="text-xs font-medium text-muted-foreground mt-1 uppercase tracking-wider">
                       {dayAgendamentos.length === 1 ? "Vistoria" : "Vistorias"}
                     </span>
                   </div>
@@ -173,6 +180,62 @@ export default function CalendarioPage() {
                   <span className="text-sm text-muted-foreground">{a.nome_fantasia || a.razao_social}</span>
                 </div>
               ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isWeekViewOpen} onOpenChange={setIsWeekViewOpen}>
+        <DialogContent className="max-w-7xl w-[95vw] h-[85vh] flex flex-col p-6">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <CalendarIcon className="h-6 w-6 text-primary" />
+              Agendamentos da Semana
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 flex gap-4 overflow-x-auto overflow-y-hidden mt-4 pb-2">
+            {eachDayOfInterval({ 
+              start: startOfWeek(currentDate), 
+              end: endOfWeek(currentDate) 
+            }).map((day, i) => {
+              const dayKey = format(day, "yyyy-MM-dd");
+              const dayAgendamentos = agendamentos.filter(a => a.data_agendamento === dayKey);
+              
+              return (
+                <div key={dayKey} className={cn(
+                  "flex-1 min-w-[180px] flex flex-col rounded-xl border bg-card overflow-hidden",
+                  isToday(day) ? "border-primary ring-2 ring-primary/20" : "border-border"
+                )}>
+                  <div className={cn(
+                    "p-3 text-center border-b",
+                    isToday(day) ? "bg-primary text-primary-foreground" : "bg-muted/30 text-foreground"
+                  )}>
+                    <div className="text-sm font-medium uppercase tracking-wider">{weekDays[i]}</div>
+                    <div className="text-3xl font-bold mt-1">{format(day, dateFormat)}</div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-muted/5">
+                    {dayAgendamentos.length === 0 ? (
+                      <div className="text-sm text-center text-muted-foreground p-6 opacity-50">
+                        Nenhum agendamento
+                      </div>
+                    ) : (
+                      dayAgendamentos.map(a => (
+                        <div
+                          key={a.id}
+                          onClick={() => {
+                            setIsWeekViewOpen(false);
+                            navigate(`/protocolo/${a.id}`);
+                          }}
+                          className="flex flex-col p-3 bg-background border rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all group"
+                        >
+                          <div className="font-bold text-primary group-hover:text-primary/80 mb-1 leading-tight">{a.numero}</div>
+                          <div className="text-xs text-muted-foreground line-clamp-3">{a.nome_fantasia || a.razao_social}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </DialogContent>
       </Dialog>
