@@ -124,21 +124,24 @@ export default function CalendarioPage() {
                   dayAgendamentos.length > 0 && "cursor-pointer hover:border-primary/50 transition-colors"
                 )}
               >
-                <div className="flex justify-between items-center mb-1">
+                <div className="flex justify-between items-start w-full">
                   <span className={cn(
                     "text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full",
                     isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
                   )}>
                     {format(day, dateFormat)}
                   </span>
-                  {dayAgendamentos.length > 0 && (
-                    <span className="text-[10px] font-medium bg-green-100 text-green-700 px-1.5 rounded">
+                </div>
+                {dayAgendamentos.length > 0 && (
+                  <div className="flex-1 flex flex-col items-center justify-center pb-2">
+                    <span className="text-4xl font-black text-green-600 leading-none">
                       {dayAgendamentos.length}
                     </span>
-                  )}
-                </div>
-
-
+                    <span className="text-xs font-semibold text-green-700 mt-1 uppercase tracking-wider">
+                      {dayAgendamentos.length === 1 ? "Vistoria" : "Vistorias"}
+                    </span>
+                  </div>
+                )}
               </div>
             )
           })}
