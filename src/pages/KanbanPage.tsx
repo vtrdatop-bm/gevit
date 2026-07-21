@@ -727,6 +727,7 @@ export default function KanbanPage() {
               )}
             </div>
           );
+        })}
       </div>
 
       {selectedProtocolIds.length > 0 && (
