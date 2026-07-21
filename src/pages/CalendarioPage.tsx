@@ -141,7 +141,7 @@ export default function CalendarioPage() {
                 </div>
                 {dayAgendamentos.length > 0 && (
                   <div className="flex-1 flex flex-col items-center justify-center pb-2">
-                    <span className="text-4xl font-bold text-primary leading-none">
+                    <span className="text-3xl font-bold text-primary leading-none">
                       {dayAgendamentos.length}
                     </span>
                     <span className="text-xs font-medium text-muted-foreground mt-1 uppercase tracking-wider">
