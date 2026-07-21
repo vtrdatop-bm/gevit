@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
 import { Calendar, User, MapPin, Clock, Building2, Maximize2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft } from "lucide-react";
 import { cn, formatArea, formatCpfCnpj, getCpfCnpjLabel } from "@/lib/utils";
@@ -59,6 +60,8 @@ interface ProcessoWithProtocolo {
     evento_unico?: boolean;
     ligar_antes?: boolean;
     data_evento?: string | null;
+    agendar?: boolean;
+    data_agendamento?: string | null;
   };
   regional_nome?: string;
   vistoriador_nome?: string;
@@ -79,55 +82,58 @@ export default function KanbanPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (isDev) {
-        setProcessos(KANBAN_MOCK_PROCESSOS as any);
-        setRegionaisMap({ "r1": "Regional Centro" });
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      try {
-        const [
-          p,
-          regionais,
-          profiles,
-          bairrosData
-        ] = await Promise.all([
-          fetchAllRows<any>((from, to) =>
-            supabase
-              .from("protocolos")
-              .select(`
-                id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento, agendar,
-                processos(
-                  id,
-                  protocolo_id,
-                  status,
-                  regional_id,
-                  data_prevista,
-                  vistoriador_id,
-                  created_at,
-                  updated_at,
-                  vistorias(
-                    processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id
-                  ),
-                  pausas(processo_id, data_inicio, data_fim, etapa),
-                  termos_compromisso(processo_id, data_validade)
-                )
-              `)
-              .order("created_at", { ascending: false })
-              .range(from, to)
-          ),
-          supabase.from("regionais").select("id, nome").order("nome").then(res => res.data),
-          supabase.from("profiles").select("user_id, patente, nome_guerra").then(res => res.data),
-          supabase.from("bairros").select("nome, municipio, regional_id").then(res => res.data),
-        ]);
+  const [selectedProtocolIds, setSelectedProtocolIds] = useState<string[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
 
-        const protocolosData = (p || []).map((proto: any) => {
-          const { processos, ...rest } = proto;
-          return rest;
-        });
+  const fetchData = useCallback(async () => {
+    if (isDev) {
+      setProcessos(KANBAN_MOCK_PROCESSOS as any);
+      setRegionaisMap({ "r1": "Regional Centro" });
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const [
+        p,
+        regionais,
+        profiles,
+        bairrosData
+      ] = await Promise.all([
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("protocolos")
+            .select(`
+              id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento, agendar, data_agendamento,
+              processos(
+                id,
+                protocolo_id,
+                status,
+                regional_id,
+                data_prevista,
+                vistoriador_id,
+                created_at,
+                updated_at,
+                vistorias(
+                  processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id
+                ),
+                pausas(processo_id, data_inicio, data_fim, etapa),
+                termos_compromisso(processo_id, data_validade)
+              )
+            `)
+            .order("created_at", { ascending: false })
+            .range(from, to)
+        ),
+        supabase.from("regionais").select("id, nome").order("nome").then(res => res.data),
+        supabase.from("profiles").select("user_id, patente, nome_guerra").then(res => res.data),
+        supabase.from("bairros").select("nome, municipio, regional_id").then(res => res.data),
+      ]);
+
+      const protocolosData = (p || []).map((proto: any) => {
+        const { processos, ...rest } = proto;
+        return rest;
+      });
 
       const procs: any[] = [];
       const vistoriasData: any[] = [];
@@ -186,7 +192,6 @@ export default function KanbanPage() {
 
       const vistoriaMap: Record<string, VistoriaData> = {};
       (vistoriasData || []).forEach((v: any) => {
-        // Keep the most recently updated record when duplicated rows exist for the same processo.
         if (!vistoriaMap[v.processo_id]) {
           vistoriaMap[v.processo_id] = v;
         }
@@ -210,48 +215,48 @@ export default function KanbanPage() {
 
       const mapped: ProcessoWithProtocolo[] = canonicalProcesses
         .map((p: any) => {
-        const protocolo = p.protocolos || protocoloById[p.protocolo_id] || null;
-        if (!protocolo) {
-          return null;
-        }
+          const protocolo = p.protocolos || protocoloById[p.protocolo_id] || null;
+          if (!protocolo) {
+            return null;
+          }
 
-        let resolvedRegionalId = p.regional_id;
-        if (!resolvedRegionalId) {
-          resolvedRegionalId = bairroRegionalMap[`${(protocolo.bairro || "").toUpperCase()}|${(protocolo.municipio || "").toUpperCase()}`] || null;
-        }
-        const vistoria = vistoriaMap[p.id] || null;
-        const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vistoria);
-        const finalStatus = resolveConsistentDisplayStatus({
-          dbStatus: p.status,
-          vistoria,
-          dataSolicitacao: protocolo?.data_solicitacao,
-          pausas: pausasByProcesso[p.id] || [],
-          termoValidade: termosMap[p.id] || null,
-        });
-        const deadlineResult = computeDeadline(vistoria, pausasByProcesso[p.id] || [], finalStatus, termosMap[p.id] || null);
+          let resolvedRegionalId = p.regional_id;
+          if (!resolvedRegionalId) {
+            resolvedRegionalId = bairroRegionalMap[`${(protocolo.bairro || "").toUpperCase()}|${(protocolo.municipio || "").toUpperCase()}`] || null;
+          }
+          const vistoria = vistoriaMap[p.id] || null;
+          const activeVistoriadorId = getCurrentVistoriadorId(p.vistoriador_id, vistoria);
+          const finalStatus = resolveConsistentDisplayStatus({
+            dbStatus: p.status,
+            vistoria,
+            dataSolicitacao: protocolo?.data_solicitacao,
+            pausas: pausasByProcesso[p.id] || [],
+            termoValidade: termosMap[p.id] || null,
+          });
+          const deadlineResult = computeDeadline(vistoria, pausasByProcesso[p.id] || [], finalStatus, termosMap[p.id] || null);
 
-        return {
-          id: p.id,
-          protocolo_id: p.protocolo_id,
-          dbStatus: p.status,
-          displayStatus: finalStatus as DisplayStatus,
-          stage: computeStage(vistoria),
-          data_prevista: p.data_prevista,
-          data_solicitacao: protocolo?.data_solicitacao || "",
-          vistoriador_id: activeVistoriadorId,
-          regional_id: resolvedRegionalId,
-          protocolos: protocolo,
-          regional_nome: regMap[resolvedRegionalId || ""] || "",
-          vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
-          dias_restantes: p.data_prevista
-            ? differenceInDays(new Date(p.data_prevista), new Date())
-            : 999,
-          deadline: deadlineResult,
-          data_1_retorno: vistoria?.data_1_retorno || null,
-          data_2_retorno: vistoria?.data_2_retorno || null,
-          vistoria_completa: vistoria,
-        };
-      })
+          return {
+            id: p.id,
+            protocolo_id: p.protocolo_id,
+            dbStatus: p.status,
+            displayStatus: finalStatus as DisplayStatus,
+            stage: computeStage(vistoria),
+            data_prevista: p.data_prevista,
+            data_solicitacao: protocolo?.data_solicitacao || "",
+            vistoriador_id: activeVistoriadorId,
+            regional_id: resolvedRegionalId,
+            protocolos: protocolo,
+            regional_nome: regMap[resolvedRegionalId || ""] || "",
+            vistoriador_nome: profMap[activeVistoriadorId || ""] || "Não atribuído",
+            dias_restantes: p.data_prevista
+              ? differenceInDays(new Date(p.data_prevista), new Date())
+              : 999,
+            deadline: deadlineResult,
+            data_1_retorno: vistoria?.data_1_retorno || null,
+            data_2_retorno: vistoria?.data_2_retorno || null,
+            vistoria_completa: vistoria,
+          };
+        })
         .filter((item): item is ProcessoWithProtocolo => item !== null);
 
       const protocoloIdsComProcesso = new Set((mapped || []).map((p) => p.protocolo_id));
@@ -291,11 +296,56 @@ export default function KanbanPage() {
 
       setProcessos([...(mapped || []), ...orfaos]);
       setRegionaisMap(regMap);
-      } catch (err) {
-        console.error(err);
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+  }, [isDev]);
+
+  const handleBulkSchedule = async () => {
+    if (selectedProtocolIds.length === 0 || !scheduledDate) return;
+    try {
+      if (isDev) {
+        setProcessos(prev =>
+          prev.map(p => {
+            if (selectedProtocolIds.includes(p.protocolo_id)) {
+              return {
+                ...p,
+                protocolos: {
+                  ...p.protocolos,
+                  agendar: true,
+                  data_agendamento: scheduledDate,
+                }
+              };
+            }
+            return p;
+          })
+        );
+      } else {
+        const { error } = await supabase
+          .from("protocolos")
+          .update({
+            agendar: true,
+            data_agendamento: scheduledDate
+          })
+          .in("id", selectedProtocolIds);
+
+        if (error) throw error;
       }
-      setLoading(false);
-    };
+      toast.success(`${selectedProtocolIds.length} protocolo(s) agendado(s) com sucesso!`);
+      setSelectedProtocolIds([]);
+      setScheduledDate("");
+      setIsModalOpen(false);
+      if (!isDev) {
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao realizar agendamento: " + err.message);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
 
     const channel = supabase
@@ -310,7 +360,7 @@ export default function KanbanPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isDev]);
+  }, [fetchData]);
 
   const filteredProcessos = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -495,9 +545,26 @@ export default function KanbanPage() {
                                   title="Clique duplo para abrir detalhes do protocolo"
                                 >
                                 <div className="flex items-start justify-between gap-2 mb-2">
-                                  <span className="text-xs font-mono text-muted-foreground shrink-0">
-                                    {process.protocolos.numero}
-                                  </span>
+                                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedProtocolIds.includes(process.protocolo_id)}
+                                      onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        setSelectedProtocolIds(prev => {
+                                          if (checked) {
+                                            return [...prev, process.protocolo_id];
+                                          } else {
+                                            return prev.filter(id => id !== process.protocolo_id);
+                                          }
+                                        });
+                                      }}
+                                      className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                    />
+                                    <span className="text-xs font-mono text-muted-foreground">
+                                      {process.protocolos.numero}
+                                    </span>
+                                  </div>
                                   <div className="ml-2 flex flex-wrap justify-end gap-1">
                                     {process.protocolos.evento_unico && (
                                       <span className="font-bold text-xs bg-cyan-100 text-cyan-700 border border-cyan-400 px-2 py-0.5 rounded">
@@ -505,8 +572,8 @@ export default function KanbanPage() {
                                       </span>
                                     )}
                                     {process.protocolos.agendar && (
-                                      <span className="font-bold text-xs bg-green-100 text-green-700 border border-green-400 px-2 py-0.5 rounded">
-                                        Agendado
+                                      <span className="font-bold text-xs bg-green-100 text-green-700 border border-green-400 px-2 py-0.5 rounded" title={process.protocolos.data_agendamento ? `Agendado para ${new Date(process.protocolos.data_agendamento + "T00:00:00").toLocaleDateString("pt-BR")}` : undefined}>
+                                        Agendado{process.protocolos.data_agendamento && ` (${new Date(process.protocolos.data_agendamento + "T00:00:00").toLocaleDateString("pt-BR")})`}
                                       </span>
                                     )}
                                     {process.protocolos.ligar_antes && (
@@ -660,8 +727,72 @@ export default function KanbanPage() {
               )}
             </div>
           );
-        })}
       </div>
+
+      {selectedProtocolIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background/95 backdrop-blur border border-border shadow-lg rounded-full px-6 py-3.5 flex items-center gap-4 animate-in slide-in-from-bottom-4 duration-200">
+          <span className="text-sm font-medium text-foreground">
+            {selectedProtocolIds.length} {selectedProtocolIds.length === 1 ? "protocolo selecionado" : "protocolos selecionados"}
+          </span>
+          <div className="h-4 w-px bg-border" />
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/95 px-4 py-2 rounded-full transition-colors"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            Agendar
+          </button>
+          <button
+            onClick={() => setSelectedProtocolIds([])}
+            className="text-xs text-muted-foreground hover:text-foreground font-medium px-2 py-1.5"
+          >
+            Limpar
+          </button>
+        </div>
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg animate-in zoom-in-95 duration-150">
+            <h3 className="text-lg font-semibold text-foreground mb-1">Agendar em Lote</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Escolha a data de agendamento para os {selectedProtocolIds.length} protocolos selecionados.
+            </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="bulk-schedule-date" className="text-xs font-medium text-muted-foreground">
+                  Data do Agendamento
+                </label>
+                <input
+                  id="bulk-schedule-date"
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setScheduledDate("");
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleBulkSchedule}
+                  disabled={!scheduledDate}
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
