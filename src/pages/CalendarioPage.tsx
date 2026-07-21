@@ -5,6 +5,12 @@ import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-reac
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Agendamento {
   id: string;
@@ -18,6 +24,7 @@ export default function CalendarioPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,10 +77,10 @@ export default function CalendarioPage() {
             <CalendarIcon className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground capitalize">
-              {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+            <h1 className="text-xl font-bold text-foreground">
+              Agendamentos
             </h1>
-            <p className="text-sm text-muted-foreground">Calendário de Agendamentos</p>
+            <p className="text-sm text-muted-foreground capitalize">{format(currentDate, "MMMM yyyy", { locale: ptBR })}</p>
           </div>
         </div>
         
@@ -107,10 +114,14 @@ export default function CalendarioPage() {
             return (
               <div 
                 key={dayKey}
+                onClick={() => {
+                  if (dayAgendamentos.length > 0) setSelectedDay(day);
+                }}
                 className={cn(
                   "bg-card border rounded-md p-1.5 flex flex-col gap-1 overflow-hidden min-h-[100px]",
                   !isSameMonth(day, monthStart) ? "opacity-40 bg-muted/50" : "",
-                  isToday(day) ? "border-primary/50 ring-1 ring-primary/20" : "border-border"
+                  isToday(day) ? "border-primary/50 ring-1 ring-primary/20" : "border-border",
+                  dayAgendamentos.length > 0 && "cursor-pointer hover:border-primary/50 transition-colors"
                 )}
               >
                 <div className="flex justify-between items-center mb-1">
@@ -127,15 +138,14 @@ export default function CalendarioPage() {
                   )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar pointer-events-none">
                   {dayAgendamentos.map(a => (
                     <div
                       key={a.id}
-                      onClick={() => navigate(`/protocolo/${a.id}`)}
-                      className="text-[10px] leading-tight p-1.5 bg-green-50/50 border border-green-200/60 hover:bg-green-100/50 hover:border-green-300 rounded cursor-pointer transition-colors break-words group"
+                      className="text-[10px] leading-tight p-1.5 bg-green-50/50 border border-green-200/60 rounded break-words group"
                       title={`${a.numero} - ${a.nome_fantasia || a.razao_social}`}
                     >
-                      <div className="font-bold text-green-800 group-hover:text-green-900">{a.numero}</div>
+                      <div className="font-bold text-green-800">{a.numero}</div>
                       <div className="text-muted-foreground truncate">{a.nome_fantasia || a.razao_social}</div>
                     </div>
                   ))}
@@ -145,6 +155,35 @@ export default function CalendarioPage() {
           })}
         </div>
       </div>
+
+      <Dialog open={!!selectedDay} onOpenChange={(open) => !open && setSelectedDay(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Agendamentos para {selectedDay ? format(selectedDay, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto mt-4 pr-2">
+            {selectedDay && agendamentos
+              .filter(a => a.data_agendamento === format(selectedDay, "yyyy-MM-dd"))
+              .map(a => (
+                <div
+                  key={a.id}
+                  onClick={() => navigate(`/protocolo/${a.id}`)}
+                  className="flex flex-col p-3 border rounded-md cursor-pointer hover:bg-muted/50 hover:border-primary/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="font-bold text-foreground text-sm">{a.numero}</span>
+                    <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200">
+                      Agendado
+                    </span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">{a.nome_fantasia || a.razao_social}</span>
+                </div>
+              ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
