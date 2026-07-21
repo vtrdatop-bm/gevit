@@ -18,7 +18,10 @@ interface Agendamento {
   nome_fantasia: string;
   razao_social: string;
   data_agendamento: string;
+  bairro?: string | null;
+  municipio?: string | null;
   processos?: {
+    regional_id?: string | null;
     regionais?: {
       nome: string;
     } | null;
@@ -33,6 +36,23 @@ export default function CalendarioPage() {
   const [isWeekViewOpen, setIsWeekViewOpen] = useState(false);
   const navigate = useNavigate();
 
+  const [regionaisMap, setRegionaisMap] = useState<Record<string, string>>({});
+  const [bairroRegionalMap, setBairroRegionalMap] = useState<Record<string, string>>({});
+
+  const getRegionalName = (a: Agendamento) => {
+    if (a.processos && a.processos.length > 0) {
+      if (a.processos[0].regionais?.nome) return a.processos[0].regionais.nome;
+      if (a.processos[0].regional_id && regionaisMap[a.processos[0].regional_id]) {
+        return regionaisMap[a.processos[0].regional_id];
+      }
+    }
+    if (a.bairro && a.municipio) {
+      const regId = bairroRegionalMap[`${a.bairro}|${a.municipio}`];
+      if (regId && regionaisMap[regId]) return regionaisMap[regId];
+    }
+    return null;
+  };
+
   useEffect(() => {
     async function fetchAgendamentos() {
       setLoading(true);
@@ -42,17 +62,31 @@ export default function CalendarioPage() {
       const startStr = format(start, 'yyyy-MM-dd');
       const endStr = format(end, 'yyyy-MM-dd');
 
-      const { data, error } = await supabase
-        .from("protocolos")
-        .select("id, numero, nome_fantasia, razao_social, data_agendamento, processos(regionais(nome))")
-        .eq("agendar", true)
-        .gte("data_agendamento", startStr)
-        .lte("data_agendamento", endStr)
-        .order("data_agendamento", { ascending: true });
+      const [{ data, error }, { data: regionaisData }, { data: bairrosData }] = await Promise.all([
+        supabase
+          .from("protocolos")
+          .select("id, numero, nome_fantasia, razao_social, data_agendamento, bairro, municipio, processos(regional_id, regionais(nome))")
+          .eq("agendar", true)
+          .gte("data_agendamento", startStr)
+          .lte("data_agendamento", endStr)
+          .order("data_agendamento", { ascending: true }),
+        supabase.from("regionais").select("id, nome"),
+        supabase.from("bairros").select("nome, municipio, regional_id")
+      ]);
 
       if (error) {
         console.error("Erro ao buscar agendamentos:", error);
       } else {
+        const rm: Record<string, string> = {};
+        (regionaisData || []).forEach((r: any) => { rm[r.id] = r.nome; });
+        setRegionaisMap(rm);
+
+        const brm: Record<string, string> = {};
+        (bairrosData || []).forEach((b: any) => {
+          if (b.regional_id) brm[`${b.nome}|${b.municipio}`] = b.regional_id;
+        });
+        setBairroRegionalMap(brm);
+
         setAgendamentos(data || []);
       }
       setLoading(false);
@@ -183,8 +217,8 @@ export default function CalendarioPage() {
                     </span>
                   </div>
                   <span className="text-sm text-muted-foreground">{a.nome_fantasia || a.razao_social}</span>
-                  {a.processos && a.processos.length > 0 && a.processos[0].regionais?.nome && (
-                    <span className="text-xs font-semibold text-muted-foreground/80 mt-1 uppercase line-clamp-1">{a.processos[0].regionais.nome}</span>
+                  {getRegionalName(a) && (
+                    <span className="text-xs font-semibold text-muted-foreground/80 mt-1 uppercase line-clamp-1">{getRegionalName(a)}</span>
                   )}
                 </div>
               ))}
@@ -237,8 +271,8 @@ export default function CalendarioPage() {
                         >
                           <div className="text-xs font-bold text-primary group-hover:text-primary/80 mb-0.5 leading-tight">{a.numero}</div>
                           <div className="text-[10px] md:text-[11px] text-muted-foreground line-clamp-3 leading-snug">{a.nome_fantasia || a.razao_social}</div>
-                          {a.processos && a.processos.length > 0 && a.processos[0].regionais?.nome && (
-                            <div className="text-[9px] md:text-[10px] font-semibold text-muted-foreground/80 mt-0.5 uppercase line-clamp-1">{a.processos[0].regionais.nome}</div>
+                          {getRegionalName(a) && (
+                            <div className="text-[9px] md:text-[10px] font-semibold text-muted-foreground/80 mt-0.5 uppercase line-clamp-1">{getRegionalName(a)}</div>
                           )}
                         </div>
                       ))
