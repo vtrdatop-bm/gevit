@@ -17,6 +17,7 @@ import {
   Flame,
   ChevronLeft,
   LogOut,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,6 +36,7 @@ const allNavItems = [
   { path: "/protocolos", label: "Protocolos", icon: FileText, roles: ["admin", "distribuidor"] },
   { path: "/vistoriantes", label: "Vistoriantes", icon: Users, roles: ["admin", "distribuidor"] },
   { path: "/kanban", label: "Gerenciamento", icon: Columns3, roles: ["admin", "distribuidor"] },
+  { path: "/calendario", label: "Calendário", icon: CalendarDays, roles: ["admin", "distribuidor"] },
   { path: "/vistorias", label: "Minhas Vistorias", icon: ClipboardList, roles: ["admin", "distribuidor", "vistoriador"] },
   { path: "/mapa", label: "Mapa", icon: Map, roles: ["admin", "distribuidor", "vistoriador"] },
   { path: "/rotas", label: "Rotas", icon: Route, roles: ["admin", "distribuidor", "vistoriador"] },

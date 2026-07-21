@@ -21,6 +21,7 @@ import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 
 import NotFound from "@/pages/NotFound";
+import CalendarioPage from "@/pages/CalendarioPage";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ function ProtectedRoutes() {
           <Route path="/" element={<DashboardPage />} />
         )}
         {!isVistoriador && <Route path="/kanban" element={<KanbanPage />} />}
+        {!isVistoriador && <Route path="/calendario" element={<CalendarioPage />} />}
         <Route path="/mapa" element={<MapPage />} />
         {!isVistoriador && <Route path="/protocolos" element={<ProtocolosPage />} />}
         {!isVistoriador && <Route path="/vistoriantes" element={<VistoriantesPage />} />}
