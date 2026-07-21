@@ -138,18 +138,7 @@ export default function CalendarioPage() {
                   )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar pointer-events-none">
-                  {dayAgendamentos.map(a => (
-                    <div
-                      key={a.id}
-                      className="text-[10px] leading-tight p-1.5 bg-green-50/50 border border-green-200/60 rounded break-words group"
-                      title={`${a.numero} - ${a.nome_fantasia || a.razao_social}`}
-                    >
-                      <div className="font-bold text-green-800">{a.numero}</div>
-                      <div className="text-muted-foreground truncate">{a.nome_fantasia || a.razao_social}</div>
-                    </div>
-                  ))}
-                </div>
+
               </div>
             )
           })}
