@@ -185,14 +185,14 @@ export default function CalendarioPage() {
       </Dialog>
 
       <Dialog open={isWeekViewOpen} onOpenChange={setIsWeekViewOpen}>
-        <DialogContent className="max-w-7xl w-[95vw] h-[85vh] flex flex-col p-6">
+        <DialogContent className="max-w-[98vw] w-[98vw] h-[85vh] flex flex-col p-4 md:p-6">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               <CalendarIcon className="h-6 w-6 text-primary" />
               Agendamentos da Semana
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 flex gap-4 overflow-x-auto overflow-y-hidden mt-4 pb-2">
+          <div className="flex-1 flex gap-2 md:gap-3 overflow-x-auto overflow-y-hidden mt-4 pb-2">
             {eachDayOfInterval({ 
               start: startOfWeek(currentDate), 
               end: endOfWeek(currentDate) 
@@ -202,19 +202,19 @@ export default function CalendarioPage() {
               
               return (
                 <div key={dayKey} className={cn(
-                  "flex-1 min-w-[180px] flex flex-col rounded-xl border bg-card overflow-hidden",
+                  "flex-1 min-w-[130px] md:min-w-[150px] flex flex-col rounded-xl border bg-card overflow-hidden",
                   isToday(day) ? "border-primary ring-2 ring-primary/20" : "border-border"
                 )}>
                   <div className={cn(
-                    "p-3 text-center border-b",
+                    "p-2 text-center border-b",
                     isToday(day) ? "bg-primary text-primary-foreground" : "bg-muted/30 text-foreground"
                   )}>
-                    <div className="text-sm font-medium uppercase tracking-wider">{weekDays[i]}</div>
-                    <div className="text-3xl font-bold mt-1">{format(day, dateFormat)}</div>
+                    <div className="text-xs md:text-sm font-medium uppercase tracking-wider">{weekDays[i]}</div>
+                    <div className="text-2xl md:text-3xl font-bold mt-1">{format(day, dateFormat)}</div>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-muted/5">
+                  <div className="flex-1 overflow-y-auto p-1.5 md:p-2 space-y-1.5 custom-scrollbar bg-muted/5">
                     {dayAgendamentos.length === 0 ? (
-                      <div className="text-sm text-center text-muted-foreground p-6 opacity-50">
+                      <div className="text-xs md:text-sm text-center text-muted-foreground p-4 md:p-6 opacity-50">
                         Nenhum agendamento
                       </div>
                     ) : (
@@ -225,10 +225,10 @@ export default function CalendarioPage() {
                             setIsWeekViewOpen(false);
                             navigate(`/protocolo/${a.id}`);
                           }}
-                          className="flex flex-col p-3 bg-background border rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all group"
+                          className="flex flex-col p-2 bg-background border rounded-lg cursor-pointer hover:border-primary hover:shadow-md transition-all group"
                         >
-                          <div className="font-bold text-primary group-hover:text-primary/80 mb-1 leading-tight">{a.numero}</div>
-                          <div className="text-xs text-muted-foreground line-clamp-3">{a.nome_fantasia || a.razao_social}</div>
+                          <div className="text-xs font-bold text-primary group-hover:text-primary/80 mb-0.5 leading-tight">{a.numero}</div>
+                          <div className="text-[10px] md:text-[11px] text-muted-foreground line-clamp-3 leading-snug">{a.nome_fantasia || a.razao_social}</div>
                         </div>
                       ))
                     )}
