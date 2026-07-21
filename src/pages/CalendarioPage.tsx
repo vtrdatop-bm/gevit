@@ -18,6 +18,11 @@ interface Agendamento {
   nome_fantasia: string;
   razao_social: string;
   data_agendamento: string;
+  processos?: {
+    regionais?: {
+      nome: string;
+    } | null;
+  }[];
 }
 
 export default function CalendarioPage() {
@@ -39,7 +44,7 @@ export default function CalendarioPage() {
 
       const { data, error } = await supabase
         .from("protocolos")
-        .select("id, numero, nome_fantasia, razao_social, data_agendamento")
+        .select("id, numero, nome_fantasia, razao_social, data_agendamento, processos(regionais(nome))")
         .eq("agendar", true)
         .gte("data_agendamento", startStr)
         .lte("data_agendamento", endStr)
@@ -95,8 +100,8 @@ export default function CalendarioPage() {
           <button onClick={prevMonth} className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1.5 text-sm font-medium hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground">
-            Hoje
+          <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1.5 text-sm font-medium hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground capitalize">
+            {format(currentDate, "MMMM", { locale: ptBR })}
           </button>
           <button onClick={nextMonth} className="p-2 hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground">
             <ChevronRight className="h-5 w-5" />
@@ -178,6 +183,9 @@ export default function CalendarioPage() {
                     </span>
                   </div>
                   <span className="text-sm text-muted-foreground">{a.nome_fantasia || a.razao_social}</span>
+                  {a.processos && a.processos.length > 0 && a.processos[0].regionais?.nome && (
+                    <span className="text-xs font-semibold text-muted-foreground/80 mt-1 uppercase line-clamp-1">{a.processos[0].regionais.nome}</span>
+                  )}
                 </div>
               ))}
           </div>
@@ -229,6 +237,9 @@ export default function CalendarioPage() {
                         >
                           <div className="text-xs font-bold text-primary group-hover:text-primary/80 mb-0.5 leading-tight">{a.numero}</div>
                           <div className="text-[10px] md:text-[11px] text-muted-foreground line-clamp-3 leading-snug">{a.nome_fantasia || a.razao_social}</div>
+                          {a.processos && a.processos.length > 0 && a.processos[0].regionais?.nome && (
+                            <div className="text-[9px] md:text-[10px] font-semibold text-muted-foreground/80 mt-0.5 uppercase line-clamp-1">{a.processos[0].regionais.nome}</div>
+                          )}
                         </div>
                       ))
                     )}
