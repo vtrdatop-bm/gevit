@@ -99,7 +99,7 @@ export default function KanbanPage() {
             supabase
               .from("protocolos")
               .select(`
-                id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento,
+                id, numero, nome_fantasia, razao_social, cnpj, endereco, bairro, municipio, area, data_solicitacao, evento_unico, ligar_antes, data_evento, agendar,
                 processos(
                   id,
                   protocolo_id,
