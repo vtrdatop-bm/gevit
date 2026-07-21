@@ -504,6 +504,11 @@ export default function KanbanPage() {
                                         Evento Único
                                       </span>
                                     )}
+                                    {process.protocolos.agendar && (
+                                      <span className="font-bold text-xs bg-green-100 text-green-700 border border-green-400 px-2 py-0.5 rounded">
+                                        Agendado
+                                      </span>
+                                    )}
                                     {process.protocolos.ligar_antes && (
                                       <span className="font-bold text-xs bg-violet-100 text-violet-700 border border-violet-300 px-2 py-0.5 rounded">
                                         Ligar antes
