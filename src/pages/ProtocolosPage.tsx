@@ -113,6 +113,7 @@ export default function ProtocolosPage() {
   const [vistoriadores, setVistoriadores] = useState<{ id: string; name: string }[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedVistoriadorId, setSelectedVistoriadorId] = useState("");
+  const [assignDate, setAssignDate] = useState("");
 
   const { isDev } = useAuth();
 
@@ -404,7 +405,7 @@ export default function ProtocolosPage() {
   };
 
   const handleBulkAssign = async () => {
-    if (selectedProtocolIds.length === 0 || !selectedVistoriadorId) return;
+    if (selectedProtocolIds.length === 0 || !selectedVistoriadorId || !assignDate) return;
     try {
       if (isDev) {
         setProcessos(prev =>
@@ -420,7 +421,7 @@ export default function ProtocolosPage() {
           })
         );
       } else {
-        const todayStr = new Date().toISOString().split("T")[0];
+        const todayStr = assignDate;
         
         for (const protoId of selectedProtocolIds) {
           const proc = processoByProtocolo[protoId];
@@ -495,6 +496,7 @@ export default function ProtocolosPage() {
       toast.success(`${selectedProtocolIds.length} protocolo(s) atribuído(s) com sucesso!`);
       setSelectedProtocolIds([]);
       setSelectedVistoriadorId("");
+      setAssignDate("");
       setIsAssignModalOpen(false);
       if (!isDev) {
         fetchData();
@@ -1212,11 +1214,24 @@ export default function ProtocolosPage() {
                   ))}
                 </select>
               </div>
+              <div className="space-y-2">
+                <label htmlFor="bulk-assign-date" className="text-xs font-medium text-muted-foreground">
+                  Data de Atribuição
+                </label>
+                <input
+                  id="bulk-assign-date"
+                  type="date"
+                  value={assignDate}
+                  onChange={(e) => setAssignDate(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   onClick={() => {
                     setIsAssignModalOpen(false);
                     setSelectedVistoriadorId("");
+                    setAssignDate("");
                   }}
                   className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
                 >
@@ -1224,7 +1239,7 @@ export default function ProtocolosPage() {
                 </button>
                 <button
                   onClick={handleBulkAssign}
-                  disabled={!selectedVistoriadorId}
+                  disabled={!selectedVistoriadorId || !assignDate}
                   className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   Confirmar
