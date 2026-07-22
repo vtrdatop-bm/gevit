@@ -86,10 +86,19 @@ export default function KanbanPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
 
+  const [vistoriadores, setVistoriadores] = useState<{ id: string; name: string }[]>([]);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedVistoriadorId, setSelectedVistoriadorId] = useState("");
+
   const fetchData = useCallback(async () => {
     if (isDev) {
       setProcessos(KANBAN_MOCK_PROCESSOS as any);
       setRegionaisMap({ "r1": "Regional Centro" });
+      setVistoriadores([
+        { id: "v1", name: "Administrador (Dev)" },
+        { id: "v2", name: "Sgt. Silva" },
+        { id: "v3", name: "Cabo Souza" }
+      ]);
       setLoading(false);
       return;
     }
@@ -182,6 +191,12 @@ export default function KanbanPage() {
 
       const profMap: Record<string, string> = {};
       (profiles || []).forEach((p: any) => { profMap[p.user_id] = [p.patente, p.nome_guerra].filter(Boolean).join(" "); });
+
+      const listVistoriadores = (profiles || []).map((p: any) => ({
+        id: p.user_id,
+        name: [p.patente, p.nome_guerra].filter(Boolean).join(" ")
+      })).sort((a, b) => a.name.localeCompare(b.name));
+      setVistoriadores(listVistoriadores);
 
       const bairroRegionalMap: Record<string, string> = {};
       (bairrosData || []).forEach((b) => {
@@ -342,6 +357,115 @@ export default function KanbanPage() {
     } catch (err: any) {
       console.error(err);
       toast.error("Erro ao realizar agendamento: " + err.message);
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (selectedProtocolIds.length === 0 || !selectedVistoriadorId) return;
+    try {
+      if (isDev) {
+        setProcessos(prev =>
+          prev.map(p => {
+            if (selectedProtocolIds.includes(p.protocolo_id)) {
+              return {
+                ...p,
+                id: p.id.startsWith("proto-") ? `proc-${p.protocolo_id}` : p.id,
+                displayStatus: "atribuido" as DisplayStatus,
+                vistoriador_id: selectedVistoriadorId,
+                vistoriador_nome: vistoriadores.find(v => v.id === selectedVistoriadorId)?.name || "Vistoriador",
+              };
+            }
+            return p;
+          })
+        );
+      } else {
+        const todayStr = new Date().toISOString().split("T")[0];
+        
+        for (const protoId of selectedProtocolIds) {
+          const proc = processos.find(p => p.protocolo_id === protoId);
+          if (!proc) continue;
+
+          let targetProcessId = proc.id;
+
+          if (proc.id.startsWith("proto-")) {
+            const { data: newProc, error: procErr } = await supabase
+              .from("processos")
+              .insert({
+                protocolo_id: proc.protocolo_id,
+                status: "atribuido",
+                vistoriador_id: selectedVistoriadorId
+              })
+              .select("id")
+              .single();
+            if (procErr) throw procErr;
+
+            targetProcessId = newProc.id;
+
+            const { error: vistErr } = await supabase
+              .from("vistorias")
+              .insert({
+                processo_id: targetProcessId,
+                data_1_atribuicao: todayStr,
+                vistoriador_1_id: selectedVistoriadorId
+              });
+            if (vistErr) throw vistErr;
+          } else {
+            const { error: procErr } = await supabase
+              .from("processos")
+              .update({
+                status: "atribuido",
+                vistoriador_id: selectedVistoriadorId
+              })
+              .eq("id", proc.id);
+            if (procErr) throw procErr;
+
+            const { data: vistData } = await supabase
+              .from("vistorias")
+              .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
+              .eq("processo_id", proc.id)
+              .maybeSingle();
+
+            if (vistData) {
+              const stageNum = proc.stage || 1;
+              const vistUpdate: any = {};
+              if (stageNum === 2) {
+                vistUpdate.data_2_atribuicao = todayStr;
+                vistUpdate.vistoriador_2_id = selectedVistoriadorId;
+              } else if (stageNum === 3) {
+                vistUpdate.data_3_atribuicao = todayStr;
+                vistUpdate.vistoriador_3_id = selectedVistoriadorId;
+              } else {
+                vistUpdate.data_1_atribuicao = todayStr;
+                vistUpdate.vistoriador_1_id = selectedVistoriadorId;
+              }
+              const { error: vistErr } = await supabase
+                .from("vistorias")
+                .update(vistUpdate)
+                .eq("id", vistData.id);
+              if (vistErr) throw vistErr;
+            } else {
+              const { error: vistErr } = await supabase
+                .from("vistorias")
+                .insert({
+                  processo_id: proc.id,
+                  data_1_atribuicao: todayStr,
+                  vistoriador_1_id: selectedVistoriadorId
+                });
+              if (vistErr) throw vistErr;
+            }
+          }
+        }
+      }
+      toast.success(`${selectedProtocolIds.length} protocolo(s) atribuído(s) com sucesso!`);
+      setSelectedProtocolIds([]);
+      setSelectedVistoriadorId("");
+      setIsAssignModalOpen(false);
+      if (!isDev) {
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao realizar atribuição: " + err.message);
     }
   };
 
@@ -744,6 +868,13 @@ export default function KanbanPage() {
             Agendar
           </button>
           <button
+            onClick={() => setIsAssignModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/95 px-4 py-2 rounded-full transition-colors"
+          >
+            <User className="w-3.5 h-3.5" />
+            Atribuir
+          </button>
+          <button
             onClick={() => setSelectedProtocolIds([])}
             className="text-xs text-muted-foreground hover:text-foreground font-medium px-2 py-1.5"
           >
@@ -785,6 +916,55 @@ export default function KanbanPage() {
                 <button
                   onClick={handleBulkSchedule}
                   disabled={!scheduledDate}
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAssignModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg animate-in zoom-in-95 duration-150">
+            <h3 className="text-lg font-semibold text-foreground mb-1">Atribuir em Lote</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Selecione o vistoriador para os {selectedProtocolIds.length} protocolos selecionados.
+            </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="bulk-assign-vistoriador" className="text-xs font-medium text-muted-foreground">
+                  Vistoriador
+                </label>
+                <select
+                  id="bulk-assign-vistoriador"
+                  value={selectedVistoriadorId}
+                  onChange={(e) => setSelectedVistoriadorId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Selecione um vistoriador...</option>
+                  {vistoriadores.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setIsAssignModalOpen(false);
+                    setSelectedVistoriadorId("");
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleBulkAssign}
+                  disabled={!selectedVistoriadorId}
                   className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
                   Confirmar
