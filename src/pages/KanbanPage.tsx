@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -74,9 +74,22 @@ interface ProcessoWithProtocolo {
 
 export default function KanbanPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const restoredState = location.state as {
+    expandedRegionais?: string[];
+    selectedProcess?: string | null;
+  } | null;
+
   const { isDev, user } = useAuth();
-  const [selectedProcess, setSelectedProcess] = useState<string | null>(null);
-  const [expandedRegionais, setExpandedRegionais] = useState<Set<string>>(new Set());
+  const [selectedProcess, setSelectedProcess] = useState<string | null>(() => {
+    return restoredState?.selectedProcess || null;
+  });
+  const [expandedRegionais, setExpandedRegionais] = useState<Set<string>>(() => {
+    if (restoredState?.expandedRegionais) {
+      return new Set(restoredState.expandedRegionais);
+    }
+    return new Set();
+  });
   const [processos, setProcessos] = useState<ProcessoWithProtocolo[]>([]);
   const [regionaisMap, setRegionaisMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -779,7 +792,13 @@ export default function KanbanPage() {
                                   }
                                   onDoubleClick={(e) => {
                                     e.preventDefault();
-                                    navigate(`/protocolo/${process.protocolo_id}`);
+                                    navigate(`/protocolo/${process.protocolo_id}`, {
+                                      state: {
+                                        fromKanban: true,
+                                        expandedRegionais: Array.from(expandedRegionais),
+                                        selectedProcess: process.id
+                                      }
+                                    });
                                   }}
                                   title="Clique duplo para abrir detalhes do protocolo"
                                 >

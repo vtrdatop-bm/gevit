@@ -665,6 +665,16 @@ export default function ProtocoloDetailPage() {
   const inputClass = "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
   const handleBackNavigation = () => {
+    if (location.state?.fromKanban) {
+      navigate("/kanban", {
+        state: {
+          expandedRegionais: location.state.expandedRegionais,
+          selectedProcess: location.state.selectedProcess
+        }
+      });
+      return;
+    }
+
     if (location.key !== "default") {
       navigate(-1);
       return;
