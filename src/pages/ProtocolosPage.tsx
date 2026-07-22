@@ -216,6 +216,7 @@ export default function ProtocolosPage() {
             .range(from, to)
         ),
         supabase.from("profiles").select("user_id, patente, nome_guerra").then(res => res.data),
+        supabase.from("user_roles").select("user_id").eq("role", "vistoriador").then(res => res.data),
       ]);
 
       // Unpack nested data to preserve identical flat patterns and maps
