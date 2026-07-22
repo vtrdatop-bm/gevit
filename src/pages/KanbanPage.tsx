@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { Calendar, User, MapPin, Clock, Building2, Maximize2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft } from "lucide-react";
+import { Calendar, User, MapPin, Clock, Building2, Maximize2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft, CalendarOff, UserMinus } from "lucide-react";
 import { cn, formatArea, formatCpfCnpj, getCpfCnpjLabel } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 import { computeDeadline, deadlineColorClass, deadlineLabel, DeadlineResult, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
@@ -475,6 +475,115 @@ export default function KanbanPage() {
     }
   };
 
+  const handleBulkUnschedule = async () => {
+    if (selectedProtocolIds.length === 0) return;
+    try {
+      if (isDev) {
+        setProcessos(prev =>
+          prev.map(p => {
+            if (selectedProtocolIds.includes(p.protocolo_id)) {
+              return {
+                ...p,
+                protocolos: {
+                  ...p.protocolos,
+                  agendar: false,
+                  data_agendamento: null,
+                }
+              };
+            }
+            return p;
+          })
+        );
+      } else {
+        const { error } = await supabase
+          .from("protocolos")
+          .update({
+            agendar: false,
+            data_agendamento: null
+          })
+          .in("id", selectedProtocolIds);
+
+        if (error) throw error;
+      }
+      toast.success(`${selectedProtocolIds.length} agendamento(s) removido(s) com sucesso!`);
+      setSelectedProtocolIds([]);
+      if (!isDev) {
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao remover agendamento: " + err.message);
+    }
+  };
+
+  const handleBulkUnassign = async () => {
+    if (selectedProtocolIds.length === 0) return;
+    try {
+      if (isDev) {
+        setProcessos(prev =>
+          prev.map(p => {
+            if (selectedProtocolIds.includes(p.protocolo_id)) {
+              return {
+                ...p,
+                displayStatus: "regional" as DisplayStatus,
+                vistoriador_id: null,
+                vistoriador_nome: "Não atribuído",
+              };
+            }
+            return p;
+          })
+        );
+      } else {
+        for (const protoId of selectedProtocolIds) {
+          const proc = processos.find(p => p.protocolo_id === protoId);
+          if (!proc || proc.id.startsWith("proto-")) continue;
+
+          const { error: procErr } = await supabase
+            .from("processos")
+            .update({
+              vistoriador_id: null
+            })
+            .eq("id", proc.id);
+          if (procErr) throw procErr;
+
+          const { data: vistData } = await supabase
+            .from("vistorias")
+            .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
+            .eq("processo_id", proc.id)
+            .maybeSingle();
+
+          if (vistData) {
+            const stageNum = proc.stage || 1;
+            const vistUpdate: any = {};
+            if (stageNum === 3) {
+              vistUpdate.data_3_atribuicao = null;
+              vistUpdate.vistoriador_3_id = null;
+            } else if (stageNum === 2) {
+              vistUpdate.data_2_atribuicao = null;
+              vistUpdate.vistoriador_2_id = null;
+            } else {
+              vistUpdate.data_1_atribuicao = null;
+              vistUpdate.vistoriador_1_id = null;
+            }
+            const { error: vistErr } = await supabase
+              .from("vistorias")
+              .update(vistUpdate)
+              .eq("id", vistData.id);
+            if (vistErr) throw vistErr;
+          }
+        }
+      }
+      toast.success(`${selectedProtocolIds.length} atribuição(ões) removida(s) com sucesso!`);
+      setSelectedProtocolIds([]);
+      if (!isDev) {
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao remover atribuição: " + err.message);
+    }
+  };
+
   useEffect(() => {
     fetchData();
 
@@ -879,6 +988,20 @@ export default function KanbanPage() {
           >
             <User className="w-3.5 h-3.5" />
             Atribuir
+          </button>
+          <button
+            onClick={handleBulkUnschedule}
+            className="flex items-center gap-1.5 text-xs font-semibold border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 px-4 py-2 rounded-full transition-colors"
+          >
+            <CalendarOff className="w-3.5 h-3.5" />
+            Desagendar
+          </button>
+          <button
+            onClick={handleBulkUnassign}
+            className="flex items-center gap-1.5 text-xs font-semibold border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 px-4 py-2 rounded-full transition-colors"
+          >
+            <UserMinus className="w-3.5 h-3.5" />
+            Desatribuir
           </button>
           <button
             onClick={() => setSelectedProtocolIds([])}
