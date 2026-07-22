@@ -557,16 +557,25 @@ export default function MapPage() {
         map.setView(targetCoords, 18);
         L.marker(targetCoords).addTo(map).bindPopup("Localização selecionada").openPopup();
       } else if (highlightProtocolIds && highlightProtocolIds.length > 0) {
-        // Fit to only the highlighted markers
+        // Fit to only the highlighted markers and open popup of the first one
         const highlightBounds: [number, number][] = [];
-        groups.forEach((groupProcesses, coordsKey) => {
-          if (groupProcesses.some(p => highlightProtocolIds.includes(p.protocolo.id))) {
-            const [lat, lng] = coordsKey.split(",").map(Number);
-            highlightBounds.push([lat, lng]);
+        let firstHighlightMarker: any = null;
+        markersRef.current.forEach(({ marker, protocoloIds }) => {
+          if (protocoloIds.some(id => highlightProtocolIds.includes(id))) {
+            highlightBounds.push(marker.getLatLng());
+            if (!firstHighlightMarker) firstHighlightMarker = marker;
           }
         });
         if (highlightBounds.length > 0) {
-          map.fitBounds(highlightBounds, { padding: [80, 80], maxZoom: 15 });
+          if (highlightBounds.length === 1 && firstHighlightMarker) {
+            map.setView(highlightBounds[0], 15);
+            setTimeout(() => firstHighlightMarker.openPopup(), 300);
+          } else {
+            map.fitBounds(highlightBounds, { padding: [80, 80], maxZoom: 15 });
+            if (firstHighlightMarker) {
+              setTimeout(() => firstHighlightMarker.openPopup(), 300);
+            }
+          }
         } else if (bounds.length > 0) {
           map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
         }
