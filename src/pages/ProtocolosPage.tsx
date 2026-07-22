@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, FileText, ChevronDown, ChevronUp, Plus, AlertTriangle, Clock, ArrowLeft } from "lucide-react";
+import { Search, FileText, ChevronDown, ChevronUp, Plus, AlertTriangle, Clock, ArrowLeft, Calendar, User, CalendarOff, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
   DisplayStatus,
   VistoriaStage,
@@ -28,6 +29,9 @@ interface Protocolo {
   municipio: string;
   area: number | null;
   created_at: string;
+  evento_unico?: boolean;
+  agendar?: boolean;
+  data_agendamento?: string | null;
 }
 
 interface Processo {
@@ -103,6 +107,13 @@ export default function ProtocolosPage() {
   const [sortAsc, setSortAsc] = useState(restoredFilters?.sortAsc ?? true);
   const statusDropdownRef = useRef<HTMLDivElement | null>(null);
 
+  const [selectedProtocolIds, setSelectedProtocolIds] = useState<string[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [vistoriadores, setVistoriadores] = useState<{ id: string; name: string }[]>([]);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedVistoriadorId, setSelectedVistoriadorId] = useState("");
+
   const { isDev } = useAuth();
 
   const fetchData = useCallback(async () => {
@@ -146,13 +157,18 @@ export default function ProtocolosPage() {
         "proc2": { processo_id: "proc2", data_1_atribuicao: "2024-03-22", data_1_vistoria: "2024-03-24", status_1_vistoria: "aprovado" } as any
       });
       setProfileMap({ "v1": "Administrador (Dev)" });
+      setVistoriadores([
+        { id: "v1", name: "Administrador (Dev)" },
+        { id: "v2", name: "Sgt. Silva" },
+        { id: "v3", name: "Cabo Souza" }
+      ]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      const [p, profiles] = await Promise.all([
+      const [p, profiles, vRoles] = await Promise.all([
         fetchAllRows<any>((from, to) =>
           supabase
             .from("protocolos")
@@ -250,6 +266,16 @@ export default function ProtocolosPage() {
       const pm: Record<string, string> = {};
       (profiles || []).forEach((pr: any) => { pm[pr.user_id] = [pr.patente, pr.nome_guerra].filter(Boolean).join(" "); });
       setProfileMap(pm);
+
+      const vistoriadorUserIds = new Set((vRoles || []).map((r: any) => r.user_id));
+      const listVistoriadores = (profiles || [])
+        .filter((pr: any) => vistoriadorUserIds.has(pr.user_id))
+        .map((pr: any) => ({
+          id: pr.user_id,
+          name: [pr.patente, pr.nome_guerra].filter(Boolean).join(" ")
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setVistoriadores(listVistoriadores);
       const pMap: Record<string, DeadlinePausaData[]> = {};
       flatPausas.forEach((pa: any) => {
         if (!pMap[pa.processo_id]) pMap[pa.processo_id] = [];
@@ -297,6 +323,253 @@ export default function ProtocolosPage() {
       supabase.removeChannel(channel);
     };
   }, [fetchData, isDev]);
+
+  const handleBulkSchedule = async () => {
+    if (selectedProtocolIds.length === 0 || !scheduledDate) return;
+    try {
+      if (isDev) {
+        setProtocolos(prev =>
+          prev.map(p => {
+            if (selectedProtocolIds.includes(p.id)) {
+              return {
+                ...p,
+                agendar: true,
+                data_agendamento: scheduledDate,
+              };
+            }
+            return p;
+          })
+        );
+      } else {
+        const { error } = await supabase
+          .from("protocolos")
+          .update({
+            agendar: true,
+            data_agendamento: scheduledDate
+          })
+          .in("id", selectedProtocolIds);
+
+        if (error) throw error;
+      }
+      toast.success(`${selectedProtocolIds.length} protocolo(s) agendado(s) com sucesso!`);
+      setSelectedProtocolIds([]);
+      setScheduledDate("");
+      setIsModalOpen(false);
+      if (!isDev) {
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao realizar agendamento: " + err.message);
+    }
+  };
+
+  const handleBulkUnschedule = async () => {
+    if (selectedProtocolIds.length === 0) return;
+    try {
+      if (isDev) {
+        setProtocolos(prev =>
+          prev.map(p => {
+            if (selectedProtocolIds.includes(p.id)) {
+              return {
+                ...p,
+                agendar: false,
+                data_agendamento: null,
+              };
+            }
+            return p;
+          })
+        );
+      } else {
+        const { error } = await supabase
+          .from("protocolos")
+          .update({
+            agendar: false,
+            data_agendamento: null
+          })
+          .in("id", selectedProtocolIds);
+
+        if (error) throw error;
+      }
+      toast.success(`${selectedProtocolIds.length} agendamento(s) removido(s) com sucesso!`);
+      setSelectedProtocolIds([]);
+      if (!isDev) {
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao remover agendamento: " + err.message);
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (selectedProtocolIds.length === 0 || !selectedVistoriadorId) return;
+    try {
+      if (isDev) {
+        setProcessos(prev =>
+          prev.map(p => {
+            if (selectedProtocolIds.includes(p.protocolo_id)) {
+              return {
+                ...p,
+                status: "regional",
+                vistoriador_id: selectedVistoriadorId
+              };
+            }
+            return p;
+          })
+        );
+      } else {
+        const todayStr = new Date().toISOString().split("T")[0];
+        
+        for (const protoId of selectedProtocolIds) {
+          const proc = processoByProtocolo[protoId];
+
+          if (!proc) {
+            const { data: newProc, error: procErr } = await supabase
+              .from("processos")
+              .insert({
+                protocolo_id: protoId,
+                status: "regional",
+                vistoriador_id: selectedVistoriadorId
+              })
+              .select("id")
+              .single();
+            if (procErr) throw procErr;
+
+            const { error: vistErr } = await supabase
+              .from("vistorias")
+              .insert({
+                processo_id: newProc.id,
+                data_1_atribuicao: todayStr,
+                vistoriador_1_id: selectedVistoriadorId
+              });
+            if (vistErr) throw vistErr;
+          } else {
+            const { error: procErr } = await supabase
+              .from("processos")
+              .update({
+                status: "regional",
+                vistoriador_id: selectedVistoriadorId
+              })
+              .eq("id", proc.id);
+            if (procErr) throw procErr;
+
+            const { data: vistData } = await supabase
+              .from("vistorias")
+              .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
+              .eq("processo_id", proc.id)
+              .maybeSingle();
+
+            if (vistData) {
+              const stageNum = getDisplayInfo(protoId)?.stage || 1;
+              const vistUpdate: any = {};
+              if (stageNum === 2) {
+                vistUpdate.data_2_atribuicao = todayStr;
+                vistUpdate.vistoriador_2_id = selectedVistoriadorId;
+              } else if (stageNum === 3) {
+                vistUpdate.data_3_atribuicao = todayStr;
+                vistUpdate.vistoriador_3_id = selectedVistoriadorId;
+              } else {
+                vistUpdate.data_1_atribuicao = todayStr;
+                vistUpdate.vistoriador_1_id = selectedVistoriadorId;
+              }
+              const { error: vistErr } = await supabase
+                .from("vistorias")
+                .update(vistUpdate)
+                .eq("id", vistData.id);
+              if (vistErr) throw vistErr;
+            } else {
+              const { error: vistErr } = await supabase
+                .from("vistorias")
+                .insert({
+                  processo_id: proc.id,
+                  data_1_atribuicao: todayStr,
+                  vistoriador_1_id: selectedVistoriadorId
+                });
+              if (vistErr) throw vistErr;
+            }
+          }
+        }
+      }
+      toast.success(`${selectedProtocolIds.length} protocolo(s) atribuído(s) com sucesso!`);
+      setSelectedProtocolIds([]);
+      setSelectedVistoriadorId("");
+      setIsAssignModalOpen(false);
+      if (!isDev) {
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao realizar atribuição: " + err.message);
+    }
+  };
+
+  const handleBulkUnassign = async () => {
+    if (selectedProtocolIds.length === 0) return;
+    try {
+      if (isDev) {
+        setProcessos(prev =>
+          prev.map(p => {
+            if (selectedProtocolIds.includes(p.protocolo_id)) {
+              return {
+                ...p,
+                status: "regional",
+                vistoriador_id: null
+              };
+            }
+            return p;
+          })
+        );
+      } else {
+        for (const protoId of selectedProtocolIds) {
+          const proc = processoByProtocolo[protoId];
+          if (!proc) continue;
+
+          const { error: procErr } = await supabase
+            .from("processos")
+            .update({
+              vistoriador_id: null
+            })
+            .eq("id", proc.id);
+          if (procErr) throw procErr;
+
+          const { data: vistData } = await supabase
+            .from("vistorias")
+            .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
+            .eq("processo_id", proc.id)
+            .maybeSingle();
+
+          if (vistData) {
+            const stageNum = getDisplayInfo(protoId)?.stage || 1;
+            const vistUpdate: any = {};
+            if (stageNum === 3) {
+              vistUpdate.data_3_atribuicao = null;
+              vistUpdate.vistoriador_3_id = null;
+            } else if (stageNum === 2) {
+              vistUpdate.data_2_atribuicao = null;
+              vistUpdate.vistoriador_2_id = null;
+            } else {
+              vistUpdate.data_1_atribuicao = null;
+              vistUpdate.vistoriador_1_id = null;
+            }
+            const { error: vistErr } = await supabase
+              .from("vistorias")
+              .update(vistUpdate)
+              .eq("id", vistData.id);
+            if (vistErr) throw vistErr;
+          }
+        }
+      }
+      toast.success(`${selectedProtocolIds.length} atribuição(ões) removida(s) com sucesso!`);
+      setSelectedProtocolIds([]);
+      if (!isDev) {
+        fetchData();
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao remover atribuição: " + err.message);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -520,6 +793,27 @@ export default function ProtocolosPage() {
       onClick={() => handleSort(field)}
     >
       <span className="inline-flex items-center gap-1">
+        {field === "numero" && (
+          <input
+            type="checkbox"
+            checked={filtered.length > 0 && selectedProtocolIds.length === filtered.length}
+            ref={(input) => {
+              if (input) {
+                input.indeterminate = selectedProtocolIds.length > 0 && selectedProtocolIds.length < filtered.length;
+              }
+            }}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              if (checked) {
+                setSelectedProtocolIds(filtered.map(x => x.id));
+              } else {
+                setSelectedProtocolIds([]);
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="mr-2 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+          />
+        )}
         {label}
         {sortKey === field && (sortAsc ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
       </span>
@@ -699,6 +993,22 @@ export default function ProtocolosPage() {
                     >
                       <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
                         <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedProtocolIds.includes(p.id)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setSelectedProtocolIds(prev => {
+                                if (checked) {
+                                  return [...prev, p.id];
+                                } else {
+                                  return prev.filter(id => id !== p.id);
+                                }
+                              });
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer shrink-0"
+                          />
                           {p.numero}
                           {isEventoUnico && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-cyan-600 text-white border border-cyan-700 ml-1" title="Evento Único">
@@ -788,6 +1098,141 @@ export default function ProtocolosPage() {
           </div>
         )}
       </div>
+
+      {selectedProtocolIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background/95 backdrop-blur border border-border shadow-lg rounded-full px-6 py-3.5 flex items-center gap-4 animate-in slide-in-from-bottom-4 duration-200">
+          <span className="text-sm font-medium text-foreground">
+            {selectedProtocolIds.length} {selectedProtocolIds.length === 1 ? "protocolo selecionado" : "protocolos selecionados"}
+          </span>
+          <div className="h-4 w-px bg-border" />
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/95 px-4 py-2 rounded-full transition-colors"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            Agendar
+          </button>
+          <button
+            onClick={() => setIsAssignModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/95 px-4 py-2 rounded-full transition-colors"
+          >
+            <User className="w-3.5 h-3.5" />
+            Atribuir
+          </button>
+          <button
+            onClick={handleBulkUnschedule}
+            className="flex items-center gap-1.5 text-xs font-semibold border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 px-4 py-2 rounded-full transition-colors"
+          >
+            <CalendarOff className="w-3.5 h-3.5" />
+            Desagendar
+          </button>
+          <button
+            onClick={handleBulkUnassign}
+            className="flex items-center gap-1.5 text-xs font-semibold border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 px-4 py-2 rounded-full transition-colors"
+          >
+            <UserMinus className="w-3.5 h-3.5" />
+            Desatribuir
+          </button>
+          <button
+            onClick={() => setSelectedProtocolIds([])}
+            className="text-xs text-muted-foreground hover:text-foreground font-medium px-2 py-1.5"
+          >
+            Limpar
+          </button>
+        </div>
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg animate-in zoom-in-95 duration-150">
+            <h3 className="text-lg font-semibold text-foreground mb-1">Agendar em Lote</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Escolha a data de agendamento para os {selectedProtocolIds.length} protocolos selecionados.
+            </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="bulk-schedule-date" className="text-xs font-medium text-muted-foreground">
+                  Data do Agendamento
+                </label>
+                <input
+                  id="bulk-schedule-date"
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setScheduledDate("");
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleBulkSchedule}
+                  disabled={!scheduledDate}
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAssignModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg animate-in zoom-in-95 duration-150">
+            <h3 className="text-lg font-semibold text-foreground mb-1">Atribuir em Lote</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Selecione o vistoriador para os {selectedProtocolIds.length} protocolos selecionados.
+            </p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="bulk-assign-vistoriador" className="text-xs font-medium text-muted-foreground">
+                  Vistoriador
+                </label>
+                <select
+                  id="bulk-assign-vistoriador"
+                  value={selectedVistoriadorId}
+                  onChange={(e) => setSelectedVistoriadorId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Selecione um vistoriador...</option>
+                  {vistoriadores.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setIsAssignModalOpen(false);
+                    setSelectedVistoriadorId("");
+                  }}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleBulkAssign}
+                  disabled={!selectedVistoriadorId}
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
