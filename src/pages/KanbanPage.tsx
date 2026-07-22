@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import StatusBadge from "@/components/shared/StatusBadge";
-import { Calendar, User, MapPin, Clock, Building2, Maximize2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft, CalendarOff, UserMinus } from "lucide-react";
+import { Calendar, User, MapPin, Clock, Building2, Maximize2, ChevronDown, ChevronRight, AlertTriangle, Filter, AlertCircle, CheckCircle2, Search, ArrowLeft, CalendarOff, UserMinus, Map } from "lucide-react";
 import { cn, formatArea, formatCpfCnpj, getCpfCnpjLabel } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 import { computeDeadline, deadlineColorClass, deadlineLabel, DeadlineResult, PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
@@ -1023,6 +1023,13 @@ export default function KanbanPage() {
           >
             <UserMinus className="w-3.5 h-3.5" />
             Desatribuir
+          </button>
+          <button
+            onClick={() => navigate("/mapa", { state: { highlightProtocolIds: selectedProtocolIds } })}
+            className="flex items-center gap-1.5 text-xs font-semibold border border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 px-4 py-2 rounded-full transition-colors"
+          >
+            <Map className="w-3.5 h-3.5" />
+            Ver no mapa
           </button>
           <button
             onClick={() => setSelectedProtocolIds([])}

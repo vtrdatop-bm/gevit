@@ -52,6 +52,7 @@ export default function MapPage() {
   const focusProcessoId = location.state?.focusProcessoId as string | undefined;
   const focusCoords = location.state?.focusCoords as [number, number] | undefined;
   const lastOpenedProtocoloId = location.state?.lastOpenedProtocoloId as string | undefined;
+  const highlightProtocolIds = location.state?.highlightProtocolIds as string[] | undefined;
   const restoredFilters = (location.state as {
     mapBackFilters?: {
       filterStatus?: (DisplayStatus | "minhas")[];
@@ -83,7 +84,7 @@ export default function MapPage() {
   const [regionais, setRegionais] = useState<{ id: string; nome: string }[]>([]);
   const [canChangeVistoriador, setCanChangeVistoriador] = useState(false);
 
-  const [selectedProtocolIds, setSelectedProtocolIds] = useState<string[]>([]);
+  const [selectedProtocolIds, setSelectedProtocolIds] = useState<string[]>(highlightProtocolIds ?? []);
   const selectedProtocolIdsRef = useRef<string[]>([]);
   useEffect(() => {
     selectedProtocolIdsRef.current = selectedProtocolIds;
@@ -555,6 +556,20 @@ export default function MapPage() {
       } else if (targetCoords) {
         map.setView(targetCoords, 18);
         L.marker(targetCoords).addTo(map).bindPopup("Localização selecionada").openPopup();
+      } else if (highlightProtocolIds && highlightProtocolIds.length > 0) {
+        // Fit to only the highlighted markers
+        const highlightBounds: [number, number][] = [];
+        groups.forEach((groupProcesses, coordsKey) => {
+          if (groupProcesses.some(p => highlightProtocolIds.includes(p.protocolo.id))) {
+            const [lat, lng] = coordsKey.split(",").map(Number);
+            highlightBounds.push([lat, lng]);
+          }
+        });
+        if (highlightBounds.length > 0) {
+          map.fitBounds(highlightBounds, { padding: [80, 80], maxZoom: 15 });
+        } else if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+        }
       } else if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
       }

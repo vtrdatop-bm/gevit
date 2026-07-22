@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, FileText, ChevronDown, ChevronUp, Plus, AlertTriangle, Clock, ArrowLeft, Calendar, User, CalendarOff, UserMinus } from "lucide-react";
+import { Search, FileText, ChevronDown, ChevronUp, Plus, AlertTriangle, Clock, ArrowLeft, Calendar, User, CalendarOff, UserMinus, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -1135,6 +1135,13 @@ export default function ProtocolosPage() {
           >
             <UserMinus className="w-3.5 h-3.5" />
             Desatribuir
+          </button>
+          <button
+            onClick={() => navigate("/mapa", { state: { highlightProtocolIds: selectedProtocolIds } })}
+            className="flex items-center gap-1.5 text-xs font-semibold border border-border text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 px-4 py-2 rounded-full transition-colors"
+          >
+            <Map className="w-3.5 h-3.5" />
+            Ver no mapa
           </button>
           <button
             onClick={() => setSelectedProtocolIds([])}
