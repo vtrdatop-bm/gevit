@@ -1042,7 +1042,7 @@ export default function MapPage() {
           <div ref={mapRef} className="w-full h-full" style={{ minHeight: 400 }} />
         )}
       </div>
-      {selectedProtocolIds.length > 0 && (
+      {selectedProtocolIds.length > 0 && createPortal(
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background/95 backdrop-blur border border-border shadow-lg rounded-full px-6 py-3.5 flex items-center gap-4 animate-in slide-in-from-bottom-4 duration-200">
           <span className="text-sm font-medium text-foreground">
             {selectedProtocolIds.length} {selectedProtocolIds.length === 1 ? "protocolo selecionado" : "protocolos selecionados"}
@@ -1082,11 +1082,12 @@ export default function MapPage() {
           >
             Limpar
           </button>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg animate-in zoom-in-95 duration-150">
             <h3 className="text-lg font-semibold text-foreground mb-1">Agendar em Lote</h3>
             <p className="text-xs text-muted-foreground mb-4">
@@ -1125,11 +1126,12 @@ export default function MapPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {isAssignModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      {isAssignModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg animate-in zoom-in-95 duration-150">
             <h3 className="text-lg font-semibold text-foreground mb-1">Atribuir em Lote</h3>
             <p className="text-xs text-muted-foreground mb-4">
@@ -1187,7 +1189,8 @@ export default function MapPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
