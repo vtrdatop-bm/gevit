@@ -398,7 +398,7 @@ export default function KanbanPage() {
               .from("processos")
               .insert({
                 protocolo_id: proc.protocolo_id,
-                status: "atribuido",
+                status: "regional",
                 vistoriador_id: selectedVistoriadorId
               })
               .select("id")
@@ -419,7 +419,7 @@ export default function KanbanPage() {
             const { error: procErr } = await supabase
               .from("processos")
               .update({
-                status: "atribuido",
+                status: "regional",
                 vistoriador_id: selectedVistoriadorId
               })
               .eq("id", proc.id);
