@@ -108,7 +108,8 @@ export default function KanbanPage() {
         p,
         regionais,
         profiles,
-        bairrosData
+        bairrosData,
+        vRoles
       ] = await Promise.all([
         fetchAllRows<any>((from, to) =>
           supabase
@@ -137,6 +138,7 @@ export default function KanbanPage() {
         supabase.from("regionais").select("id, nome").order("nome").then(res => res.data),
         supabase.from("profiles").select("user_id, patente, nome_guerra").then(res => res.data),
         supabase.from("bairros").select("nome, municipio, regional_id").then(res => res.data),
+        supabase.from("user_roles").select("user_id").eq("role", "vistoriador").then(res => res.data),
       ]);
 
       const protocolosData = (p || []).map((proto: any) => {
@@ -192,10 +194,14 @@ export default function KanbanPage() {
       const profMap: Record<string, string> = {};
       (profiles || []).forEach((p: any) => { profMap[p.user_id] = [p.patente, p.nome_guerra].filter(Boolean).join(" "); });
 
-      const listVistoriadores = (profiles || []).map((p: any) => ({
-        id: p.user_id,
-        name: [p.patente, p.nome_guerra].filter(Boolean).join(" ")
-      })).sort((a, b) => a.name.localeCompare(b.name));
+      const vistoriadorUserIds = new Set((vRoles || []).map((r: any) => r.user_id));
+      const listVistoriadores = (profiles || [])
+        .filter((p: any) => vistoriadorUserIds.has(p.user_id))
+        .map((p: any) => ({
+          id: p.user_id,
+          name: [p.patente, p.nome_guerra].filter(Boolean).join(" ")
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
       setVistoriadores(listVistoriadores);
 
       const bairroRegionalMap: Record<string, string> = {};
