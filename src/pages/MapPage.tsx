@@ -364,16 +364,18 @@ export default function MapPage() {
     navigate(`/protocolo/${protocoloId}`);
   }, [navigate, location.pathname, location.search, location.state, filterStatus, selectedVistoriador, selectedRegional]);
 
-  const filteredProcesses = processos.filter((p) => {
-    if (selectedVistoriador && p.vistoriador_id !== selectedVistoriador) return false;
-    if (selectedRegional && p.regional_id !== selectedRegional) return false;
+  const filteredProcesses = useMemo(() => {
+    return processos.filter((p) => {
+      if (selectedVistoriador && p.vistoriador_id !== selectedVistoriador) return false;
+      if (selectedRegional && p.regional_id !== selectedRegional) return false;
 
-    if (filterStatus.includes("minhas") && p.vistoriador_id !== user?.id) return false;
+      if (filterStatus.includes("minhas") && p.vistoriador_id !== user?.id) return false;
 
-    const selectedStatuses = filterStatus.filter((s): s is DisplayStatus => s !== "minhas");
-    if (selectedStatuses.length === 0) return true;
-    return selectedStatuses.includes(p.displayStatus);
-  });
+      const selectedStatuses = filterStatus.filter((s): s is DisplayStatus => s !== "minhas");
+      if (selectedStatuses.length === 0) return true;
+      return selectedStatuses.includes(p.displayStatus);
+    });
+  }, [processos, selectedVistoriador, selectedRegional, filterStatus, user?.id]);
 
   // Init map centered on Rio Branco, AC
   useEffect(() => {
@@ -465,20 +467,9 @@ export default function MapPage() {
           fillOpacity: 0.7,
         }).addTo(map);
 
-        marker.on('click', () => {
-          setTimeout(() => marker.openPopup(), 10);
-          setSelectedProtocolIds(prev => {
-            const isCurrentlySelected = groupProcesses.some(p => prev.includes(p.protocolo.id));
-            if (isCurrentlySelected) {
-              return prev.filter(id => !groupProcesses.some(p => p.protocolo.id === id));
-            } else {
-              return [...prev, ...groupProcesses.map(p => p.protocolo.id)];
-            }
-          });
-        });
-
         markersRef.current.push({ marker, protocoloIds: groupProcesses.map(p => p.protocolo.id), isMultiple, baseColor });
 
+        const protocoloIds = groupProcesses.map(p => p.protocolo.id);
         const popupContent = `
           <div style="font-family: system-ui, sans-serif; min-width: 250px; max-height: 400px; overflow-y: auto; padding: 4px;">
             ${isMultiple ? `<div style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #ef4444; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
@@ -510,12 +501,21 @@ export default function MapPage() {
                     ${stage ? `<div style=\"font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;\">\n                      <span>🔍</span> <span>${stage}${result ? ` — ${result}` : ""}</span>\n                    </div>` : ""}
                     ${process.vistoriador_nome ? `<div style=\"font-size: 11px; color: #444; display: flex; align-items: center; gap: 4px;\">\n                      <span>👤</span> <span>${process.vistoriador_nome}</span>\n                    </div>` : ""}
                   </div>
-                  <button 
-                    onclick="window.dispatchEvent(new CustomEvent('open-protocolo', { detail: '${process.protocolo.id}' }))"
-                    style="width: 100%; background: hsl(var(--primary)); color: white; border: none; padding: 7px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 4px;"
-                  >
-                    Ver Detalhes
-                  </button>
+                  <div style="display: flex; gap: 6px;">
+                    <button 
+                      onclick="window.dispatchEvent(new CustomEvent('open-protocolo', { detail: '${process.protocolo.id}' }))"
+                      style="flex: 1; background: hsl(var(--primary)); color: white; border: none; padding: 7px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;"
+                    >
+                      Ver Detalhes
+                    </button>
+                    <button 
+                      onclick="window.dispatchEvent(new CustomEvent('toggle-select-protocolo', { detail: '${process.protocolo.id}' }))"
+                      style="background: #f59e0b; color: white; border: none; padding: 7px 12px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer;"
+                      title="Selecionar para ação em lote"
+                    >
+                      ✓
+                    </button>
+                  </div>
                 </div>
               `;
         }).join("")}
@@ -525,6 +525,19 @@ export default function MapPage() {
         marker.bindPopup(popupContent, {
           className: 'protocolo-popup',
           maxWidth: 300
+        });
+        // Left click opens popup natively (no interception)
+        // Right click or the ✓ button in popup selects for bulk actions
+        marker.on('contextmenu', (e: any) => {
+          L.DomEvent.stopPropagation(e);
+          setSelectedProtocolIds(prev => {
+            const isCurrentlySelected = protocoloIds.some(id => prev.includes(id));
+            if (isCurrentlySelected) {
+              return prev.filter(id => !protocoloIds.includes(id));
+            } else {
+              return [...prev, ...protocoloIds];
+            }
+          });
         });
 
         if (lastOpenedProtocoloId && groupProcesses.some((p) => p.protocolo.id === lastOpenedProtocoloId)) {
@@ -582,8 +595,21 @@ export default function MapPage() {
       }
     };
 
+    const handleToggleSelect = (e: any) => {
+      const id = e.detail;
+      if (id) {
+        setSelectedProtocolIds(prev =>
+          prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+      }
+    };
+
     window.addEventListener('open-protocolo', handleOpenProtocolo);
-    return () => window.removeEventListener('open-protocolo', handleOpenProtocolo);
+    window.addEventListener('toggle-select-protocolo', handleToggleSelect);
+    return () => {
+      window.removeEventListener('open-protocolo', handleOpenProtocolo);
+      window.removeEventListener('toggle-select-protocolo', handleToggleSelect);
+    };
   }, [openProtocoloDetail]);
 
   // Abrir popup automaticamente ao voltar do detalhe
