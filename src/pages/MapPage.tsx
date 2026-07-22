@@ -466,6 +466,7 @@ export default function MapPage() {
         }).addTo(map);
 
         marker.on('click', () => {
+          setTimeout(() => marker.openPopup(), 10);
           setSelectedProtocolIds(prev => {
             const isCurrentlySelected = groupProcesses.some(p => prev.includes(p.protocolo.id));
             if (isCurrentlySelected) {
