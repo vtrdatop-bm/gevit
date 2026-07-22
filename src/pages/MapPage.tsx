@@ -63,6 +63,7 @@ export default function MapPage() {
   const { isDev, user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
+  const markersRef = useRef<{ marker: any, protocoloIds: string[], isMultiple: boolean, baseColor: string }[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [processos, setProcessos] = useState<MapProcess[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +84,10 @@ export default function MapPage() {
   const [canChangeVistoriador, setCanChangeVistoriador] = useState(false);
 
   const [selectedProtocolIds, setSelectedProtocolIds] = useState<string[]>([]);
+  const selectedProtocolIdsRef = useRef<string[]>([]);
+  useEffect(() => {
+    selectedProtocolIdsRef.current = selectedProtocolIds;
+  }, [selectedProtocolIds]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [scheduledDate, setScheduledDate] = useState("");
@@ -425,7 +430,7 @@ export default function MapPage() {
 
 
 
-      const markersData: { marker: L.CircleMarker, isMultiple: boolean }[] = [];
+      markersRef.current = [];
 
       const getRadius = (isMult: boolean, zoom: number) => {
         const maxRadius = isMult ? 12 : 10;
@@ -447,7 +452,7 @@ export default function MapPage() {
         const baseColor = isEventoUnico ? "#06b6d4" : STATUS_MARKER_COLORS[primaryProcess.displayStatus];
         const isMultiple = groupProcesses.length > 1;
 
-        const isSelected = groupProcesses.some(p => selectedProtocolIds.includes(p.protocolo.id));
+        const isSelected = groupProcesses.some(p => selectedProtocolIdsRef.current.includes(p.protocolo.id));
         const color = isSelected ? "#f59e0b" : (isMultiple ? "#ffffff" : baseColor);
         const weight = isSelected ? 4 : (isMultiple ? 3 : 2);
 
@@ -471,7 +476,7 @@ export default function MapPage() {
           });
         });
 
-        markersData.push({ marker, isMultiple });
+        markersRef.current.push({ marker, protocoloIds: groupProcesses.map(p => p.protocolo.id), isMultiple, baseColor });
 
         const popupContent = `
           <div style="font-family: system-ui, sans-serif; min-width: 250px; max-height: 400px; overflow-y: auto; padding: 4px;">
@@ -542,7 +547,7 @@ export default function MapPage() {
 
       const updateRadii = () => {
         const zoom = map.getZoom();
-        markersData.forEach(({ marker, isMultiple }) => {
+        markersRef.current.forEach(({ marker, isMultiple }) => {
           marker.setRadius(getRadius(isMultiple, zoom));
         });
       };
@@ -556,7 +561,17 @@ export default function MapPage() {
       }
       (map as any)._customZoomCleanup = updateRadii;
     });
-  }, [filteredProcesses, mapReady, focusProcessoId, focusCoords, lastOpenedProtocoloId, selectedProtocolIds]);
+  }, [filteredProcesses, mapReady, focusProcessoId, focusCoords, lastOpenedProtocoloId]);
+
+  useEffect(() => {
+    markersRef.current.forEach(({ marker, protocoloIds, isMultiple, baseColor }) => {
+      const isSelected = protocoloIds.some(id => selectedProtocolIds.includes(id));
+      marker.setStyle({
+        color: isSelected ? "#f59e0b" : (isMultiple ? "#ffffff" : baseColor),
+        weight: isSelected ? 4 : (isMultiple ? 3 : 2),
+      });
+    });
+  }, [selectedProtocolIds]);
 
   useEffect(() => {
     const handleOpenProtocolo = (e: any) => {
