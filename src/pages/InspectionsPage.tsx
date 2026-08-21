@@ -95,7 +95,7 @@ export default function InspectionsPage() {
         .eq("vistoriador_id", user.id),
       supabase
         .from("vistorias")
-        .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
+        .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno"),
       supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
       supabase.from("termos_compromisso").select("processo_id, data_validade"),
     ]);
@@ -242,14 +242,27 @@ export default function InspectionsPage() {
             </button>
           ))}
           <button
-            onClick={() => {
+            onClick={async () => {
               if (selectedIds.size === 0) {
                 toast.error("Selecione pelo menos uma vistoria.");
                 return;
               }
+              
+              const today = new Date().toISOString().split("T")[0];
+              const updates = Array.from(selectedIds).map(async (processId) => {
+                const vist = vistoriaMap[processId];
+                const stage = computeStage(vist);
+                if (stage) {
+                  const field = `data_${stage}_vistoria`;
+                  await supabase.from("vistorias").update({ [field]: today }).eq("processo_id", processId);
+                }
+              });
+              
+              await Promise.all(updates);
+              
               toast.success(`${selectedIds.size} vistoria(s) sinalizada(s) como realizada(s)!`);
               setSelectedIds(new Set());
-              // Aqui você pode adicionar a lógica de atualização no banco
+              fetchData(); // Refresh data
             }}
             className="text-xs px-3 py-1.5 rounded-full border transition-colors bg-green-600 text-white border-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={selectedIds.size === 0}
@@ -313,6 +326,11 @@ export default function InspectionsPage() {
                     {stage && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium stage-badge">
                         {stage}ª Vist.
+                      </span>
+                    )}
+                    {stage && vistoria && (vistoria as any)[`data_${stage}_vistoria`] && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-300">
+                        Realizado
                       </span>
                     )}
                   </div>
