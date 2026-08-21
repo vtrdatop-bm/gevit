@@ -310,16 +310,10 @@ export default function DashboardPage() {
           icon={LayoutDashboard}
         />
         <KpiCard
-          title="Aguardando Vistoria"
-          value={stats.aguardando}
+          title="Aguardando (Vist. ou Retorno)"
+          value={stats.aguardando + stats.aguardandoRetorno}
           icon={Clock}
           color="bg-status-risk/15"
-        />
-        <KpiCard
-          title="Aguardando Retorno"
-          value={stats.aguardandoRetorno}
-          icon={Clock}
-          color="bg-status-retorno/15 text-status-retorno"
         />
         <KpiCard
           title="Atribuído"

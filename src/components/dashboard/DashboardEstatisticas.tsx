@@ -322,7 +322,7 @@ export default function DashboardEstatisticas({
       { key: "certificado_termo", label: "Cert. Provisório", count: byStatus["certificado_termo"] || 0 },
       { key: "pendencias", label: "Pendência", count: byStatus["pendencias"] || 0 },
       { key: "expirado", label: "Expirados", count: byStatus["expirado"] || 0 },
-      { key: "regional", label: "Aguardando", count: byStatus["regional"] || 0 },
+      { key: "regional", label: "Aguardando (Vist. ou Retorno)", count: (byStatus["regional"] || 0) + (byStatus["aguardando_retorno"] || 0) },
       { key: "atribuido", label: "Atribuído", count: byStatus["atribuido"] || 0 },
     ];
 
