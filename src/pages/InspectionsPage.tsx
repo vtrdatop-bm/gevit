@@ -13,6 +13,7 @@ import {
 } from "@/lib/vistoriaStatus";
 import { PausaData as DeadlinePausaData } from "@/lib/deadlineUtils";
 import { resolveConsistentDisplayStatus } from "@/lib/processoConsistency";
+import { toast } from "sonner";
 
 interface ProcessoComProtocolo {
   id: string;
@@ -49,6 +50,7 @@ export default function InspectionsPage() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const effectiveFilterStatus = activeRole === "vistoriador" ? "atribuido" : filterStatus;
 
@@ -239,6 +241,21 @@ export default function InspectionsPage() {
               {opt.label}
             </button>
           ))}
+          <button
+            onClick={() => {
+              if (selectedIds.size === 0) {
+                toast.error("Selecione pelo menos uma vistoria.");
+                return;
+              }
+              toast.success(`${selectedIds.size} vistoria(s) sinalizada(s) como realizada(s)!`);
+              setSelectedIds(new Set());
+              // Aqui você pode adicionar a lógica de atualização no banco
+            }}
+            className="text-xs px-3 py-1.5 rounded-full border transition-colors bg-green-600 text-white border-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={selectedIds.size === 0}
+          >
+            Realizado
+          </button>
         </div>
       </div>
 
@@ -268,6 +285,23 @@ export default function InspectionsPage() {
                 className="bg-card rounded-xl border border-border p-4 flex items-start gap-4 hover:bg-muted/30 transition-colors cursor-pointer"
                 style={{ boxShadow: "var(--shadow-sm)" }}
               >
+                <div 
+                  className="pt-1 flex-shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = new Set(selectedIds);
+                    if (next.has(process.id)) next.delete(process.id);
+                    else next.add(process.id);
+                    setSelectedIds(next);
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(process.id)}
+                    onChange={() => {}} // handled by div onClick
+                    className="w-4 h-4 rounded border-muted-foreground text-primary focus:ring-primary cursor-pointer pointer-events-none"
+                  />
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-xs font-mono text-muted-foreground">
