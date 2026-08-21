@@ -27,8 +27,6 @@ import {
 import { cn, formatArea } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 
-/* ── Local types ────────────────────────────────────────────────────────────────── */
-
 interface RawProcesso {
   id: string;
   status: string;
@@ -66,8 +64,6 @@ interface Profile {
   patente: string | null;
   nome_guerra: string | null;
 }
-
-/* ── Helpers ─────────────────────────────────────────────────────────────────────── */
 
 function daysBetween(a: string | null | undefined, b: string | null | undefined): number | null {
   if (!a || !b) return null;
@@ -123,54 +119,44 @@ const BAR_COLORS = [
   "hsl(310, 60%, 50%)",
 ];
 
-/* ── Component ───────────────────────────────────────────────────────────────────── */
-
 interface DashboardEstatisticasProps {
   dateRange: DateRange;
   totalProtocolosFiltrados?: number;
+  filteredProtocolos?: any[];
+  processoByProtocolo?: Record<string, any>;
+  vistoriaMap?: Record<string, any>;
+  pausasByProcesso?: Record<string, any[]>;
+  termosMap?: Record<string, string>;
+  profiles?: any[];
 }
 
-export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltrados }: DashboardEstatisticasProps) {
+export default function DashboardEstatisticas({ 
+  dateRange, 
+  totalProtocolosFiltrados,
+  filteredProtocolos,
+  processoByProtocolo,
+  vistoriaMap: propsVistoriaMap,
+  pausasByProcesso: propsPausas,
+  termosMap: propsTermos,
+  profiles: propsProfiles
+}: DashboardEstatisticasProps) {
   const { isDev } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [processos, setProcessos] = useState<RawProcesso[]>([]);
-  const [vistorias, setVistorias] = useState<RawVistoria[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [pausasByProcesso, setPausasByProcesso] = useState<Record<string, DeadlinePausaData[]>>({});
-  const [termosMap, setTermosMap] = useState<Record<string, string>>({});
   const [regionaisMap, setRegionaisMap] = useState<Record<string, string>>({});
   const [bairroRegionalMap, setBairroRegionalMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function fetchData() {
       if (isDev) {
-        setProcessos([
-          { id: "1", status: "regional", vistoriador_id: "v1", regional_id: "r1", created_at: new Date().toISOString(), protocolos: { data_solicitacao: "2024-01-10", bairro: "Centro", municipio: "Rio Branco", area: 150 } },
-          { id: "2", status: "certificado", vistoriador_id: "v1", regional_id: "r1", created_at: new Date().toISOString(), protocolos: { data_solicitacao: "2024-02-01", bairro: "Centro", municipio: "Rio Branco", area: 1200 } },
-        ]);
-        setVistorias([
-          { processo_id: "1", data_1_atribuicao: "2024-01-12", data_1_vistoria: "2024-01-20", status_1_vistoria: "pendencia", data_2_atribuicao: null, data_2_vistoria: null, status_2_vistoria: null, data_3_atribuicao: null, data_3_vistoria: null, status_3_vistoria: null, data_1_retorno: "2024-01-25", data_2_retorno: null, vistoriador_1_id: "v1", vistoriador_2_id: null, vistoriador_3_id: null },
-          { processo_id: "2", data_1_atribuicao: "2024-02-03", data_1_vistoria: "2024-02-10", status_1_vistoria: "aprovado", data_2_atribuicao: null, data_2_vistoria: null, status_2_vistoria: null, data_3_atribuicao: null, data_3_vistoria: null, status_3_vistoria: null, data_1_retorno: null, data_2_retorno: null, vistoriador_1_id: "v1", vistoriador_2_id: null, vistoriador_3_id: null },
-        ]);
-        setProfiles([{ user_id: "v1", patente: "CB", nome_guerra: "Admin Dev" }]);
         setRegionaisMap({ r1: "Regional Centro" });
         setLoading(false);
         return;
       }
 
-      const [{ data: procs }, { data: vists }, { data: profs }, { data: regionais }, { data: bairros }, { data: pausas }, { data: termos }] = await Promise.all([
-        supabase.from("processos").select("id, status, vistoriador_id, regional_id, created_at, protocolos(data_solicitacao, bairro, municipio, area, evento_unico, data_evento)"),
-        supabase.from("vistorias").select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, data_1_vistoria, data_2_vistoria, data_3_vistoria, status_1_vistoria, status_2_vistoria, status_3_vistoria, data_1_retorno, data_2_retorno, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
-        supabase.from("profiles").select("user_id, patente, nome_guerra"),
+      const [{ data: regionais }, { data: bairros }] = await Promise.all([
         supabase.from("regionais").select("id, nome").order("nome"),
         supabase.from("bairros").select("nome, municipio, regional_id"),
-        supabase.from("pausas").select("processo_id, data_inicio, data_fim, etapa"),
-        supabase.from("termos_compromisso").select("processo_id, data_validade"),
       ]);
-
-      setProcessos((procs || []) as unknown as RawProcesso[]);
-      setVistorias((vists || []) as unknown as RawVistoria[]);
-      setProfiles((profs || []) as Profile[]);
 
       const rm: Record<string, string> = {};
       (regionais || []).forEach((r: any) => { rm[r.id] = r.nome; });
@@ -182,116 +168,135 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       });
       setBairroRegionalMap(brm);
 
-      const pMap: Record<string, DeadlinePausaData[]> = {};
-      (pausas || []).forEach((p: any) => {
-        if (!pMap[p.processo_id]) pMap[p.processo_id] = [];
-        pMap[p.processo_id].push(p);
-      });
-      setPausasByProcesso(pMap);
-
-      const tMap: Record<string, string> = {};
-      (termos || []).forEach((t: any) => {
-        tMap[t.processo_id] = t.data_validade;
-      });
-      setTermosMap(tMap);
-
       setLoading(false);
     }
     fetchData();
-
-    if (isDev) {
-      return;
-    }
-
-    const channel = supabase
-      .channel("dashboard-estatisticas-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "processos" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "vistorias" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "termos_compromisso" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "regionais" }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "bairros" }, () => fetchData())
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [isDev]);
-
-  /* ── Filtering ──────────────────────────────────────────────────────────────────── */
-
-  const filtered = useMemo(() => {
-    if (!dateRange.from && !dateRange.to) return processos;
-    return processos.filter((p) => {
-      const d = new Date(p.created_at);
-      if (dateRange.from && d < dateRange.from) return false;
-      if (dateRange.to) {
-        const end = new Date(dateRange.to);
-        end.setHours(23, 59, 59, 999);
-        if (d > end) return false;
-      }
-      return true;
-    });
-  }, [processos, dateRange]);
-
-  const vistoriaMap = useMemo(() => {
-    const m: Record<string, RawVistoria> = {};
-    vistorias.forEach((v) => { m[v.processo_id] = v; });
-    return m;
-  }, [vistorias]);
 
   const profileMap = useMemo(() => {
     const m: Record<string, string> = {};
-    profiles.forEach((p) => { m[p.user_id] = [p.patente, p.nome_guerra].filter(Boolean).join(" "); });
+    if (propsProfiles) {
+      propsProfiles.forEach((p) => { m[p.user_id] = [p.patente, p.nome_guerra].filter(Boolean).join(" "); });
+    }
     return m;
-  }, [profiles]);
-
-  /* ── Compute statistics ────────────────────────────────────────────────────────── */
-
+  }, [propsProfiles]);
 
   const stats = useMemo(() => {
-    const processosSemRegistro = Math.max(0, (totalProtocolosFiltrados ?? filtered.length) - filtered.length);
-    const totalProcessos = filtered.length + processosSemRegistro;
+    if (!filteredProtocolos || !processoByProtocolo || !propsVistoriaMap || !propsPausas || !propsTermos) {
+      return null;
+    }
+    const totalProcessos = filteredProtocolos.length;
 
-    // --- 1) Inspections by stage ---
     let stage1 = 0, stage2 = 0, stage3 = 0;
-    filtered.forEach((p) => {
-      const v = vistoriaMap[p.id];
-      if (!v) return;
-      if (v.data_1_vistoria || v.status_1_vistoria) stage1++;
-      if (v.data_2_vistoria || v.status_2_vistoria) stage2++;
-      if (v.data_3_vistoria || v.status_3_vistoria) stage3++;
+    const byStatus: Record<string, number> = {};
+    const stageStatusGrid: Record<string, number[]> = {
+      pendencias: [0, 0, 0],
+      certificado: [0, 0, 0],
+      certificado_termo: [0, 0, 0],
+    };
+
+    const tempos1Vist: number[] = [];
+    const temposRetorno1: number[] = [];
+    const temposRetorno2: number[] = [];
+    const temposCert: number[] = [];
+
+    const byVistoriador: Record<string, { count: number; area: number }> = {};
+    let totalAreaVistoriada = 0;
+    const byRegional: Record<string, number> = {};
+
+    let eventoUnicoCount = 0;
+
+    filteredProtocolos.forEach((proto) => {
+      if (proto.evento_unico === true) {
+        eventoUnicoCount++;
+      }
+
+      const p = processoByProtocolo[proto.id];
+      if (!p) {
+        byStatus.regional = (byStatus.regional || 0) + 1;
+        let regId = null;
+        if (proto.bairro && proto.municipio) {
+           regId = bairroRegionalMap[`${proto.bairro}|${proto.municipio}`] || null;
+        }
+        const name = regId ? (regionaisMap[regId] || "Desconhecida") : "Sem Regional";
+        byRegional[name] = (byRegional[name] || 0) + 1;
+        return;
+      }
+
+      const v = propsVistoriaMap[p.id];
+      const pausas = propsPausas[p.id] || [];
+      const termo = propsTermos[p.id] || null;
+      const dataSolicitacao = proto.data_solicitacao;
+
+      const ds = resolveConsistentDisplayStatus({
+        dbStatus: p.status,
+        vistoria: v || null,
+        dataSolicitacao: dataSolicitacao || null,
+        pausas,
+        termoValidade: termo,
+      });
+      byStatus[ds] = (byStatus[ds] || 0) + 1;
+
+      if (v) {
+        if (v.data_1_vistoria || v.status_1_vistoria) stage1++;
+        if (v.data_2_vistoria || v.status_2_vistoria) stage2++;
+        if (v.data_3_vistoria || v.status_3_vistoria) stage3++;
+
+        if (v.status_1_vistoria === "pendencia") stageStatusGrid.pendencias[0]++;
+        if (v.status_1_vistoria === "reprovado") stageStatusGrid.certificado[0]++;
+        if (v.status_1_vistoria === "aprovado") stageStatusGrid.certificado_termo[0]++;
+        
+        if (v.status_2_vistoria === "pendencia") stageStatusGrid.pendencias[1]++;
+        if (v.status_2_vistoria === "reprovado") stageStatusGrid.certificado[1]++;
+        if (v.status_2_vistoria === "aprovado") stageStatusGrid.certificado_termo[1]++;
+        
+        if (v.status_3_vistoria === "pendencia") stageStatusGrid.pendencias[2]++;
+        if (v.status_3_vistoria === "reprovado") stageStatusGrid.certificado[2]++;
+        if (v.status_3_vistoria === "aprovado") stageStatusGrid.certificado_termo[2]++;
+
+        if (dataSolicitacao) {
+          const d1 = daysBetween(dataSolicitacao, v.data_1_vistoria);
+          if (d1 !== null) tempos1Vist.push(d1);
+
+          const r1 = daysBetween(v.data_1_retorno, v.data_2_vistoria);
+          if (r1 !== null) temposRetorno1.push(r1);
+
+          const r2 = daysBetween(v.data_2_retorno, v.data_3_vistoria);
+          if (r2 !== null) temposRetorno2.push(r2);
+
+          const certDate = getCertificationDate(v);
+          if (certDate) {
+            const dc = daysBetween(dataSolicitacao, certDate);
+            if (dc !== null) temposCert.push(dc);
+          }
+        }
+
+        const vid = v.vistoriador_1_id || getCurrentVistoriadorId(p.vistoriador_id, v);
+        if (vid) {
+          if (!byVistoriador[vid]) byVistoriador[vid] = { count: 0, area: 0 };
+          byVistoriador[vid].count++;
+          if (proto.area) byVistoriador[vid].area += proto.area;
+        }
+
+        if ((v.vistoriador_1_id || v.data_1_atribuicao) && proto.area) {
+          totalAreaVistoriada += proto.area;
+        }
+      }
+
+      let regId = p.regional_id;
+      if (!regId) {
+        regId = bairroRegionalMap[`${proto.bairro}|${proto.municipio}`] || null;
+      }
+      const name = regId ? (regionaisMap[regId] || "Desconhecida") : "Sem Regional";
+      byRegional[name] = (byRegional[name] || 0) + 1;
     });
+
     const totalVistorias = stage1 + stage2 + stage3;
     const stageData = [
       { name: "1ª Vistoria", value: stage1 },
       { name: "2ª Vistoria", value: stage2 },
       { name: "3ª Vistoria", value: stage3 },
     ];
-
-    // --- 2) Status counts + Evento Único ---
-    const byStatus: Record<string, number> = {};
-    if (processosSemRegistro > 0) {
-      byStatus.regional = processosSemRegistro;
-    }
-    filtered.forEach((p) => {
-      const v = vistoriaMap[p.id] as VistoriaData | undefined;
-      const ds = resolveConsistentDisplayStatus({
-        dbStatus: p.status,
-        vistoria: v || null,
-        dataSolicitacao: p.protocolos?.data_solicitacao,
-        pausas: pausasByProcesso[p.id] || [],
-        termoValidade: termosMap[p.id] || null,
-      });
-      byStatus[ds] = (byStatus[ds] || 0) + 1;
-    });
-
-    console.log('DashboardEstatisticas filtered:', filtered);
-	// Evento Único: conta protocolos marcados corretamente
-    const unicos = filtered.filter((p) => p.protocolos?.evento_unico === true);
-    console.log('PROCESSOS COM protocolos.evento_unico === TRUE:', unicos.map(p => ({ id: p.id, evento_unico: p.protocolos?.evento_unico })));
-    const eventoUnicoCount = unicos.length;
 
     const statusCounts = [
       { key: "cancelado", label: "Cancelados", count: byStatus["cancelado"] || 0 },
@@ -304,62 +309,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       { key: "atribuido", label: "Atribuído", count: byStatus["atribuido"] || 0 },
     ];
 
-    // --- 3) Status by stage ---
-    // rows: result types, columns: 1ª/2ª/3ª
-    const stageStatusGrid: Record<string, number[]> = {
-      pendencias: [0, 0, 0],
-      certificado: [0, 0, 0],
-      certificado_termo: [0, 0, 0],
-    };
-    filtered.forEach((p) => {
-      const v = vistoriaMap[p.id] as VistoriaData | undefined;
-      if (!v) return;
-      // Etapa 1
-      if (v.status_1_vistoria === "pendencia") stageStatusGrid.pendencias[0]++;
-      if (v.status_1_vistoria === "reprovado") stageStatusGrid.certificado[0]++;
-      if (v.status_1_vistoria === "aprovado") stageStatusGrid.certificado_termo[0]++;
-      // Etapa 2
-      if (v.status_2_vistoria === "pendencia") stageStatusGrid.pendencias[1]++;
-      if (v.status_2_vistoria === "reprovado") stageStatusGrid.certificado[1]++;
-      if (v.status_2_vistoria === "aprovado") stageStatusGrid.certificado_termo[1]++;
-      // Etapa 3
-      if (v.status_3_vistoria === "pendencia") stageStatusGrid.pendencias[2]++;
-      if (v.status_3_vistoria === "reprovado") stageStatusGrid.certificado[2]++;
-      if (v.status_3_vistoria === "aprovado") stageStatusGrid.certificado_termo[2]++;
-    });
-
-    // --- 4) Average times ---
-    const tempos1Vist: number[] = [];
-    const temposRetorno1: number[] = [];
-    const temposRetorno2: number[] = [];
-    const temposCert: number[] = [];
-
-    filtered.forEach((p) => {
-      const v = vistoriaMap[p.id];
-      const sol = p.protocolos?.data_solicitacao;
-      if (!v || !sol) return;
-
-      // Time to 1st inspection
-      const d1 = daysBetween(sol, v.data_1_vistoria);
-      if (d1 !== null) tempos1Vist.push(d1);
-
-      // 1st return time (diferença entre data_2_vistoria e data_1_retorno)
-      const r1 = daysBetween(v.data_1_retorno, v.data_2_vistoria);
-      if (r1 !== null) temposRetorno1.push(r1);
-
-      // 2nd return time (diferença entre data_3_vistoria e data_2_retorno)
-      const r2 = daysBetween(v.data_2_retorno, v.data_3_vistoria);
-      if (r2 !== null) temposRetorno2.push(r2);
-
-      // Time to certification should use the historical certification milestone,
-      // even if the current display status later became "expirado".
-      const certDate = getCertificationDate(v);
-      if (certDate) {
-        const dc = daysBetween(sol, certDate);
-        if (dc !== null) temposCert.push(dc);
-      }
-    });
-
     const avgTempos = {
       primeiraVistoria: { value: avg(tempos1Vist), count: tempos1Vist.length },
       retorno1: { value: avg(temposRetorno1), count: temposRetorno1.length },
@@ -367,40 +316,10 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       certificacao: { value: avg(temposCert), count: temposCert.length },
     };
 
-    // --- 5) By vistoriador (count + area sum from 1st inspection) ---
-    const byVistoriador: Record<string, { count: number; area: number }> = {};
-    filtered.forEach((p) => {
-      const v = vistoriaMap[p.id];
-      // Use vistoriador_1_id from vistoria (atribuído na 1ª etapa)
-      const vid = v?.vistoriador_1_id || getCurrentVistoriadorId(p.vistoriador_id, v as VistoriaData | undefined || null);
-      if (!vid) return;
-      if (!byVistoriador[vid]) byVistoriador[vid] = { count: 0, area: 0 };
-      byVistoriador[vid].count++;
-      if (p.protocolos?.area) byVistoriador[vid].area += p.protocolos.area;
-    });
     const vistoriadorData = Object.entries(byVistoriador)
       .map(([id, { count, area }]) => ({ name: profileMap[id] || "Desconhecido", count, area }))
       .sort((a, b) => b.count - a.count);
 
-    // --- 6) Total area vistoriada (once per protocolo, only if 1st vistoria assigned) ---
-    let totalAreaVistoriada = 0;
-    filtered.forEach((p) => {
-      const v = vistoriaMap[p.id];
-      if ((v?.vistoriador_1_id || v?.data_1_atribuicao) && p.protocolos?.area) {
-        totalAreaVistoriada += p.protocolos.area;
-      }
-    });
-
-    // --- 6) By regional ---
-    const byRegional: Record<string, number> = {};
-    filtered.forEach((p) => {
-      let regId = p.regional_id;
-      if (!regId && p.protocolos) {
-        regId = bairroRegionalMap[`${p.protocolos.bairro}|${p.protocolos.municipio}`] || null;
-      }
-      const name = regId ? (regionaisMap[regId] || "Desconhecida") : "Sem Regional";
-      byRegional[name] = (byRegional[name] || 0) + 1;
-    });
     const regionalData = Object.entries(byRegional)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
@@ -417,11 +336,9 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
       byStatus,
       totalAreaVistoriada,
     };
-  }, [filtered, vistoriaMap, profileMap, regionaisMap, bairroRegionalMap, totalProtocolosFiltrados, pausasByProcesso, termosMap]);
+  }, [filteredProtocolos, processoByProtocolo, propsVistoriaMap, propsPausas, propsTermos, profileMap, regionaisMap, bairroRegionalMap]);
 
-  /* ── Render ─────────────────────────────────────────────────────────────────────── */
-
-  if (loading) {
+  if (loading || !stats) {
     return (
       <div className="flex items-center justify-center h-32">
         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -433,7 +350,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
 
   return (
     <div className="space-y-6">
-      {/* Header + filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-primary" />
@@ -446,9 +362,7 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
         ) : null}
       </div>
 
-      {/* ── Row 1: Inspection stages + Status counts ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Vistorias por Etapa */}
         <div className="kpi-card">
           <div className="flex items-center gap-2 mb-4">
             <ClipboardList className="w-4 h-4 text-primary" />
@@ -472,7 +386,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
           </ResponsiveContainer>
         </div>
 
-        {/* Status counts + percentages */}
         <div className="kpi-card">
           <div className="flex items-center gap-2 mb-4">
             <Percent className="w-4 h-4 text-primary" />
@@ -500,7 +413,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
         </div>
       </div>
 
-      {/* ── Row 2: Status by stage table ── */}
       <div className="kpi-card">
         <h4 className="text-sm font-semibold text-foreground mb-4">Resultado por Etapa</h4>
         <div className="overflow-x-auto">
@@ -516,10 +428,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
             </thead>
             <tbody>
         {(() => {
-          // Calculate the sums of columns (stages) to use as the base for each column's percentage
-          // Column 0 (1ª Vistoria) total = sum of Pendência + Certificado + Certificado Provisório in stage 1
-          // Column 1 (2ª Vistoria) total = sum of Pendência + Certificado + Certificado Provisório in stage 2
-          // Column 2 (3ª Vistoria) total = sum of Pendência + Certificado + Certificado Provisório in stage 3
           const columnSums = [0, 1, 2].map(i =>
             ["pendencias", "certificado", "certificado_termo"].reduce((sum, key) => sum + (stats.stageStatusGrid[key]?.[i] || 0), 0)
           );
@@ -562,7 +470,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
             );
           });
         })()}
-        {/* Linha Totais */}
         {(() => {
           const vals = [0, 1, 2].map(i =>
             ["pendencias", "certificado", "certificado_termo"].reduce((sum, key) => sum + (stats.stageStatusGrid[key]?.[i] || 0), 0)
@@ -595,7 +502,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
         </div>
       </div>
 
-      {/* ── Row 3: Average times ── */}
       <div className="kpi-card">
         <div className="flex items-center gap-2 mb-4">
           <Timer className="w-4 h-4 text-primary" />
@@ -621,7 +527,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
         </p>
       </div>
 
-      {/* ── Área total vistoriada ── */}
       <div className="kpi-card">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -638,9 +543,7 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
         <p className="text-xs text-muted-foreground mt-1 ml-6">Soma da área dos protocolos com 1ª vistoria atribuída — contabilizado uma vez por protocolo</p>
       </div>
 
-      {/* ── Row 4: By vistoriador + By regional ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* By vistoriador */}
         <div className="kpi-card">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-4 h-4 text-primary" />
@@ -682,7 +585,6 @@ export default function DashboardEstatisticas({ dateRange, totalProtocolosFiltra
           )}
         </div>
 
-        {/* By regional */}
         <div className="kpi-card">
           <div className="flex items-center gap-2 mb-4">
             <MapPin className="w-4 h-4 text-primary" />

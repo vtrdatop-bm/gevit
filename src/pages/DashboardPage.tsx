@@ -78,7 +78,7 @@ export default function DashboardPage() {
             supabase
               .from("protocolos")
               .select(`
-                id, data_solicitacao, created_at, evento_unico, data_evento,
+                id, data_solicitacao, created_at, evento_unico, data_evento, bairro, municipio, area,
                 processos(
                   id,
                   protocolo_id,
@@ -433,7 +433,15 @@ export default function DashboardPage() {
 
       {/* Estatísticas */}
       <hr className="border-border" />
-      <DashboardEstatisticas dateRange={dateRange} totalProtocolosFiltrados={filteredProtocolos.length} />
+      <DashboardEstatisticas 
+        dateRange={dateRange} 
+        filteredProtocolos={filteredProtocolos}
+        processoByProtocolo={processoByProtocolo}
+        vistoriaMap={vistoriaMap}
+        pausasByProcesso={pausasByProcesso}
+        termosMap={termosMap}
+        profiles={profiles}
+      />
     </div>
   );
 }
