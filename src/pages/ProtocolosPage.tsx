@@ -995,9 +995,11 @@ export default function ProtocolosPage() {
                           const proc = processoByProtocolo[p.id];
                           if (!proc) return false;
                           const vistoria = vistoriaMap[proc.id];
-                          if (!vistoria) return false;
-                          return info.stage && (vistoria as any)[`data_${info.stage}_vistoria`];
-                        })() && "bg-green-100/60"
+                          if (!vistoria || !info.stage) return false;
+                          
+                          const visitDate = (vistoria as any)[`data_${info.stage}_vistoria`];
+                          return Boolean(visitDate);
+                        })() && "bg-green-100"
                       )}
                       style={isEventoUnico ? { borderLeft: '6px solid #d946ef' } : {}}
                       onClick={() => openProtocoloDetail(p.id)}

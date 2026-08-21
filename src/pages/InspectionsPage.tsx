@@ -269,6 +269,34 @@ export default function InspectionsPage() {
           >
             Realizado
           </button>
+          
+          <button
+            onClick={async () => {
+              if (selectedIds.size === 0) {
+                toast.error("Selecione pelo menos uma vistoria.");
+                return;
+              }
+              
+              const updates = Array.from(selectedIds).map(async (processId) => {
+                const vist = vistoriaMap[processId];
+                const stage = computeStage(vist);
+                if (stage) {
+                  const field = `data_${stage}_vistoria`;
+                  await supabase.from("vistorias").update({ [field]: null }).eq("processo_id", processId);
+                }
+              });
+              
+              await Promise.all(updates);
+              
+              toast.success(`${selectedIds.size} vistoria(s) desmarcada(s) com sucesso!`);
+              setSelectedIds(new Set());
+              fetchData(); // Refresh data
+            }}
+            className="text-xs px-3 py-1.5 rounded-full border transition-colors bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={selectedIds.size === 0}
+          >
+            Desfazer Realizado
+          </button>
         </div>
       </div>
 
