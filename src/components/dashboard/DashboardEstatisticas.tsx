@@ -240,13 +240,17 @@ export default function DashboardEstatisticas({
       byStatus[ds] = (byStatus[ds] || 0) + 1;
 
       if (v) {
-        if (v.data_1_vistoria || v.status_1_vistoria) stage1++;
-        if (v.data_2_vistoria || v.status_2_vistoria) stage2++;
-        if (v.data_3_vistoria || v.status_3_vistoria) stage3++;
+        if (v.status_1_vistoria) stage1++;
+        if (v.status_2_vistoria) stage2++;
+        if (v.status_3_vistoria) stage3++;
 
         const mapTerminal = (original: string) => {
           if (ds === "expirado") return "expirado";
           if (ds === "cancelado") return "cancelado";
+          // If a terminal result is no longer the final ds, it was superseded by a later stage.
+          // Map it to cancelado so it doesn't inflate the active Certificados count.
+          if (original === "certificado" && ds !== "certificado") return "cancelado";
+          if (original === "certificado_termo" && ds !== "certificado_termo") return "cancelado";
           return original;
         };
 
@@ -453,7 +457,7 @@ export default function DashboardEstatisticas({
             { key: "certificado", label: "Certificado", color: "text-status-certified" },
             { key: "certificado_termo", label: "Certificado Provisório", color: "text-primary" },
             { key: "expirado", label: "Certificado (Expirou)", color: "text-status-risk" },
-            { key: "cancelado", label: "Cancelado", color: "text-muted-foreground" },
+            { key: "cancelado", label: "Cancelado / Substituído", color: "text-muted-foreground" },
           ].map((row) => {
             const vals = stats.stageStatusGrid[row.key];
             const total = vals[0] + vals[1] + vals[2];
