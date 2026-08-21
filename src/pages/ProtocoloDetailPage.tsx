@@ -5,7 +5,7 @@ import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Building2, MapPin, FileText, Pencil, X, Save, LocateFixed, Loader2, Plus, Search, Trash2, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import VistoriaTab from "@/components/protocolo/VistoriaTab";
 import ExpirationWarning from "@/components/protocolo/ExpirationWarning";
 import { cn, formatProtocoloNumero, formatArea, applyAreaMask, parseAreaToNumber, formatAreaOnBlur, formatCpfCnpj, getCpfCnpjLabel, formatCep, truncateCoordinate } from "@/lib/utils";
@@ -596,22 +596,25 @@ export default function ProtocoloDetailPage() {
     setIsDeleting(true);
     try {
       // Exclui todos os registros relacionados ao protocolo
-      let processoId = processo?.id;
-      if (!processoId) {
-        const { data: procData, error: procError } = await supabase.from("processos").select("id").eq("protocolo_id", protocolo.id).maybeSingle();
-        if (procError) throw new Error("Erro ao buscar processo relacionado: " + procError.message);
-        processoId = procData?.id;
-      }
-      if (processoId) {
-        const { error: notifErr } = await supabase.from("notificacoes").delete().eq("processo_id", processoId);
+      const { data: processosData, error: procError } = await supabase
+        .from("processos")
+        .select("id")
+        .eq("protocolo_id", protocolo.id);
+        
+      if (procError) throw new Error("Erro ao buscar processos relacionados: " + procError.message);
+      
+      const processosIds = processosData?.map(p => p.id) || [];
+      
+      if (processosIds.length > 0) {
+        const { error: notifErr } = await supabase.from("notificacoes").delete().in("processo_id", processosIds);
         if (notifErr) throw new Error("Erro ao excluir notificações: " + notifErr.message);
-        const { error: vistErr } = await supabase.from("vistorias").delete().eq("processo_id", processoId);
+        const { error: vistErr } = await supabase.from("vistorias").delete().in("processo_id", processosIds);
         if (vistErr) throw new Error("Erro ao excluir vistorias: " + vistErr.message);
-        const { error: pausasErr } = await supabase.from("pausas").delete().eq("processo_id", processoId);
+        const { error: pausasErr } = await supabase.from("pausas").delete().in("processo_id", processosIds);
         if (pausasErr) throw new Error("Erro ao excluir pausas: " + pausasErr.message);
-        const { error: termosErr } = await supabase.from("termos_compromisso").delete().eq("processo_id", processoId);
+        const { error: termosErr } = await supabase.from("termos_compromisso").delete().in("processo_id", processosIds);
         if (termosErr) throw new Error("Erro ao excluir termos de compromisso: " + termosErr.message);
-        const { error: errProc } = await supabase.from("processos").delete().eq("id", processoId);
+        const { error: errProc } = await supabase.from("processos").delete().in("id", processosIds);
         if (errProc) throw new Error("Erro ao excluir processo: " + errProc.message);
       }
       // Por fim, exclui o protocolo
@@ -1116,8 +1119,11 @@ export default function ProtocoloDetailPage() {
       )}
 
       <Dialog open={novoBairroDialog} onOpenChange={setNovoBairroDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Cadastrar novo bairro</DialogTitle></DialogHeader>
+        <DialogContent className="sm:max-w-md" aria-describedby="novo-bairro-desc">
+          <DialogHeader>
+            <DialogTitle>Cadastrar novo bairro</DialogTitle>
+            <DialogDescription id="novo-bairro-desc" className="hidden">Preencha os dados do novo bairro.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Município</label>
@@ -1145,8 +1151,11 @@ export default function ProtocoloDetailPage() {
       </Dialog>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle className="flex items-center gap-2 text-destructive"><AlertCircle className="w-5 h-5" />Confirmar Exclusão</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-md" aria-describedby="delete-dialog-desc">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive"><AlertCircle className="w-5 h-5" />Confirmar Exclusão</DialogTitle>
+            <DialogDescription id="delete-dialog-desc" className="hidden">Confirme a exclusão permanente deste protocolo.</DialogDescription>
+          </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-foreground">Você tem certeza que deseja excluir o protocolo **{protocolo.numero}**?</p>
             <p className="text-xs text-muted-foreground p-3 bg-destructive/10 rounded-lg border border-destructive/20 text-destructive-foreground">Esta ação é permanente e excluirá também todas as vistorias, documentos e históricos associados a este protocolo.</p>

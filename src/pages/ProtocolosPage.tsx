@@ -989,7 +989,15 @@ export default function ProtocolosPage() {
                       className={cn(
                         "hover:bg-muted/30 transition-colors cursor-pointer",
                         dlActive && dl.remaining <= 0 && "bg-destructive/5",
-                        isEventoUnico && "bg-cyan-100/60 border-cyan-400"
+                        isEventoUnico && "bg-cyan-100/60 border-cyan-400",
+                        (() => {
+                          if (info?.status !== "atribuido") return false;
+                          const proc = processoByProtocolo[p.id];
+                          if (!proc) return false;
+                          const vistoria = vistoriaMap[proc.id];
+                          if (!vistoria) return false;
+                          return info.stage && (vistoria as any)[`data_${info.stage}_vistoria`];
+                        })() && "bg-green-100/60"
                       )}
                       style={isEventoUnico ? { borderLeft: '6px solid #d946ef' } : {}}
                       onClick={() => openProtocoloDetail(p.id)}
