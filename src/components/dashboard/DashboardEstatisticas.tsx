@@ -244,33 +244,31 @@ export default function DashboardEstatisticas({
         if (v.status_2_vistoria) stage2++;
         if (v.status_3_vistoria) stage3++;
 
-        const mapTerminal = (original: string) => {
+        const mapTerminal = (original: string, isSupersededByLaterStage: boolean) => {
           if (ds === "expirado") return "expirado";
           if (ds === "cancelado") return "cancelado";
-          // If a terminal result is no longer the final ds, it was superseded by a later stage.
-          // Map it to cancelado so it doesn't inflate the active Certificados count.
+          if (isSupersededByLaterStage) return "cancelado";
           if (original === "certificado" && ds !== "certificado") return "cancelado";
           if (original === "certificado_termo" && ds !== "certificado_termo") return "cancelado";
           return original;
         };
 
+        const hasStage2 = !!v.status_2_vistoria;
+        const hasStage3 = !!v.status_3_vistoria;
+
         if (v.status_1_vistoria === "pendencia") {
-           // Se foi pendência e cancelou logo depois, podemos exibir como cancelado para fechar a conta? 
-           // Não, vamos mapear apenas os terminais para bater com o KPI de Certificado. Mas se a última ação foi pendência e cancelou, 
-           // seria melhor mapear para cancelado SE for a última vistoria?
-           // O usuário não reclamou de pendência. Vamos manter pendência como pendência.
            stageStatusGrid.pendencias[0]++;
         }
-        if (v.status_1_vistoria === "reprovado") stageStatusGrid[mapTerminal("certificado")][0]++;
-        if (v.status_1_vistoria === "aprovado") stageStatusGrid[mapTerminal("certificado_termo")][0]++;
+        if (v.status_1_vistoria === "reprovado") stageStatusGrid[mapTerminal("certificado", hasStage2 || hasStage3)][0]++;
+        if (v.status_1_vistoria === "aprovado") stageStatusGrid[mapTerminal("certificado_termo", hasStage2 || hasStage3)][0]++;
         
         if (v.status_2_vistoria === "pendencia") stageStatusGrid.pendencias[1]++;
-        if (v.status_2_vistoria === "reprovado") stageStatusGrid[mapTerminal("certificado")][1]++;
-        if (v.status_2_vistoria === "aprovado") stageStatusGrid[mapTerminal("certificado_termo")][1]++;
+        if (v.status_2_vistoria === "reprovado") stageStatusGrid[mapTerminal("certificado", hasStage3)][1]++;
+        if (v.status_2_vistoria === "aprovado") stageStatusGrid[mapTerminal("certificado_termo", hasStage3)][1]++;
         
         if (v.status_3_vistoria === "pendencia") stageStatusGrid.pendencias[2]++;
-        if (v.status_3_vistoria === "reprovado") stageStatusGrid[mapTerminal("certificado")][2]++;
-        if (v.status_3_vistoria === "aprovado") stageStatusGrid[mapTerminal("certificado_termo")][2]++;
+        if (v.status_3_vistoria === "reprovado") stageStatusGrid[mapTerminal("certificado", false)][2]++;
+        if (v.status_3_vistoria === "aprovado") stageStatusGrid[mapTerminal("certificado_termo", false)][2]++;
 
 
         if (dataSolicitacao) {
