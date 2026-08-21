@@ -255,17 +255,15 @@ export default function DashboardPage() {
     const expirados = byStatus["expirado"] || 0;
     const cancelados = byStatus["cancelado"] || 0;
 
-    // Adiciona Evento Único ao gráfico de pizza
     const pieData = [
-      ...(eventoUnicoCount > 0 ? [{ name: "Evento Único", value: eventoUnicoCount, color: "#06b6d4" }] : []),
-      ...Object.entries(byStatus)
-        .filter(([, v]) => v > 0)
-        .map(([status, value]) => ({
-          name: displayStatusLabels[status as DisplayStatus] || status,
-          value,
-          color: STATUS_COLORS[status] || "hsl(220, 9%, 46%)",
-        }))
-    ];
+      { name: "Aguardando (Vist. ou Retorno)", value: aguardando + aguardandoRetorno, color: STATUS_COLORS.regional },
+      { name: "Atribuído", value: atribuidos, color: STATUS_COLORS.atribuido },
+      { name: "Pendência", value: pendentes, color: STATUS_COLORS.pendencias },
+      { name: "Certificado", value: certificados, color: STATUS_COLORS.certificado },
+      { name: "Cert. Provisório", value: certificadosTermo, color: STATUS_COLORS.certificado_termo },
+      { name: "Expirados", value: expirados, color: STATUS_COLORS.expirado },
+      { name: "Cancelados", value: cancelados, color: STATUS_COLORS.cancelado },
+    ].filter((d) => d.value > 0);
 
     const vistoriadoresAtivos = profiles.filter((p) => p.ativo).length;
     const taxaCertificacao = total > 0 ? Math.round(((certificados + certificadosTermo) / total) * 100) : 0;
