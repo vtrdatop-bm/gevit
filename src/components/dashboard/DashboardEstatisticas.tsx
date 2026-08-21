@@ -289,8 +289,7 @@ export default function DashboardEstatisticas({
         }
 
         const countVistoriador = (vid: string | null | undefined, area: number | undefined) => {
-          const finalVid = vid || p.vistoriador_id;
-          if (!finalVid) return;
+          const finalVid = vid || p.vistoriador_id || 'unassigned';
           if (!byVistoriador[finalVid]) byVistoriador[finalVid] = { count: 0, area: 0 };
           byVistoriador[finalVid].count++;
           if (area) byVistoriador[finalVid].area += area;
@@ -344,7 +343,11 @@ export default function DashboardEstatisticas({
     };
 
     const vistoriadorData = Object.entries(byVistoriador)
-      .map(([id, { count, area }]) => ({ name: profileMap[id] || "Desconhecido", count, area }))
+      .map(([id, { count, area }]) => ({ 
+        name: id === 'unassigned' ? "Não Atribuído" : (profileMap[id] || "Desconhecido"), 
+        count, 
+        area 
+      }))
       .sort((a, b) => b.count - a.count);
 
     const regionalData = Object.entries(byRegional)
