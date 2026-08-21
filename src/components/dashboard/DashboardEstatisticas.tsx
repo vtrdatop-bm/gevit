@@ -288,11 +288,22 @@ export default function DashboardEstatisticas({
           }
         }
 
-        const vid = v.vistoriador_1_id || getCurrentVistoriadorId(p.vistoriador_id, v);
-        if (vid) {
-          if (!byVistoriador[vid]) byVistoriador[vid] = { count: 0, area: 0 };
-          byVistoriador[vid].count++;
-          if (proto.area) byVistoriador[vid].area += proto.area;
+        const countVistoriador = (vid: string | null | undefined, area: number | undefined) => {
+          const finalVid = vid || p.vistoriador_id;
+          if (!finalVid) return;
+          if (!byVistoriador[finalVid]) byVistoriador[finalVid] = { count: 0, area: 0 };
+          byVistoriador[finalVid].count++;
+          if (area) byVistoriador[finalVid].area += area;
+        };
+
+        if (v.status_1_vistoria) {
+          countVistoriador(v.vistoriador_1_id, proto.area);
+        }
+        if (v.status_2_vistoria) {
+          countVistoriador(v.vistoriador_2_id, proto.area);
+        }
+        if (v.status_3_vistoria) {
+          countVistoriador(v.vistoriador_3_id, proto.area);
         }
 
         if ((v.vistoriador_1_id || v.data_1_atribuicao) && proto.area) {
