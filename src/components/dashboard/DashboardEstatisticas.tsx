@@ -193,6 +193,8 @@ export default function DashboardEstatisticas({
       pendencias: [0, 0, 0],
       certificado: [0, 0, 0],
       certificado_termo: [0, 0, 0],
+      expirado: [0, 0, 0],
+      cancelado: [0, 0, 0],
     };
 
     const tempos1Vist: number[] = [];
@@ -242,17 +244,30 @@ export default function DashboardEstatisticas({
         if (v.data_2_vistoria || v.status_2_vistoria) stage2++;
         if (v.data_3_vistoria || v.status_3_vistoria) stage3++;
 
-        if (v.status_1_vistoria === "pendencia") stageStatusGrid.pendencias[0]++;
-        if (v.status_1_vistoria === "reprovado") stageStatusGrid.certificado[0]++;
-        if (v.status_1_vistoria === "aprovado") stageStatusGrid.certificado_termo[0]++;
+        const mapTerminal = (original: string) => {
+          if (ds === "expirado") return "expirado";
+          if (ds === "cancelado") return "cancelado";
+          return original;
+        };
+
+        if (v.status_1_vistoria === "pendencia") {
+           // Se foi pendência e cancelou logo depois, podemos exibir como cancelado para fechar a conta? 
+           // Não, vamos mapear apenas os terminais para bater com o KPI de Certificado. Mas se a última ação foi pendência e cancelou, 
+           // seria melhor mapear para cancelado SE for a última vistoria?
+           // O usuário não reclamou de pendência. Vamos manter pendência como pendência.
+           stageStatusGrid.pendencias[0]++;
+        }
+        if (v.status_1_vistoria === "reprovado") stageStatusGrid[mapTerminal("certificado")][0]++;
+        if (v.status_1_vistoria === "aprovado") stageStatusGrid[mapTerminal("certificado_termo")][0]++;
         
         if (v.status_2_vistoria === "pendencia") stageStatusGrid.pendencias[1]++;
-        if (v.status_2_vistoria === "reprovado") stageStatusGrid.certificado[1]++;
-        if (v.status_2_vistoria === "aprovado") stageStatusGrid.certificado_termo[1]++;
+        if (v.status_2_vistoria === "reprovado") stageStatusGrid[mapTerminal("certificado")][1]++;
+        if (v.status_2_vistoria === "aprovado") stageStatusGrid[mapTerminal("certificado_termo")][1]++;
         
         if (v.status_3_vistoria === "pendencia") stageStatusGrid.pendencias[2]++;
-        if (v.status_3_vistoria === "reprovado") stageStatusGrid.certificado[2]++;
-        if (v.status_3_vistoria === "aprovado") stageStatusGrid.certificado_termo[2]++;
+        if (v.status_3_vistoria === "reprovado") stageStatusGrid[mapTerminal("certificado")][2]++;
+        if (v.status_3_vistoria === "aprovado") stageStatusGrid[mapTerminal("certificado_termo")][2]++;
+
 
         if (dataSolicitacao) {
           const d1 = daysBetween(dataSolicitacao, v.data_1_vistoria);
@@ -429,7 +444,7 @@ export default function DashboardEstatisticas({
             <tbody>
         {(() => {
           const columnSums = [0, 1, 2].map(i =>
-            ["pendencias", "certificado", "certificado_termo"].reduce((sum, key) => sum + (stats.stageStatusGrid[key]?.[i] || 0), 0)
+            ["pendencias", "certificado", "certificado_termo", "expirado", "cancelado"].reduce((sum, key) => sum + (stats.stageStatusGrid[key]?.[i] || 0), 0)
           );
           const totalRowsSum = columnSums.reduce((a, b) => a + b, 0);
 
@@ -437,9 +452,15 @@ export default function DashboardEstatisticas({
             { key: "pendencias", label: "Pendência", color: "text-status-pending" },
             { key: "certificado", label: "Certificado", color: "text-status-certified" },
             { key: "certificado_termo", label: "Certificado Provisório", color: "text-primary" },
+            { key: "expirado", label: "Certificado (Expirou)", color: "text-status-risk" },
+            { key: "cancelado", label: "Cancelado", color: "text-muted-foreground" },
           ].map((row) => {
             const vals = stats.stageStatusGrid[row.key];
             const total = vals[0] + vals[1] + vals[2];
+            
+            // Only render row if there are any items in it, or if it's one of the main 3
+            const isMainRow = ["pendencias", "certificado", "certificado_termo"].includes(row.key);
+            if (!isMainRow && total === 0) return null;
             
             const getPct = (v: number, colIndex: number) => {
               const colSum = columnSums[colIndex] || 1;
@@ -472,7 +493,7 @@ export default function DashboardEstatisticas({
         })()}
         {(() => {
           const vals = [0, 1, 2].map(i =>
-            ["pendencias", "certificado", "certificado_termo"].reduce((sum, key) => sum + (stats.stageStatusGrid[key]?.[i] || 0), 0)
+            ["pendencias", "certificado", "certificado_termo", "expirado", "cancelado"].reduce((sum, key) => sum + (stats.stageStatusGrid[key]?.[i] || 0), 0)
           );
           const total = vals.reduce((a, b) => a + b, 0);
           
