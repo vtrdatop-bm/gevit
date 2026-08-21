@@ -1,0 +1,1 @@
+CREATE POLICY "Permitir delete para admin ou distribuidor em notificacoes" ON public.notificacoes FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'distribuidor'));
