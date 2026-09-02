@@ -422,78 +422,87 @@ export default function ProtocolosPage() {
         );
       } else {
         const todayStr = assignDate;
+        let successCount = 0;
+        const errs: string[] = [];
         
-        for (const protoId of selectedProtocolIds) {
-          const proc = processoByProtocolo[protoId];
+        await Promise.all(selectedProtocolIds.map(async (protoId) => {
+          try {
+            const proc = processoByProtocolo[protoId];
 
-          if (!proc) {
-            const { data: newProc, error: procErr } = await supabase
-              .from("processos")
-              .insert({
-                protocolo_id: protoId,
-                status: "regional",
-                vistoriador_id: selectedVistoriadorId
-              })
-              .select("id")
-              .single();
-            if (procErr) throw procErr;
+            if (!proc) {
+              const { data: newProc, error: procErr } = await supabase
+                .from("processos")
+                .insert({
+                  protocolo_id: protoId,
+                  status: "regional",
+                  vistoriador_id: selectedVistoriadorId
+                })
+                .select("id")
+                .single();
+              if (procErr) throw procErr;
 
-            const { error: vistErr } = await supabase
-              .from("vistorias")
-              .insert({
-                processo_id: newProc.id,
-                data_1_atribuicao: todayStr,
-                vistoriador_1_id: selectedVistoriadorId
-              });
-            if (vistErr) throw vistErr;
-          } else {
-            const { error: procErr } = await supabase
-              .from("processos")
-              .update({
-                status: "regional",
-                vistoriador_id: selectedVistoriadorId
-              })
-              .eq("id", proc.id);
-            if (procErr) throw procErr;
-
-            const { data: vistData } = await supabase
-              .from("vistorias")
-              .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
-              .eq("processo_id", proc.id)
-              .maybeSingle();
-
-            if (vistData) {
-              const stageNum = getDisplayInfo(protoId)?.stage || 1;
-              const vistUpdate: any = {};
-              if (stageNum === 2) {
-                vistUpdate.data_2_atribuicao = todayStr;
-                vistUpdate.vistoriador_2_id = selectedVistoriadorId;
-              } else if (stageNum === 3) {
-                vistUpdate.data_3_atribuicao = todayStr;
-                vistUpdate.vistoriador_3_id = selectedVistoriadorId;
-              } else {
-                vistUpdate.data_1_atribuicao = todayStr;
-                vistUpdate.vistoriador_1_id = selectedVistoriadorId;
-              }
-              const { error: vistErr } = await supabase
-                .from("vistorias")
-                .update(vistUpdate)
-                .eq("id", vistData.id);
-              if (vistErr) throw vistErr;
-            } else {
               const { error: vistErr } = await supabase
                 .from("vistorias")
                 .insert({
-                  processo_id: proc.id,
+                  processo_id: newProc.id,
                   data_1_atribuicao: todayStr,
                   vistoriador_1_id: selectedVistoriadorId
                 });
               if (vistErr) throw vistErr;
+            } else {
+              const { error: procErr } = await supabase
+                .from("processos")
+                .update({
+                  status: "regional",
+                  vistoriador_id: selectedVistoriadorId
+                })
+                .eq("id", proc.id);
+              if (procErr) throw procErr;
+
+              const { data: vistData } = await supabase
+                .from("vistorias")
+                .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
+                .eq("processo_id", proc.id)
+                .maybeSingle();
+
+              if (vistData) {
+                const stageNum = getDisplayInfo(protoId)?.stage || 1;
+                const vistUpdate: any = {};
+                if (stageNum === 2) {
+                  vistUpdate.data_2_atribuicao = todayStr;
+                  vistUpdate.vistoriador_2_id = selectedVistoriadorId;
+                } else if (stageNum === 3) {
+                  vistUpdate.data_3_atribuicao = todayStr;
+                  vistUpdate.vistoriador_3_id = selectedVistoriadorId;
+                } else {
+                  vistUpdate.data_1_atribuicao = todayStr;
+                  vistUpdate.vistoriador_1_id = selectedVistoriadorId;
+                }
+                const { error: vistErr } = await supabase
+                  .from("vistorias")
+                  .update(vistUpdate)
+                  .eq("id", vistData.id);
+                if (vistErr) throw vistErr;
+              } else {
+                const { error: vistErr } = await supabase
+                  .from("vistorias")
+                  .insert({
+                    processo_id: proc.id,
+                    data_1_atribuicao: todayStr,
+                    vistoriador_1_id: selectedVistoriadorId
+                  });
+                if (vistErr) throw vistErr;
+              }
             }
+            successCount++;
+          } catch (err: any) {
+            console.error(err);
+            errs.push(err.message);
           }
-        }
+        }));
       }
-      toast.success(`${selectedProtocolIds.length} protocolo(s) atribuído(s) com sucesso!`);
+      
+      toast.success(`${selectedProtocolIds.length} protocolo(s) processado(s).`);
       setSelectedProtocolIds([]);
       setSelectedVistoriadorId("");
       setAssignDate("");
@@ -503,7 +512,7 @@ export default function ProtocolosPage() {
       }
     } catch (err: any) {
       console.error(err);
-      toast.error("Erro ao realizar atribuição: " + err.message);
+      toast.error("Erro geral: " + err.message);
     }
   };
 

@@ -779,80 +779,88 @@ export default function MapPage() {
         );
       } else {
         const todayStr = assignDate;
+        let successCount = 0;
+        const errs: string[] = [];
         
-        for (const protoId of selectedProtocolIds) {
-          const proc = processos.find(p => p.protocolo.id === protoId);
+        await Promise.all(selectedProtocolIds.map(async (protoId) => {
+          try {
+            const proc = processos.find(p => p.protocolo.id === protoId);
+            if (!proc) return;
 
-          if (!proc) continue;
+            if (proc.id.startsWith("proto-")) {
+              const { data: newProc, error: procErr } = await supabase
+                .from("processos")
+                .insert({
+                  protocolo_id: protoId,
+                  status: "regional",
+                  vistoriador_id: selectedBulkVistoriadorId
+                })
+                .select("id")
+                .single();
+              if (procErr) throw procErr;
 
-          if (proc.id.startsWith("proto-")) {
-            const { data: newProc, error: procErr } = await supabase
-              .from("processos")
-              .insert({
-                protocolo_id: protoId,
-                status: "regional",
-                vistoriador_id: selectedBulkVistoriadorId
-              })
-              .select("id")
-              .single();
-            if (procErr) throw procErr;
-
-            const { error: vistErr } = await supabase
-              .from("vistorias")
-              .insert({
-                processo_id: newProc.id,
-                data_1_atribuicao: todayStr,
-                vistoriador_1_id: selectedBulkVistoriadorId
-              });
-            if (vistErr) throw vistErr;
-          } else {
-            const { error: procErr } = await supabase
-              .from("processos")
-              .update({
-                status: "regional",
-                vistoriador_id: selectedBulkVistoriadorId
-              })
-              .eq("id", proc.id);
-            if (procErr) throw procErr;
-
-            const { data: vistData } = await supabase
-              .from("vistorias")
-              .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
-              .eq("processo_id", proc.id)
-              .maybeSingle();
-
-            if (vistData) {
-              const stageNum = getVistoriaStage(proc.vistoria) === "3ª Vistoria" ? 3 : getVistoriaStage(proc.vistoria) === "2ª Vistoria" ? 2 : 1;
-              const vistUpdate: any = {};
-              if (stageNum === 2) {
-                vistUpdate.data_2_atribuicao = todayStr;
-                vistUpdate.vistoriador_2_id = selectedBulkVistoriadorId;
-              } else if (stageNum === 3) {
-                vistUpdate.data_3_atribuicao = todayStr;
-                vistUpdate.vistoriador_3_id = selectedBulkVistoriadorId;
-              } else {
-                vistUpdate.data_1_atribuicao = todayStr;
-                vistUpdate.vistoriador_1_id = selectedBulkVistoriadorId;
-              }
-              const { error: vistErr } = await supabase
-                .from("vistorias")
-                .update(vistUpdate)
-                .eq("id", vistData.id);
-              if (vistErr) throw vistErr;
-            } else {
               const { error: vistErr } = await supabase
                 .from("vistorias")
                 .insert({
-                  processo_id: proc.id,
+                  processo_id: newProc.id,
                   data_1_atribuicao: todayStr,
                   vistoriador_1_id: selectedBulkVistoriadorId
                 });
               if (vistErr) throw vistErr;
+            } else {
+              const { error: procErr } = await supabase
+                .from("processos")
+                .update({
+                  status: "regional",
+                  vistoriador_id: selectedBulkVistoriadorId
+                })
+                .eq("id", proc.id);
+              if (procErr) throw procErr;
+
+              const { data: vistData } = await supabase
+                .from("vistorias")
+                .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
+                .eq("processo_id", proc.id)
+                .maybeSingle();
+
+              if (vistData) {
+                const stageNum = getVistoriaStage(proc.vistoria) === "3ª Vistoria" ? 3 : getVistoriaStage(proc.vistoria) === "2ª Vistoria" ? 2 : 1;
+                const vistUpdate: any = {};
+                if (stageNum === 2) {
+                  vistUpdate.data_2_atribuicao = todayStr;
+                  vistUpdate.vistoriador_2_id = selectedBulkVistoriadorId;
+                } else if (stageNum === 3) {
+                  vistUpdate.data_3_atribuicao = todayStr;
+                  vistUpdate.vistoriador_3_id = selectedBulkVistoriadorId;
+                } else {
+                  vistUpdate.data_1_atribuicao = todayStr;
+                  vistUpdate.vistoriador_1_id = selectedBulkVistoriadorId;
+                }
+                const { error: vistErr } = await supabase
+                  .from("vistorias")
+                  .update(vistUpdate)
+                  .eq("id", vistData.id);
+                if (vistErr) throw vistErr;
+              } else {
+                const { error: vistErr } = await supabase
+                  .from("vistorias")
+                  .insert({
+                    processo_id: proc.id,
+                    data_1_atribuicao: todayStr,
+                    vistoriador_1_id: selectedBulkVistoriadorId
+                  });
+                if (vistErr) throw vistErr;
+              }
             }
+            successCount++;
+          } catch (err: any) {
+            console.error(err);
+            errs.push(err.message);
           }
-        }
+        }));
       }
-      toast.success(`${selectedProtocolIds.length} protocolo(s) atribuído(s) com sucesso!`);
+      
+      toast.success(`${selectedProtocolIds.length} protocolo(s) processado(s).`);
       setSelectedProtocolIds([]);
       setSelectedBulkVistoriadorId("");
       setAssignDate("");
