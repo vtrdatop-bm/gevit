@@ -93,19 +93,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loadRoles = async () => {
       if (!user) {
         setRoles([]);
-        setActiveRole(null);
+        setActiveRoleState(null);
         setRolesLoading(false);
         return;
       }
 
       if (user.id === "00000000-0000-0000-0000-000000000000") {
         setRoles(["admin"]);
-        setActiveRole("admin");
+        setActiveRoleState("admin");
         setRolesLoading(false);
         return;
       }
 
-      setRolesLoading(true);
+      // Only set loading to true if we don't have roles yet, to avoid UI flickering
+      if (roles.length === 0) {
+        setRolesLoading(true);
+      }
+      
       const { data } = await supabase
         .from("user_roles")
         .select("role")
@@ -132,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     void loadRoles();
-  }, [user]);
+  }, [user?.id]);
 
   const setActiveRole = (role: string) => {
     if (!user) return;
