@@ -468,10 +468,15 @@ export default function ProtocolosPage() {
               if (vistData) {
                 const stageNum = getDisplayInfo(protoId)?.stage || 1;
                 const vistUpdate: any = {};
-                if (stageNum === 2) {
+                
+                let targetStage = stageNum;
+                if (targetStage === 1 && vistData.status_1_vistoria) targetStage = 2;
+                if (targetStage === 2 && vistData.status_2_vistoria) targetStage = 3;
+
+                if (targetStage === 2) {
                   vistUpdate.data_2_atribuicao = todayStr;
                   vistUpdate.vistoriador_2_id = selectedVistoriadorId;
-                } else if (stageNum === 3) {
+                } else if (targetStage === 3) {
                   vistUpdate.data_3_atribuicao = todayStr;
                   vistUpdate.vistoriador_3_id = selectedVistoriadorId;
                 } else {
