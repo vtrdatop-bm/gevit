@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import RouteMap from "@/components/routes/RouteMap";
 import { sortVistoriadores, getCurrentVistoriadorId } from "@/lib/vistoriaStatus";
+import { fetchAllRows } from "@/lib/processoConsistency";
 
 interface VistoriaRow {
   processo_id: string;
@@ -123,14 +124,20 @@ export default function RoutesPage() {
       // Filtrar apenas perfis que são vistoriadores
       const onlyVistoriadores = (profiles || []).filter((p) => vistoriadorIds.includes(p.user_id));
 
-      const [{ data: procsData }, { data: vistoriasData }] = await Promise.all([
-        supabase
-          .from("processos")
-          .select("id, protocolo_id, vistoriador_id, status, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, evento_unico, ligar_antes, telefone_contato)")
-          .neq("status", "certificado"),
-        supabase
-          .from("vistorias")
-          .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id"),
+      const [procsData, vistoriasData] = await Promise.all([
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("processos")
+            .select("id, protocolo_id, vistoriador_id, status, protocolos(numero, nome_fantasia, razao_social, endereco, bairro, municipio, latitude, longitude, evento_unico, ligar_antes, telefone_contato)")
+            .neq("status", "certificado")
+            .range(from, to)
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("vistorias")
+            .select("processo_id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria, vistoriador_1_id, vistoriador_2_id, vistoriador_3_id")
+            .range(from, to)
+        ),
       ]);
 
       setCanChangeVistoriador(true); // Permitir múltipla seleção para todos os perfis

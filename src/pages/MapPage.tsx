@@ -819,7 +819,7 @@ export default function MapPage() {
 
               const { data: vistData } = await supabase
                 .from("vistorias")
-                .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
+                .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria")
                 .eq("processo_id", proc.id)
                 .maybeSingle();
 
@@ -906,7 +906,7 @@ export default function MapPage() {
 
           const { data: vistData } = await supabase
             .from("vistorias")
-            .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao")
+            .select("id, data_1_atribuicao, data_2_atribuicao, data_3_atribuicao, status_1_vistoria, status_2_vistoria, status_3_vistoria")
             .eq("processo_id", proc.id)
             .maybeSingle();
 
