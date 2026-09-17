@@ -96,6 +96,34 @@ export default function VistoriaTab({
       return;
     }
 
+    // Trava de Validação para Datas
+    if (status && !data) {
+      toast.error(`A data da ${numero}ª Vistoria é obrigatória ao informar um status.`);
+      return;
+    }
+
+    if (data) {
+      if (numero === 1) {
+        if (!dataSolicitacao) {
+          toast.error("A Data de Solicitação precisa estar preenchida no protocolo para salvar a data da 1ª Vistoria.");
+          return;
+        }
+        if (data < dataSolicitacao) {
+          toast.error("A Data da 1ª Vistoria não pode ser anterior à Data de Solicitação.");
+          return;
+        }
+      } else if (numero === 2 || numero === 3) {
+        if (!retorno) {
+          toast.error(`A Data do ${numero - 1}º Retorno precisa estar preenchida para salvar a data desta vistoria.`);
+          return;
+        }
+        if (data < retorno) {
+          toast.error(`A Data da vistoria não pode ser anterior à Data do ${numero - 1}º Retorno.`);
+          return;
+        }
+      }
+    }
+
     setSaving(true);
     try {
       const vistoriaUpdate: any = {};

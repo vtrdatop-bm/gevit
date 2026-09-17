@@ -336,10 +336,10 @@ export default function DashboardEstatisticas({
     ];
 
     const avgTempos = {
-      primeiraVistoria: { value: avg(tempos1Vist), count: stage1 },
-      retorno1: { value: avg(temposRetorno1), count: stage2 },
-      retorno2: { value: avg(temposRetorno2), count: stage3 },
-      certificacao: { value: avg(temposCert), count: (byStatus["certificado"] || 0) + (byStatus["certificado_termo"] || 0) },
+      primeiraVistoria: { value: avg(tempos1Vist), count: tempos1Vist.length },
+      retorno1: { value: avg(temposRetorno1), count: temposRetorno1.length },
+      retorno2: { value: avg(temposRetorno2), count: temposRetorno2.length },
+      certificacao: { value: avg(temposCert), count: temposCert.length },
     };
 
     const vistoriadorData = Object.entries(byVistoriador)
