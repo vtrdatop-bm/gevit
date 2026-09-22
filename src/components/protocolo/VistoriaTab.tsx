@@ -102,6 +102,11 @@ export default function VistoriaTab({
       return;
     }
 
+    if (!status && data) {
+      toast.error(`O status da ${numero}ª Vistoria é obrigatório ao informar uma data.`);
+      return;
+    }
+
     if (data) {
       if (numero === 1) {
         if (!dataSolicitacao) {
