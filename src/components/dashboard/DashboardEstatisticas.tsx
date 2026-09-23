@@ -613,6 +613,15 @@ export default function DashboardEstatisticas({
                       </td>
                     </tr>
                   ))}
+                  <tr className="border-t border-border font-bold bg-muted/40">
+                    <td className="py-2.5 px-3 text-foreground">Totais</td>
+                    <td className="text-center py-2.5 px-3 text-foreground">
+                      {stats.vistoriadorData.reduce((acc, row) => acc + row.count, 0)}
+                    </td>
+                    <td className="text-right py-2.5 px-3 text-foreground">
+                      {formatArea(stats.vistoriadorData.reduce((acc, row) => acc + row.area, 0))}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
