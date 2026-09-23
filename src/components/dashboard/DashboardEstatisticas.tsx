@@ -714,20 +714,27 @@ export default function DashboardEstatisticas({
                   </ResponsiveContainer>
                   
                   <div className="mt-4 flex flex-col gap-1.5 overflow-y-auto max-h-[400px] px-2 scrollbar-thin">
-                    {stats.regionalData.map((data, i) => (
-                      <div key={data.name} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <span 
-                            className="w-3 h-3 rounded-full shrink-0" 
-                            style={{ backgroundColor: BAR_COLORS[i % BAR_COLORS.length] }} 
-                          />
-                          <span className="text-muted-foreground truncate" title={data.name}>
-                            {data.name}
-                          </span>
+                    {stats.regionalData.map((data, i) => {
+                      const totalProcessos = stats.totalProcessos || 1;
+                      const pct = Math.round((data.value / totalProcessos) * 100);
+                      return (
+                        <div key={data.name} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            <span 
+                              className="w-3 h-3 rounded-full shrink-0" 
+                              style={{ backgroundColor: BAR_COLORS[i % BAR_COLORS.length] }} 
+                            />
+                            <span className="text-muted-foreground truncate" title={data.name}>
+                              {data.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 ml-3 shrink-0">
+                            <span className="font-semibold text-foreground">{data.value}</span>
+                            <span className="text-xs text-muted-foreground w-9 text-right">({pct}%)</span>
+                          </div>
                         </div>
-                        <span className="font-semibold text-foreground ml-3 shrink-0">{data.value}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )
