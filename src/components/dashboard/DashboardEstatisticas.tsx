@@ -673,43 +673,63 @@ export default function DashboardEstatisticas({
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={stats.regionalData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                      labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
-                    >
-                      {stats.regionalData.map((_, i) => (
-                        <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload;
-                          const totalProcessos = stats.totalProcessos || 1;
-                          const pct = Math.round((data.value / totalProcessos) * 100);
-                          return (
-                            <div className="bg-popover border border-border rounded-lg p-2 shadow-sm text-xs">
-                              <p className="font-semibold text-foreground">{data.name}</p>
-                              <p className="text-muted-foreground mt-0.5">
-                                Processos: <span className="font-semibold text-foreground">{data.value}</span>
-                                <span className="ml-1 text-primary font-medium">({pct}%)</span>
-                              </p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="flex flex-col">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={stats.regionalData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={65}
+                        outerRadius={100}
+                        stroke="none"
+                        paddingAngle={2}
+                      >
+                        {stats.regionalData.map((_, i) => (
+                          <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            const totalProcessos = stats.totalProcessos || 1;
+                            const pct = Math.round((data.value / totalProcessos) * 100);
+                            return (
+                              <div className="bg-popover border border-border rounded-lg p-2 shadow-sm text-xs">
+                                <p className="font-semibold text-foreground">{data.name}</p>
+                                <p className="text-muted-foreground mt-0.5">
+                                  Processos: <span className="font-semibold text-foreground">{data.value}</span>
+                                  <span className="ml-1 text-primary font-medium">({pct}%)</span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  
+                  <div className="mt-4 flex flex-col gap-1.5 overflow-y-auto max-h-[160px] px-2 scrollbar-thin">
+                    {stats.regionalData.map((data, i) => (
+                      <div key={data.name} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <span 
+                            className="w-3 h-3 rounded-full shrink-0" 
+                            style={{ backgroundColor: BAR_COLORS[i % BAR_COLORS.length] }} 
+                          />
+                          <span className="text-muted-foreground truncate" title={data.name}>
+                            {data.name}
+                          </span>
+                        </div>
+                        <span className="font-semibold text-foreground ml-3 shrink-0">{data.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado disponível</p>
