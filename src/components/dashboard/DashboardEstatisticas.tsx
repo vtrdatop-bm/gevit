@@ -713,7 +713,7 @@ export default function DashboardEstatisticas({
                     </PieChart>
                   </ResponsiveContainer>
                   
-                  <div className="mt-4 flex flex-col gap-1.5 overflow-y-auto max-h-[160px] px-2 scrollbar-thin">
+                  <div className="mt-4 flex flex-col gap-1.5 overflow-y-auto max-h-[400px] px-2 scrollbar-thin">
                     {stats.regionalData.map((data, i) => (
                       <div key={data.name} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2 overflow-hidden">
@@ -746,7 +746,7 @@ export default function DashboardEstatisticas({
               onClick={() => setRegionalChartType("pie")}
               className={`px-3 py-1 text-xs rounded-md transition-colors ${regionalChartType === "pie" ? "bg-primary text-primary-foreground font-medium" : "bg-accent text-accent-foreground hover:bg-accent/80"}`}
             >
-              Pizza
+              Donut
             </button>
           </div>
         </div>
