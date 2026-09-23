@@ -14,6 +14,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  PieChart,
+  Pie,
 } from "recharts";
 import {
   ClipboardList,
@@ -144,6 +146,7 @@ export default function DashboardEstatisticas({
   const [loading, setLoading] = useState(true);
   const [regionaisMap, setRegionaisMap] = useState<Record<string, string>>({});
   const [bairroRegionalMap, setBairroRegionalMap] = useState<Record<string, string>>({});
+  const [regionalChartType, setRegionalChartType] = useState<"bar" | "pie">("bar");
 
   useEffect(() => {
     async function fetchData() {
@@ -630,46 +633,102 @@ export default function DashboardEstatisticas({
           )}
         </div>
 
-        <div className="kpi-card">
+        <div className="kpi-card flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <MapPin className="w-4 h-4 text-primary" />
             <h4 className="text-sm font-semibold text-foreground">Vistorias por Regional</h4>
           </div>
-          {stats.regionalData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={Math.max(160, stats.regionalData.length * 36)}>
-              <BarChart data={stats.regionalData} layout="vertical" barSize={20} margin={{ left: 10, right: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={120} />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      const totalProcessos = stats.totalProcessos || 1;
-                      const pct = Math.round((data.value / totalProcessos) * 100);
-                      return (
-                        <div className="bg-popover border border-border rounded-lg p-2 shadow-sm text-xs">
-                          <p className="font-semibold text-foreground">{data.name}</p>
-                          <p className="text-muted-foreground mt-0.5">
-                            Processos: <span className="font-semibold text-foreground">{data.value}</span>
-                            <span className="ml-1 text-primary font-medium">({pct}%)</span>
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="value" name="Processos" radius={[0, 6, 6, 0]}>
-                  {stats.regionalData.map((_, i) => (
-                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado disponível</p>
-          )}
+          <div className="flex-1">
+            {stats.regionalData.length > 0 ? (
+              regionalChartType === "bar" ? (
+                <ResponsiveContainer width="100%" height={Math.max(160, stats.regionalData.length * 36)}>
+                  <BarChart data={stats.regionalData} layout="vertical" barSize={20} margin={{ left: 10, right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={120} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          const totalProcessos = stats.totalProcessos || 1;
+                          const pct = Math.round((data.value / totalProcessos) * 100);
+                          return (
+                            <div className="bg-popover border border-border rounded-lg p-2 shadow-sm text-xs">
+                              <p className="font-semibold text-foreground">{data.name}</p>
+                              <p className="text-muted-foreground mt-0.5">
+                                Processos: <span className="font-semibold text-foreground">{data.value}</span>
+                                <span className="ml-1 text-primary font-medium">({pct}%)</span>
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="value" name="Processos" radius={[0, 6, 6, 0]}>
+                      {stats.regionalData.map((_, i) => (
+                        <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={stats.regionalData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+                    >
+                      {stats.regionalData.map((_, i) => (
+                        <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          const totalProcessos = stats.totalProcessos || 1;
+                          const pct = Math.round((data.value / totalProcessos) * 100);
+                          return (
+                            <div className="bg-popover border border-border rounded-lg p-2 shadow-sm text-xs">
+                              <p className="font-semibold text-foreground">{data.name}</p>
+                              <p className="text-muted-foreground mt-0.5">
+                                Processos: <span className="font-semibold text-foreground">{data.value}</span>
+                                <span className="ml-1 text-primary font-medium">({pct}%)</span>
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado disponível</p>
+            )}
+          </div>
+          <div className="flex justify-center gap-2 mt-4">
+            <button
+              onClick={() => setRegionalChartType("bar")}
+              className={`px-3 py-1 text-xs rounded-md transition-colors ${regionalChartType === "bar" ? "bg-primary text-primary-foreground font-medium" : "bg-accent text-accent-foreground hover:bg-accent/80"}`}
+            >
+              Barras
+            </button>
+            <button
+              onClick={() => setRegionalChartType("pie")}
+              className={`px-3 py-1 text-xs rounded-md transition-colors ${regionalChartType === "pie" ? "bg-primary text-primary-foreground font-medium" : "bg-accent text-accent-foreground hover:bg-accent/80"}`}
+            >
+              Pizza
+            </button>
+          </div>
         </div>
       </div>
     </div>
